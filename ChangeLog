@@ -1,3 +1,14 @@
+2001-06-19  Jeff Hobbs  <jeffh@ActiveState.com>
+
+	* tkcon.tcl (dir): added fallback in generic dir command to not
+	require being run in tkcon.
+	(Init): Changed around how all options are initialized to allow
+	for tkcon embedders to set their own defaults.  Added a usehistory
+	PRIV key that tells us whether to load/save history files.  Added
+	showOnStartup PRIV key to control whether tkcon should deiconify
+	itself on startup.  Changed setting root to .tkcon to ensure that
+	root was just . before.
+
 2001-06-18  Jeff Hobbs  <jeffh@ActiveState.com>
 
 	* tkcon.tcl: (InitUI) added WM_DELETE_WINDOW hook to exit to

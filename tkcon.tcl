@@ -82,8 +82,14 @@ proc ::tkcon::Init {} {
 	set title Main
     }
 
+    ##
+    ## When setting up all the default values, we always check for
+    ## prior existence.  This allows users who embed tkcon to modify
+    ## the initial state before tkcon initializes itself.
+    ##
+
     # bg == {} will get bg color from the main toplevel (in InitUI)
-    array set COLOR {
+    foreach {key default} {
 	bg		{}
 	blink		\#FFFF00
 	cursor		\#000000
@@ -94,9 +100,11 @@ proc ::tkcon::Init {} {
 	stdin		\#000000
 	stdout		\#0000FF
 	stderr		\#FF0000
+    } {
+	if {![info exists COLOR($key)]} { set COLOR($key) $default }
     }
 
-    array set OPT {
+    foreach {key default} {
 	autoload	{}
 	blinktime	500
 	blinkrange	1
@@ -125,11 +133,14 @@ proc ::tkcon::Init {} {
 	subhistory	1
 	gc-delay	60000
 	gets		{congets}
+	usehistory	1
 
 	exec		slave
+    } {
+	if {![info exists OPT($key)]} { set OPT($key) $default }
     }
 
-    array set PRIV {
+    foreach {key default} {
 	app		{}
 	appname		{}
 	apptype		slave
@@ -147,20 +158,24 @@ proc ::tkcon::Init {} {
 	find,case	0
 	find,reg	0
 	errorInfo	{}
+	showOnStartup	1
 	slavealias	{ edit more less tkcon }
 	slaveprocs	{
 	    alias clear dir dump echo idebug lremove
 	    tkcon_puts tkcon_gets observe observe_var unalias which what
 	}
 	version		2.1+
-	RCS		{RCS: @(#) $Id: tkcon.tcl,v 1.32 2001/06/18 17:24:46 hobbs Exp $}
+	RCS		{RCS: @(#) $Id: tkcon.tcl,v 1.33 2001/06/19 02:51:09 hobbs Exp $}
 	release		{May 2001}
 	docs		"http://tkcon.sf.net/"
 	email		{jeff@hobbs.org}
 	root		.
+    } {
+	if {![info exists PRIV($key)]} { set PRIV($key) $default }
     }
-    ## NOTES FOR STAYING IN PRIMARY INTERPRETER:
 
+    ## NOTES FOR STAYING IN PRIMARY INTERPRETER:
+    ##
     ## If you set ::tkcon::OPT(exec) to {}, then instead of a multiple
     ## interp model, you get tkcon operating in the main interp by default.
     ## This can be useful when attaching to programs that like to operate
@@ -178,38 +193,41 @@ proc ::tkcon::Init {} {
 	set OPT(prompt1) {([file tail [pwd]]) [history nextid] % }
     }
 
-    ## If there appear to be children of '.', then make sure we use
-    ## a disassociated toplevel.
-    if {[llength [winfo children .]]} {
+    ## If we are using the default '.' toplevel, and there appear to be
+    ## children of '.', then make sure we use a disassociated toplevel.
+    if {$PRIV(root) == "." && [llength [winfo children .]]} {
 	set PRIV(root) .tkcon
     }
 
-    ## Do platform specific configuration here
+    ## Do platform specific configuration here, other than defaults
     ### Use tkcon.cfg filename for resource filename on non-unix systems
     ### Determine what directory the resource file should be in
-    ### Windows could possibly use env(WINDIR)
     switch $tcl_platform(platform) {
 	macintosh	{
-	    set envHome PREF_FOLDER
 	    if {![interp issafe]} {cd [file dirname [info script]]}
-	    set PRIV(rcfile)	tkcon.cfg
-	    set PRIV(histfile)	tkcon.hst
+	    set envHome		PREF_FOLDER
+	    set rcfile		tkcon.cfg
+	    set histfile	tkcon.hst
 	    catch {console hide}
 	}
 	windows		{
-	    set envHome HOME
-	    set PRIV(rcfile)	tkcon.cfg
-	    set PRIV(histfile)	tkcon.hst
+	    set envHome		HOME
+	    set rcfile		tkcon.cfg
+	    set histfile	tkcon.hst
 	}
 	unix		{
-	    set envHome HOME
-	    set PRIV(rcfile)	.tkconrc
-	    set PRIV(histfile)	.tkcon_history
+	    set envHome		HOME
+	    set rcfile		.tkconrc
+	    set histfile	.tkcon_history
 	}
     }
     if {[info exists env($envHome)]} {
-	set PRIV(rcfile)	[file join $env($envHome) $PRIV(rcfile)]
-	set PRIV(histfile)	[file join $env($envHome) $PRIV(histfile)]
+	if {![info exists PRIV(rcfile)]} {
+	    set PRIV(rcfile)	[file join $env($envHome) $rcfile]
+	}
+	if {![info exists PRIV(histfile)]} {
+	    set PRIV(histfile)	[file join $env($envHome) $histfile]
+	}
     }
 
     ## Handle command line arguments before sourcing resource file to
@@ -298,7 +316,7 @@ proc ::tkcon::Init {} {
 	# Source history file only for the main console, as all slave
 	# consoles will adopt from the main's history, but still
 	# keep separate histories
-	if {!$PRIV(WWW) && [file exists $PRIV(histfile)]} {
+	if {!$PRIV(WWW) && $OPT(usehistory) && [file exists $PRIV(histfile)]} {
 	    puts -nonewline "loading history file ... "
 	    # The history file is built to be loaded in and
 	    # understood by tkcon
@@ -554,9 +572,9 @@ proc ::tkcon::InitUI {title} {
 	    scan [wm geometry [winfo toplevel %W]] "%%dx%%d" \
 		    ::tkcon::OPT(cols) ::tkcon::OPT(rows)
 	}
-	wm deiconify $root
+	if {$PRIV(showOnStartup)} { wm deiconify $root }
     }
-    focus -force $PRIV(console)
+    if {$PRIV(showOnStartup)} { focus -force $PRIV(console) }
     if {$OPT(gc-delay)} {
 	after $OPT(gc-delay) ::tkcon::GarbageCollect
     }
@@ -1985,23 +2003,25 @@ proc ::tkcon::MainInit {} {
 	puts stderr "tkcon might panic:\n$err"
     }
     proc ::exit args {
-	if {[catch {open $::tkcon::PRIV(histfile) w} fid]} {
-	    puts stderr "unable to save history file:\n$fid"
-	    # pause a moment, because we are about to die finally...
-	    after 1000
-	} else {
-	    set max [::tkcon::EvalSlave history nextid]
-	    set id [expr {$max - $::tkcon::OPT(history)}]
-	    if {$id < 1} { set id 1 }
-	    ## FIX: This puts history in backwards!!
-	    while {($id < $max) && \
-		    ![catch {::tkcon::EvalSlave history event $id} cmd]} {
-		if {[string compare {} $cmd]} {
-		    puts $fid "::tkcon::EvalSlave history add [list $cmd]"
+	if {$::tkcon::OPT(usehistory)} {
+	    if {[catch {open $::tkcon::PRIV(histfile) w} fid]} {
+		puts stderr "unable to save history file:\n$fid"
+		# pause a moment, because we are about to die finally...
+		after 1000
+	    } else {
+		set max [::tkcon::EvalSlave history nextid]
+		set id [expr {$max - $::tkcon::OPT(history)}]
+		if {$id < 1} { set id 1 }
+		## FIX: This puts history in backwards!!
+		while {($id < $max) && \
+			![catch {::tkcon::EvalSlave history event $id} cmd]} {
+		    if {[string compare {} $cmd]} {
+			puts $fid "::tkcon::EvalSlave history add [list $cmd]"
+		    }
+		    incr id
 		}
-		incr id
+		close $fid
 	    }
-	    close $fid
 	}
 	uplevel 1 ::tkcon::FinalExit $args
     }
@@ -3651,8 +3671,11 @@ proc dir {args} {
 		}
 	    }
 	    set i [expr {$i+2+$s(full)}]
+	    set j 80
 	    ## This gets the number of cols in the tkcon console widget
-	    set j [expr {[tkcon master set ::tkcon::OPT(cols)]/$i}]
+	    if {[llength [info commands tkcon]]} {
+		set j [expr {[tkcon master set ::tkcon::OPT(cols)]/$i}]
+	    }
 	    set k 0
 	    foreach f [lindex $o 1] {
 		set f [file tail $f]
@@ -4963,6 +4986,7 @@ proc ::tkcon::Resource {} {
 
 ## Initialize only if we haven't yet
 ##
-if {[catch {winfo exists $::tkcon::PRIV(root)} exists] || !$exists} {
+if {![info exists ::tkcon::PRIV(root)] || \
+	![winfo exists $::tkcon::PRIV(root)]} {
     ::tkcon::Init
 }
