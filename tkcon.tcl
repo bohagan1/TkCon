@@ -187,7 +187,7 @@ proc ::tkcon::Init {args} {
 	    alias clear dir dump echo idebug lremove
 	    tkcon_puts tkcon_gets observe observe_var unalias which what
 	}
-	RCS		{RCS: @(#) $Id: tkcon.tcl,v 1.61 2003/02/21 00:48:52 hobbs Exp $}
+	RCS		{RCS: @(#) $Id: tkcon.tcl,v 1.62 2003/03/31 20:44:43 hobbs Exp $}
 	HEADURL		{http://cvs.sourceforge.net/cgi-bin/viewcvs.cgi/tkcon/tkcon/tkcon.tcl?rev=HEAD}
 	docs		"http://tkcon.sourceforge.net/"
 	email		{jeff@hobbs.org}
@@ -583,6 +583,25 @@ proc ::tkcon::InitUI {title} {
     }
     set OPT(font) [$con cget -font]
     if {!$PRIV(WWW)} {
+	if {[string match "Windows CE" $::tcl_platform(os)]} {
+	    $con configure -bd 0
+	    catch {font create tkconfixed}
+	    font configure tkconfixed -family Courier -size 8
+	    set cw [font measure tkconfixed "0"]
+	    set ch [font metrics tkconfixed -linespace]
+	    set sw [winfo screenwidth $con]
+	    set sh [winfo screenheight $con]
+	    # We need the magic hard offsets until I find a way to
+	    # correctly assume size
+	    if {$cw*($OPT(cols)+2) > $sw} {
+		set OPT(cols) [expr {($sw / $cw) - 2}]
+	    }
+	    if {$ch*($OPT(rows)+3) > $sh} {
+		set OPT(rows) [expr {($sh / $ch) - 3}]
+	    }
+	    # Place it so that the titlebar underlaps the CE titlebar
+	    wm geometry $root +0+0
+	}
 	$con configure -setgrid 1 -width $OPT(cols) -height $OPT(rows)
     }
     bindtags $con [list $con TkConsole TkConsolePost $root all]
