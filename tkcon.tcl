@@ -22,11 +22,19 @@ exec wish "$0" ${1+"$@"}
 ## source beer_ware.tcl
 ##
 
-if [catch {package require Tk 4.1}] {
+if [catch {package require Tk [expr $tcl_version-3.4]}] {
   return -code error \
       "TkCon requires at least the stable version of tcl7.5/tk4.1"
 }
-package ifneeded Tk $tk_version {load {} Tk}
+foreach pkg [info loaded {}] {
+  set file [lindex $pkg 0]
+  set name [lindex $pkg 1]
+  set version [package require $name]
+  if {[string match {} [package ifneeded $name $version]]} {
+    package ifneeded $name $version "load [list $file $name]"
+  }
+}
+catch {unset file name version}
 
 ## tkConInit - inits tkCon
 # ARGS:	root	- widget pathname of the tkCon console root
@@ -35,7 +43,8 @@ package ifneeded Tk $tk_version {load {} Tk}
 # Outputs:	errors found in tkCon resource file
 ##
 proc tkConInit {} {
-  global tkCon tcl_interactive tcl_platform env auto_path argv0 argc argv
+  ## Give full access to globals
+  eval global [uplevel \#0 info vars]
 
   set tcl_interactive 1
 
@@ -55,7 +64,7 @@ proc tkConInit {} {
     color,stderr	red
 
     blinktime		500
-    debugPrompt		{(level \#[expr [info level]-1]) debug > }
+    debugPrompt		{(level \#$level) debug [history nextid] > }
     font		fixed
     history		32
     dead		{}
@@ -80,8 +89,8 @@ proc tkConInit {} {
     slavealias	{ tkcon warn }
     slaveprocs	{ alias clear dir dump lremove puts echo tclindex idebug \
 	auto_execpath unknown tcl_unknown unalias which observe observe_var }
-    version	0.63
-    release	{September 1996}
+    version	0.64
+    release	{October 1996}
     root	.
   }
 
@@ -697,20 +706,20 @@ proc tkConInterpMenu w {
     $w add command -state disabled -label "dead or non-Tcl interps"
     return
   }
-  $w add cascade -label Inspect -un 0 -menu $w.ins
-  $w add cascade -label Packages -un 0 -menu $w.pkg
 
   set isnew [tkConEvalAttached expr \[info tclversion\]>7.4]
   set hastk [tkConEvalAttached info exists tk_library]
 
-  ## Inspect Cascaded Menu
-  set m $w.ins
-  if [winfo exists $m] {
-    $m delete 0 end
-  } else {
-    menu $m -tearoff no -disabledfore $tkCon(color,prompt)
-  }
   if [string comp {} [package provide TkConInspect]] {
+    ## Inspect Cascaded Menu
+    ##
+    $w add cascade -label Inspect -un 0 -menu $w.ins
+    set m $w.ins
+    if [winfo exists $m] {
+      $m delete 0 end
+    } else {
+      menu $m -tearoff no -disabledfore $tkCon(color,prompt)
+    }
     $m add command -label "Procedures" \
 	-command [list tkConInspect $app $type procs]
     $m add command -label "Global Vars" \
@@ -738,34 +747,40 @@ proc tkConInterpMenu w {
     }
   }
 
-  ## Packages Cascaded Menu
-  ##
-  set m $w.pkg
-  if [winfo exists $m] { $m delete 0 end } else {
-    menu $m -tearoff no -disabledfore $tkCon(color,prompt)
-  }
+  if $isnew {
+    ## Packages Cascaded Menu
+    ##
+    $w add cascade -label Packages -un 0 -menu $w.pkg
+    set m $w.pkg
+    if [winfo exists $m] { $m delete 0 end } else {
+      menu $m -tearoff no -disabledfore $tkCon(color,prompt)
+    }
 
-  foreach pkg [tkConEvalAttached [list info loaded {}]] {
-    set loaded([lindex $pkg 1]) {}
-  }
-  foreach pkg [info loaded] {
-    set pkg [lindex $pkg 1]
-    if ![info exists loaded($pkg)] {
-      set loadable($pkg) [list load {} $pkg]
+    foreach pkg [tkConEvalAttached [list info loaded {}]] {
+      set loaded([lindex $pkg 1]) [package provide $pkg]
     }
-  }
-  foreach pkg [lremove [tkConEvalAttached package names] Tcl] {
-    if ![info exists loaded($pkg)] {
-      set loadable($pkg) [list package require $pkg]
+    foreach pkg [lremove [tkConEvalAttached package names] Tcl] {
+      set version [tkConEvalAttached package provide $pkg]
+      if [string comp {} $version] {
+	set loaded($pkg) $version
+      } elseif ![info exists loaded($pkg)] {
+	set loadable($pkg) [list package require $pkg]
+      }
     }
-  }
-  foreach pkg [array names loadable] {
-    $m add command -label "Load $pkg" \
-	-command "tkConEvalOther [list $app] $type $loadable($pkg)"
-  }
-  if {[info exists loaded] && [info exists loadable]} { $m add separator }
-  foreach pkg [array names loaded] {
-    $m add command -label "$pkg Loaded" -state disabled
+    foreach pkg [tkConEvalAttached info loaded] {
+      set pkg [lindex $pkg 1]
+      if {![info exists loaded($pkg)] && ![info exists loadable($pkg)]} {
+	set loadable($pkg) [list load {} $pkg]
+      }
+    }
+    foreach pkg [array names loadable] {
+      $m add command -label "Load $pkg ([tkConEvalAttached package version $pkg])" \
+	  -command "tkConEvalOther [list $app] $type $loadable($pkg)"
+    }
+    if {[info exists loaded] && [info exists loadable]} { $m add separator }
+    foreach pkg [array names loaded] {
+      $m add command -label "${pkg}$loaded($pkg) Loaded" -state disabled
+    }
   }
 
   ## Show Last Error
@@ -1669,7 +1684,8 @@ proc idebug {opt args} {
       set tkcon [string comp {} [info command tkcon]]
       if $tkcon {
 	tkcon show
-	set prompt [tkcon set tkCon(debugPrompt)]
+	tkcon master eval set tkCon(prompt2) \$tkCon(prompt1)
+	tkcon master eval set tkCon(prompt1) \$tkCon(debugPrompt)
 	set slave  [tkcon set tkCon(exec)]
 	set event  [tkcon set tkCon(event)]
 	tkcon set tkCon(exec) [tkcon master interp create debugger]
@@ -1679,7 +1695,8 @@ proc idebug {opt args} {
       while 1 {
 	set err {}
 	if $tkcon {
-	  tkcon prompt {} {} [subst $prompt]
+	  tkcon evalSlave set level $level
+	  tkcon prompt
 	  set line [tkcon gets]
 	  tkcon console mark set output end
 	} else {
@@ -1748,8 +1765,10 @@ proc idebug {opt args} {
       set IDEBUG(debugging) 0
       if $tkcon {
 	tkcon master interp delete debugger
+	tkcon master eval set tkCon(prompt1) \$tkCon(prompt2)
 	tkcon set tkCon(exec) $slave
 	tkcon set tkCon(event) $event
+	tkcon prompt
       }
     }
     bo* {
@@ -1907,7 +1926,7 @@ proc observe_var {name el op} {
       puts "unset \"$name\""
     }
   } else {
-    upvar \#0 $name $name
+    upvar $name $name
     if [info exists $name\($el\)] {
       puts [dump v $name\($el\)]
     } else {
@@ -2177,7 +2196,6 @@ proc lremove {args} {
       }
     }
   }
-  idebug break
   return $l
 }
 
@@ -2340,10 +2358,7 @@ proc tcl_unknown args {
 }
 
 proc tkConBindings {} {
-  global tkCon tcl_platform
-
-  ## FIX ; rewrite so that virtual events are used as well as preventing
-  ## the overwriting of user events
+  global tkCon tcl_platform tk_version
 
   #-----------------------------------------------------------------------
   # Elements of tkPriv that are used in this file:
@@ -2454,7 +2469,8 @@ proc tkConBindings {} {
   ## Get all Text bindings into Console except Unix cut/copy/paste
   ## and newline insertion
   foreach ev [lremove [bind Text] {<Control-Key-y> <Control-Key-w> \
-				       <Meta-Key-w> <Control-Key-o>}] {
+				       <Meta-Key-w> <Control-Key-o> \
+				       <<Cut>> <<Copy>> <<Paste>>}] {
     bind Console $ev [bind Text $ev]
   }
 
@@ -2991,17 +3007,17 @@ proc tkConExpandVariable str {
 # ARGS:	l	- list to find best unique match in
 # Returns:	longest unique match in the list
 ## 
-proc tkConExpandBestMatch2 {l {e {}}} {
-  set ec [lindex $l 0]
+proc tkConExpandBestMatch2 l {
+  set s [lindex $l 0]
   if {[llength $l]>1} {
-    set ei [string length $ec]; incr ei -1
+    set i [expr [string length $s]-1]
     foreach l $l {
-      while {$ei>0 && [string first $ec $l]} {
-	set ec [string range $ec 0 [incr ei -1]]
+      while {$i>=0 && [string first $s $l]} {
+	set s [string range $s 0 [incr i -1]]
       }
     }
   }
-  return $ec
+  return $s
 }
 
 ## tkConExpandBestMatch - finds the best unique match in a list of names
@@ -3038,6 +3054,7 @@ while {[string match link [file type $tkCon(SCRIPT)]]} {
     set tkCon(SCRIPT) $link
   }
 }
+catch {unset link}
 if [string match relative [file pathtype $tkCon(SCRIPT)]] {
   set tkCon(SCRIPT) [file join [pwd] $tkCon(SCRIPT)]
 }
