@@ -5,7 +5,7 @@ WHERE:  http://www.purl.org/net/hobbs/tcl/script/tkcon/
 	http://www.neosoft.com/tcl/ (somewhere in the devel area)
 
 REQUIREMENTS: Tcl 7.6 / Tk 4.2 (as least the stable versions)
-	Tested through Tcl/Tk8.1b1.
+	Tested through Tcl/Tk8.4.
         TkCon is all Tcl/Tk code, no compiling required
 
 TkCon is a replacement for the standard console that comes with Tk (on

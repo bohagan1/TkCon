@@ -22,6 +22,29 @@
 <H3>Future Ideas</H3>
 
 <UL>
+<LI> Add encoding auto-conversion to exec commands
+<LI> keep history file, also keep history of sourced files
+<LI> <PRE>set mimetype(extension,au) "audio/u-law"
+set mimetype(extension,wav) "audio/wave"
+set mimetype(extension,mid) "audio/midi"
+/etc/magic
+proc run {file} {
+    global mimetype
+
+    if {[file executable $file]} {
+        exec $file
+        return
+    }
+
+    catch {set mimetype $mimetype(extension,[file extension $file])}
+
+    if {![info exists mimetype]} {
+        set mimetype $mimetype(magic,[exec /bin/file $file])
+    }
+
+    exec $mimetype(application,$mimetype) $file
+}</PRE>
+
 <LI> Add socket level communication model
 <LI> Enhance the true debugging capabilities - I'm looking at
 tcl-debug and into what I can adopt from the tkInspect philosophy.
