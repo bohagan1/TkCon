@@ -59,6 +59,18 @@ foreach pkg [info loaded {}] {
 }
 catch {unset pkg file name version}
 
+# Tk 8.4 makes previously exposed stuff private.
+# FIX: Update tkcon to not rely on tje private Tk code.
+#
+if {![llength [info globals tkPriv]]} {
+    ::tk::unsupported::ExposePrivateVariable tkPriv
+}
+foreach cmd {SetCursor UpDownLine Transpose ScrollPages} {
+    if {![llength [info commands tkText$cmd]]} {
+        ::tk::unsupported::ExposePrivateCommand tkText$cmd
+    }
+}
+
 # Initialize the ::tkcon namespace
 #
 namespace eval ::tkcon {
@@ -184,7 +196,7 @@ proc ::tkcon::Init {} {
 	    tkcon_puts tkcon_gets observe observe_var unalias which what
 	}
 	version		2.2
-	RCS		{RCS: @(#) $Id: tkcon.tcl,v 1.38 2001/07/05 00:31:53 uid38172 Exp $}
+	RCS		{RCS: @(#) $Id: tkcon.tcl,v 1.39 2001/07/05 17:52:45 hobbs Exp $}
 	HEADURL		{http://cvs.sourceforge.net/cgi-bin/viewcvs.cgi/tkcon/tkcon/tkcon.tcl?rev=HEAD}
 	release		{June 2001}
 	docs		"http://tkcon.sourceforge.net/"
@@ -717,7 +729,7 @@ proc ::tkcon::EvalCmd {w cmd} {
 		    $w tag bind $tag <Leave> \
 			    [list $w tag configure $tag -under 0]
 		    $w tag bind $tag <ButtonRelease-1> \
-			    "if {!\$tkPriv(mouseMoved)} \
+			    "if {!\[info exists tkPriv(mouseMoved)\] || !\$tkPriv(mouseMoved)} \
 			    {[list edit -attach [Attach] -type error -- $PRIV(errorInfo)]}"
 		} else {
 		    $w insert output $res\n stderr
@@ -882,7 +894,8 @@ proc ::tkcon::EvalSocketClosed {} {
 ##
 proc ::tkcon::EvalNamespace { attached namespace args } {
     if {[llength $args]} {
-	uplevel \#0 $attached namespace eval [list $namespace $args]
+	uplevel \#0 $attached \
+		[list [concat [list namespace eval $namespace] $args]]
     }
 }
 
