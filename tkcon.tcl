@@ -188,7 +188,7 @@ proc ::tkcon::Init {args} {
 	    alias clear dir dump echo idebug lremove
 	    tkcon_puts tkcon_gets observe observe_var unalias which what
 	}
-	RCS		{RCS: @(#) $Id: tkcon.tcl,v 1.83 2004/11/12 18:06:54 hobbs Exp $}
+	RCS		{RCS: @(#) $Id: tkcon.tcl,v 1.84 2004/11/18 19:18:06 hobbs Exp $}
 	HEADURL		{http://cvs.sourceforge.net/viewcvs.py/*checkout*/tkcon/tkcon/tkcon.tcl?rev=HEAD}
 
 	docs		"http://tkcon.sourceforge.net/"
@@ -900,6 +900,7 @@ proc ::tkcon::EvalCmd {w cmd} {
 	if {$OPT(subhistory)} {
 	    set ev [EvalSlave history nextid]
 	    incr ev -1
+	    ## FIX: calcmode doesn't work with requesting history events
 	    if {[string match !! $cmd]} {
 		set code [catch {EvalSlave history event $ev} cmd]
 		if {!$code} {$w insert output $cmd\n stdin}
@@ -6033,16 +6034,20 @@ proc ::tkcon::Retrieve {} {
     }
 }
 
-## 'send' pacakge that handles multiple communication variants
+## 'send' package that handles multiple communication variants
 ##
 # Try using Tk send first, then look for a winsend interp,
 # then try dde and finally have a go at comm
 namespace eval ::send {}
 proc ::send::send {args} {
+    set winfoInterpCmd [list ::winfo interps]
     array set opts [list displayof {} async 0]
     while {[string match -* [lindex $args 0]]} {
 	switch -exact -- [lindex $args 0] {
-	    -displayof { set opts(displayof) [Pop args 1] }
+	    -displayof {
+		set opts(displayof) [Pop args 1]
+		lappend winfoInterpCmd -displayof $opts(displayof)
+	    }
 	    -async     { set opts(async) 1 }
 	    -- { Pop args ; break }
 	    default {
@@ -6055,7 +6060,7 @@ proc ::send::send {args} {
     set app [Pop args]
 
     if {[llength [info commands ::winfo]]
-	&& [lsearch -exact [::winfo interps] $app] > -1} {
+	&& [lsearch -exact [eval $winfoInterpCmd] $app] > -1} {
 	set cmd [list ::send]
 	if {$opts(async) == 1} {lappend cmd -async}
 	if {$opts(displayof) != {}} {lappend cmd -displayof $opts(displayof)}
@@ -6080,10 +6085,14 @@ proc ::send::send {args} {
 }
 
 proc ::send::interps {args} {
+    set winfoInterpCmd [list ::winfo interps]
     array set opts [list displayof {}]
     while {[string match -* [lindex $args 0]]} {
 	switch -exact -- [lindex $args 0] {
-	    -displayof { set opts(displayof) [Pop args 1] }
+	    -displayof {
+		set opts(displayof) [Pop args 1]
+		lappend winfoInterpCmd -displayof $opts(displayof)
+	    }
 	    --	       { Pop args ; break }
 	    default {
 		return -code error "bad option \"[lindex $args 0]\":\
@@ -6095,11 +6104,7 @@ proc ::send::interps {args} {
 
     set interps {}
     if {[llength [info commands ::winfo]]} {
-	set cmd [list ::winfo interps]
-	if {$opts(displayof) != {}} {
-	    lappend cmd -displayof $opts(displayof)
-	}
-	set interps [concat $interps [eval $cmd]]
+	set interps [concat $interps [eval $winfoInterpCmd]]
     }
     if {[llength [info commands ::winsend]]} {
 	set interps [concat $interps [::winsend interps]]

@@ -1,3 +1,8 @@
+2005-02-21  Jeff Hobbs  <jeffh@ActiveState.com>
+
+	* tkcon.tcl (::send::send): propagate -displayof to winfo interps
+	call. [Bug 1124369] (mbec)
+
 2004-11-17  Jeff Hobbs  <jeffh@ActiveState.com>
 
 	* tkcon.tcl (::tkcon::ExpandVariable): correct array keyname
