@@ -1,0 +1,54 @@
+<HTML>
+<HEAD>
+<TITLE>TkCon for Non-Tcl Users</TITLE>
+</HEAD>
+
+<BODY BGCOLOR=#FFFFFF>
+<H1>TkCon for Non-Tcl Users</H1>
+
+<TABLE COLS=4 BORDER=0 CELLPADDING=1 CELLSPACING=3 BGCOLOR=#CCCCCC>
+<TR>
+<TD><B><A HREF="index.html">TkCon Docs</A></B></TD>
+<TD><B><A HREF="purpose.html">Purpose &amp; Features</A></B></TD>
+<TD><B><A HREF="limits.html">Limitations</A></B></TD>
+<TD><B><A HREF="todo.html">To&nbsp;Do</A></B></TD>
+</TR>
+<TD><B><A HREF="changes.txt">Changes</A></B></TD>
+<TD><B><A HREF="license.terms">License Terms</A></B></TD>
+<TD COLSPAN=2 BGCOLOR=#FFFF33><B><A HREF="nontcl.html">Using TkCon with other Tk Languages</A></B></TD>
+</TR>
+</TABLE>
+
+<I>This document is for those users who are trying to use TkCon with a
+non-Tcl based Tk language (ie - SchemeTk, PerlTk, PythonTk...).</I>
+ <P>
+
+TkCon requires <A HREF="http://www.scriptics.com/">Tcl 7.6 / Tk 4.2</A> to
+run (better with 8.0+).  However, it can attach to any language with Tk4+
+embedded into it with the use of the Tk 'send' command.  I have been able
+to succesfully talk to SchemeTk-3.0 and Perl/Tk.  When using TkCon attached
+to these interpreters, you must remember to talk to the connected
+interpreter in its language.
+ <P>
+I welcome further comments from users of Tk-embedded languages on their
+experiences or ideas.  Of course, you can always try to port TkCon in full
+to your language.  I'd like to see the results from any such efforts.
+ <P>
+
+<H3>Special Language Notes:</H3>
+
+<H4>Perl Tk</H4>
+
+Read the man page on Perl/Tk's send command.  You have to define Tk::Receive
+before it will work.
+<A HREF="mailto:lusol@turkey.cc.lehigh.edu">Stephen Lidie
+(lusol@Turkey.CC.Lehigh.EDU)</A> contributed
+a <A HREF="perl.txt">companion Perl/Tk program</A> that does the trick with
+some extras.
+
+<HR NOSHADE SIZE=1>
+<ADDRESS><FONT SIZE=2>&copy;
+<A HREF="mailto:jeff.hobbs@acm.org">Jeffrey Hobbs</A></FONT></ADDRESS>
+
+</BODY>
+</HTML>

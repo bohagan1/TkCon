@@ -1,0 +1,66 @@
+<HTML>
+<HEAD>
+<TITLE>Tcl Plugin Stripped TkCon Demo</TITLE>
+</HEAD>
+
+<BODY>
+<H1>Tcl Plugin Stripped TkCon Demo</H1>
+<HR>
+
+<A HREF="/tcl/script/tkcon/">Full TkCon Distribution</A>
+ <P>
+
+This is the full TkCon script when run inside the plugin.  It feels like a
+stripped down version of TkCon, but the only limitations are those
+established by the plugin.  You can test the basic console features and get
+a feel for the mutli-color output.  Below the demo are some ideas to try
+out.  v2 of the plugin is distributed with a megawidget version of TkCon for
+debugging tclets.
+
+<P>
+<embed src="/tcl/script/tkcon/tkcon.tcl" width=600 height=350>
+</P>
+
+Have a look at some of the features: (culled from the
+<A HREF="/tcl/script/tkcon/docs/">full TkCon documentation</A>)
+<UL>
+<LI> <B>Variable / Path / Procedure Name Expansion.</B>  Type in
+<CODE>set tc</CODE> at the prompt.  Hit <I>&lt;Control-Shift-V&gt;</I>.
+<CODE>set tcl_</CODE> should now be visible.
+Hit <I>&lt;Control-Shift-V&gt;</I> again.  You should see the rest of
+the completions printed out for you.  Works the same for procedures
+and files paths (file access restricted from plugin).  Works properly
+when spaces or other funny characters are including in the name.
+
+<LI> <B>Command Highlighting.</B> Note that <CODE>set</CODE> should be in
+green, denoting it is a recognized command in that interpreter.
+
+<LI> <B>Electric Character Matching.</B>  Watch while you type the
+following: <CODE>proc foo { a b } { puts [list $a $b] }</CODE>.  Did you
+notice the blink matching of the braces?  Yes, it's smart.
+
+<LI> <B>Command History.</B>  Use the Up/Down arrows or
+<I>&lt;Control-p&gt;</I>/<I>&lt;Control-n&gt;</I> to peruse the command
+history.  <I>&lt;Control-r&gt;</I>/<I>&lt;Control-s&gt;</I> Actually
+does command history matching (like tcsh or other advanced Unix shells).
+
+<LI> <B>Useful Colorization.</B> Having defined <CODE>foo</CODE> above, type
+in <CODE>foo hey</CODE>.  Note that the error comes back in red.  Go up one
+in the command history and add <CODE> you</CODE> and see that regular
+stdout output comes through in blue (the colors are configurable).
+
+<LI> <B>Cut/Copy/Paste.</B>  You should be able to do that between outside
+windows and TkCon.  The default keys are
+<I>&lt;Control-x&gt;</I>/<I>&lt;Control-c&gt;</I>/<I>&lt;Control-v&gt;</I>.
+
+</UL>
+
+<HR>
+
+<ADDRESS>
+Contact <A HREF="mailto:jeff.hobbs@acm.org">jeff.hobbs@acm.org</A>
+with questions or updated info.
+</ADDRESS>
+
+</BODY>
+</HTML>

@@ -1,0 +1,53 @@
+<HTML>
+<HEAD>
+<TITLE>TkCon: To Do Ideas</TITLE>
+</HEAD>
+
+<BODY BGCOLOR=#FFFFFF>
+<H1>TkCon: To Do Ideas</H1>
+
+<TABLE COLS=4 BORDER=0 CELLPADDING=1 CELLSPACING=3 BGCOLOR=#CCCCCC>
+<TR>
+<TD><B><A HREF="index.html">TkCon Docs</A></B></TD>
+<TD><B><A HREF="purpose.html">Purpose &amp; Features</A></B></TD>
+<TD><B><A HREF="limits.html">Limitations</A></B></TD>
+<TD BGCOLOR=#FFFF33><B><A HREF="todo.html">To&nbsp;Do</A></B></TD>
+</TR>
+<TD><B><A HREF="changes.txt">Changes</A></B></TD>
+<TD><B><A HREF="license.terms">License Terms</A></B></TD>
+<TD COLSPAN=2><B><A HREF="nontcl.html">Using TkCon with other Tk Languages</A></B></TD>
+</TR>
+</TABLE>
+
+<H3>Future Ideas</H3>
+
+<UL>
+<LI> Add socket level communication model
+<LI> Enhance the true debugging capabilities - I'm looking at
+tcl-debug and into what I can adopt from the tkInspect philosophy.
+<LI> I'm taking ideas...
+</UL>
+
+<H3>Known Bugs/Quirks</H3>
+
+<UL>
+<LI> Command highlighting isn't perfect because I try to make it too
+efficient.
+<LI> All interpreters have the same current working directory.  This is
+a limitation of tcl.
+<LI> You can't 'attach' on machines where <CODE>send</CODE> does not exist.
+<A HREF="http://www.osf.org/~loverso/">John Loverso</A> has a comm.tcl
+replacement.
+In any case, you can still attach to internal interpreters and namespaces.
+<LI> Need to clean up checkpointed states when the associated interp dies.
+Works with slaves, but not foreign interps.
+<LI> Can't identify non-Tcl or pre-Tk4 interpreters automagically...
+<LI> You tell me...
+</UL>
+
+<HR NOSHADE SIZE=1>
+<ADDRESS><FONT SIZE=2>&copy;
+<A HREF="mailto:jeff.hobbs@acm.org">Jeffrey Hobbs</A></FONT></ADDRESS>
+
+</BODY>
+</HTML>

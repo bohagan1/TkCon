@@ -1,0 +1,80 @@
+<HTML>
+<HEAD>
+<TITLE>TkCon: observe procedure</TITLE>
+</HEAD>
+
+<BODY BGCOLOR=#FFFFFF>
+<H1>TkCon: <CODE>observe</CODE> procedure</H1>
+
+<TABLE COLS=4 BORDER=0 CELLPADDING=1 CELLSPACING=3 BGCOLOR=#CCCCCC>
+<TR>
+<TD BGCOLOR=#FFFF33><B><A HREF="index.html">TkCon Docs</A></B></TD>
+<TD><B><A HREF="purpose.html">Purpose &amp; Features</A></B></TD>
+<TD><B><A HREF="limits.html">Limitations</A></B></TD>
+<TD><B><A HREF="todo.html">To&nbsp;Do</A></B></TD>
+</TR>
+<TD><B><A HREF="changes.txt">Changes</A></B></TD>
+<TD><B><A HREF="license.terms">License Terms</A></B></TD>
+<TD COLSPAN=2><B><A HREF="nontcl.html">Using TkCon with other Tk Languages</A></B></TD>
+</TR>
+</TABLE>
+
+<TABLE COLS=4 BORDER=0 CELLPADDING=1 CELLSPACING=3 BGCOLOR=#CCCCCC>
+<TR>
+<TD><B><A HREF="start.html">Getting Started</A></B></TD>
+<TD><B><A HREF="bindings.html">Special Bindings</A></B></TD>
+<TD><B><A HREF="procs.html">Procedures</A></B></TD>
+</TR>
+<TR>
+<TD><B><A HREF="dump.html"><CODE>dump</CODE></A></B></TD>
+<TD><B><A HREF="tkcon.html"><CODE>tkcon</CODE></A></B></TD>
+<TD><B><A HREF="idebug.html"><CODE>idebug</CODE></A></B></TD>
+<TD BGCOLOR=#CCFF99><B><A HREF="observe.html"><CODE>observe</CODE></A></B></TD>
+</TR>
+</TABLE>
+
+ <P>
+This command provides runtime debugging output for variables and commands
+without the need to edit your code.  For variables, the underlying mechanism
+uses <code>trace</code> and <code>dump var</code>.  For commands, it renames
+the observed procedure and uses a special wrapper procedure.  <b><font
+color="#FF0000">WARNING:</font></b> using this procedure after checkpointing
+state will result in major problems if you clean state because the renamed
+(true) commands will be lost.
+ <P>
+
+This procedure is experimental.  Comments are encouraged.
+
+<DL>
+
+<DT> <CODE>observe command</CODE> <I>cmdname ?maxlevel?</I>
+<DD> This will create a wrapper command which prints out (using
+<code>dump</code>) the call stack to the console.  <i>maxlevel</i>
+represents the maximum number of levels of the call stack which will be
+printed (defaults to 4).
+
+<DT> <CODE>observe cdelete</CODE> <I>cmdname</I>
+<DD> Removes the wrapper around an observed command.
+
+<DT> <CODE>observe cinfo</CODE> <I>cmdname</I>
+<DD> Prints out useless info.
+
+<DT> <CODE>observe variable</CODE> <I>varname operation ?args?</I>
+<DD> Currently a wrapper around trace that uses <code>dump</code> to
+print out the value of the named variable whenever the specified operation
+on that variable occurs (must be read, write or unset).
+
+<DT> <CODE>observe vdelete</CODE> <I>varname operation</I>
+<DD> Deletes the trace wrapper around the named variable.
+
+<DT> <CODE>observe vinfo</CODE> <I>varname</I>
+<DD> Prints out trace info about the named variable.
+
+</DL>
+
+<HR NOSHADE SIZE=1>
+<ADDRESS><FONT SIZE=2>&copy;
+<A HREF="mailto:jeff.hobbs@acm.org">Jeffrey Hobbs</A></FONT></ADDRESS>
+
+</BODY>
+</HTML>

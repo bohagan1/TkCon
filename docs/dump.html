@@ -1,0 +1,77 @@
+<HTML>
+<HEAD>
+<TITLE>TkCon: dump procedure</TITLE>
+</HEAD>
+
+<BODY BGCOLOR=#FFFFFF>
+<H1>TkCon: <CODE>dump</CODE> procedure</H1>
+
+<TABLE COLS=4 BORDER=0 CELLPADDING=1 CELLSPACING=3 BGCOLOR=#CCCCCC>
+<TR>
+<TD BGCOLOR=#FFFF33><B><A HREF="index.html">TkCon Docs</A></B></TD>
+<TD><B><A HREF="purpose.html">Purpose &amp; Features</A></B></TD>
+<TD><B><A HREF="limits.html">Limitations</A></B></TD>
+<TD><B><A HREF="todo.html">To&nbsp;Do</A></B></TD>
+</TR>
+<TD><B><A HREF="changes.txt">Changes</A></B></TD>
+<TD><B><A HREF="license.terms">License Terms</A></B></TD>
+<TD COLSPAN=2><B><A HREF="nontcl.html">Using TkCon with other Tk Languages</A></B></TD>
+</TR>
+</TABLE>
+
+<TABLE COLS=4 BORDER=0 CELLPADDING=1 CELLSPACING=3 BGCOLOR=#CCCCCC>
+<TR>
+<TD><B><A HREF="start.html">Getting Started</A></B></TD>
+<TD><B><A HREF="bindings.html">Special Bindings</A></B></TD>
+<TD><B><A HREF="procs.html">Procedures</A></B></TD>
+</TR>
+<TR>
+<TD BGCOLOR=#CCFF99><B><A HREF="dump.html"><CODE>dump</CODE></A></B></TD>
+<TD><B><A HREF="tkcon.html"><CODE>tkcon</CODE></A></B></TD>
+<TD><B><A HREF="idebug.html"><CODE>idebug</CODE></A></B></TD>
+<TD><B><A HREF="observe.html"><CODE>observe</CODE></A></B></TD>
+</TR>
+</TABLE>
+
+ <P>
+The <CODE>dump</CODE> command provides a way for the user to spit out
+state information about the interpreter in a Tcl readable (and human
+readable) form.  It takes the general form:
+
+<BLOCKQUOTE>
+<code>dump</code> <b>method</b> <i>?-nocomplain? ?-filter pattern? ?--?
+pattern ?pattern ...?</i>
+</BLOCKQUOTE>
+
+The patterns represent glob-style patterns (as in <code>string match pattern
+$str</code>).  <i>-nocomplain</i> will prevent <code>dump</code> from
+throwing an error if no items matched the pattern.  <i>-filter</i> is
+interpreted as appropriate for the method.  The various methods are:
+
+<DL>
+
+<DT> dump <b>command</b> <i>args</i>
+<DD> Outputs one or more commands.
+
+<DT> dump <b>procedure</b> <i>args</i>
+<DD> Outputs one or more procs in sourceable form.
+
+<DT> dump <b>variable</b> <i>args</i>
+<DD> Outputs the values of variables in sourceable form.  Recognizes nested
+arrays.  The <i>-filter</i> pattern is used as to filter array element
+names and is interepreted as a glob pattern (defaults to {*}).
+It is passed down for nested arrays.
+
+<DT> dump <b>widget</b> <i>args</i>
+<DD> Outputs one or more widgets by giving their configuration options.
+The <i>-filter</i> pattern is used as to filter the config options and
+is interpreted as a case insensitive regexp pattern (defaults to {.*})
+
+</DL>
+
+<HR NOSHADE SIZE=1>
+<ADDRESS><FONT SIZE=2>&copy;
+<A HREF="mailto:jeff.hobbs@acm.org">Jeffrey Hobbs</A></FONT></ADDRESS>
+
+</BODY>
+</HTML>

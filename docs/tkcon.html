@@ -1,0 +1,131 @@
+<HTML>
+<HEAD>
+<TITLE>TkCon: tkcon procedure</TITLE>
+</HEAD>
+
+<BODY BGCOLOR=#FFFFFF>
+<H1>TkCon: <CODE>tkcon</CODE> procedure</H1>
+
+<TABLE COLS=4 BORDER=0 CELLPADDING=1 CELLSPACING=3 BGCOLOR=#CCCCCC>
+<TR>
+<TD BGCOLOR=#FFFF33><B><A HREF="index.html">TkCon Docs</A></B></TD>
+<TD><B><A HREF="purpose.html">Purpose &amp; Features</A></B></TD>
+<TD><B><A HREF="limits.html">Limitations</A></B></TD>
+<TD><B><A HREF="todo.html">To&nbsp;Do</A></B></TD>
+</TR>
+<TD><B><A HREF="changes.txt">Changes</A></B></TD>
+<TD><B><A HREF="license.terms">License Terms</A></B></TD>
+<TD COLSPAN=2><B><A HREF="nontcl.html">Using TkCon with other Tk Languages</A></B></TD>
+</TR>
+</TABLE>
+
+<TABLE COLS=4 BORDER=0 CELLPADDING=1 CELLSPACING=3 BGCOLOR=#CCCCCC>
+<TR>
+<TD><B><A HREF="start.html">Getting Started</A></B></TD>
+<TD><B><A HREF="bindings.html">Special Bindings</A></B></TD>
+<TD><B><A HREF="procs.html">Procedures</A></B></TD>
+</TR>
+<TR>
+<TD><B><A HREF="dump.html"><CODE>dump</CODE></A></B></TD>
+<TD BGCOLOR=#CCFF99><B><A HREF="tkcon.html"><CODE>tkcon</CODE></A></B></TD>
+<TD><B><A HREF="idebug.html"><CODE>idebug</CODE></A></B></TD>
+<TD><B><A HREF="observe.html"><CODE>observe</CODE></A></B></TD>
+</TR>
+</TABLE>
+
+ <P>
+This provides lots of useful control over a console:
+
+<DL>
+
+<DT> <CODE>tkcon attach</CODE> <I>interpreter</I>
+<DD> Attaches TkCon to the named interpreter.  The name must be that
+returned by <CODE>[tk appname]</CODE> or a valid path to a slave
+interpreter.  It's best to use this via the <CODE>Console->Attach
+Console</CODE> menu.
+
+<DT> <CODE>tkcon bgerror</CODE> ?<I>msg errorInfo</I>?
+<DD> Does bgerror stuff in the TkCon master interpreter.
+
+<DT> <CODE>tkcon close</CODE> or <CODE>tkcon destroy</CODE>
+<DD> Destroys this TkCon widget.
+
+<DT> <CODE>tkcon console</CODE> <I>args</I>
+<DD> Passes the args to the TkCon text widget (the console).
+
+<DT> <CODE>tkcon error</CODE>
+<DD> Pops up a dialog that gives the user a full trace of the last error
+received in the TkCon console.
+
+<DT> <CODE>tkcon find</CODE> <I>string ?-case TCL_BOOLEAN
+-regexp TCL_BOOLEAN?</I>
+<DD> Highlights all instances of <I>string</I> in the console.  If the string
+is empty, it clears any previous highlighting.
+
+<DT> <CODE>tkcon font</CODE> ?<I>fontname</I>?
+<DD> Sets or returns the console font.
+
+<DT> <CODE>tkcon gets</CODE> ?<I>varname</I>?
+<DD> Behaves like the traditional Tcl <code>gets</code>, but uses the
+TkCon console instead of <code>stdin</code>.
+
+<DT> <CODE>tkcon hide</CODE>
+<DD> Withdraw the TkCon display from the screen (make sure you have
+a way to get it back).
+
+<DT> <CODE>tkcon history</CODE> ?<i>-newline</i>?
+<DD> Displays the TkCon history in sourceable form.  If <i>-newline</i> is
+specified, it separates each command by an extra newline.
+
+<DT> <CODE>tkcon iconify</CODE>
+<DD> Iconifies the TkCon display.
+
+<DT> <CODE>tkcon load</CODE> <I>filename</I>
+<DD> Sources named file into the slave interpreter.  If no filename is
+given, it will attempt to call <CODE>tk_getOpenFile</CODE> to pop up the
+file select box.
+
+<DT> <CODE>tkcon main</CODE> ?<I>arg arg ...</I>?
+<DD> Passes the args to the main TkCon interpreter to be evaluated and
+returns the result.
+
+<DT> <CODE>tkcon master</CODE> <I>args</I>
+<DD> Passes the args to the master interpreter to be evaluated and
+returns the result.
+
+<DT> <CODE>tkcon new</CODE>
+<DD> Creates a new TkCon widget.
+
+<DT> <CODE>tkcon save</CODE> ?<I>filename</I> ?<I>type</I>??
+<DD> Saves the console buffer to the given filename.  If no filename is
+given, it will attempt to call <CODE>tk_getSaveFile</CODE> to pop up the
+file select box.  If no type is given, a dialog will ask you to specify
+what portion of the text you want to save.
+
+<DT> <CODE>tkcon set</CODE> <I>var ?value?</I>
+<DD> Queries or sets a master interpreter variable.
+
+<DT> <CODE>tkcon show</CODE> or <CODE>tkcon deiconify</CODE>
+<DD> Redisplays TkCon on the screen.
+
+<DT> <CODE>tkcon slave</CODE> ?<I>slavename ?arg arg ...?</I>?
+<DD> If called with no args, it returns the name of all the TkCon
+interpreters.  Otherwise given an interp name it passes the args
+to the named interpreter to be evaluated and returns the result.
+If no args are passed, then it returns the <CODE>[tk appname]</CODE>
+of that interpreter.
+
+<DT> <CODE>tkcon title</CODE> ?<I>title</I>?
+<DD> Sets or returns the title for TkCon.
+
+<DT> <CODE>tkcon version</CODE>
+<DD> Returns of version of TkCon.
+
+</DL>
+
+<HR NOSHADE SIZE=1>
+<ADDRESS><FONT SIZE=2>&copy;
+<A HREF="mailto:jeff.hobbs@acm.org">Jeffrey Hobbs</A></FONT></ADDRESS>
+
+</BODY>
+</HTML>

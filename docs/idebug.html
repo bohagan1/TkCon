@@ -1,0 +1,99 @@
+<HTML>
+<HEAD>
+<TITLE>TkCon: idebug procedure</TITLE>
+</HEAD>
+
+<BODY BGCOLOR=#FFFFFF>
+<H1>TkCon: <CODE>idebug</CODE> procedure</H1>
+
+<TABLE COLS=4 BORDER=0 CELLPADDING=1 CELLSPACING=3 BGCOLOR=#CCCCCC>
+<TR>
+<TD BGCOLOR=#FFFF33><B><A HREF="index.html">TkCon Docs</A></B></TD>
+<TD><B><A HREF="purpose.html">Purpose &amp; Features</A></B></TD>
+<TD><B><A HREF="limits.html">Limitations</A></B></TD>
+<TD><B><A HREF="todo.html">To&nbsp;Do</A></B></TD>
+</TR>
+<TD><B><A HREF="changes.txt">Changes</A></B></TD>
+<TD><B><A HREF="license.terms">License Terms</A></B></TD>
+<TD COLSPAN=2><B><A HREF="nontcl.html">Using TkCon with other Tk Languages</A></B></TD>
+</TR>
+</TABLE>
+
+<TABLE COLS=4 BORDER=0 CELLPADDING=1 CELLSPACING=3 BGCOLOR=#CCCCCC>
+<TR>
+<TD><B><A HREF="start.html">Getting Started</A></B></TD>
+<TD><B><A HREF="bindings.html">Special Bindings</A></B></TD>
+<TD><B><A HREF="procs.html">Procedures</A></B></TD>
+</TR>
+<TR>
+<TD><B><A HREF="dump.html"><CODE>dump</CODE></A></B></TD>
+<TD><B><A HREF="tkcon.html"><CODE>tkcon</CODE></A></B></TD>
+<TD BGCOLOR=#CCFF99><B><A HREF="idebug.html"><CODE>idebug</CODE></A></B></TD>
+<TD><B><A HREF="observe.html"><CODE>observe</CODE></A></B></TD>
+</TR>
+</TABLE>
+
+ <P>
+The <B>idebug</B> command provides an interactive debugging environment for
+procedures via TkCon.  You can place <code>idebug break</code> commands
+into your procedure to create breakpoints.  It will pop up the TkCon
+console and put you into a "debugging" mode.  The <code>body, show &amp;
+trace</code> methods are intended for internal use only.
+ <P>
+
+This procedure is experimental (to say the least).  Comments are encouraged.
+
+<DL>
+
+<DT> <CODE>idebug body</CODE> <I>?level?</I>
+<DD> Prints out the body of the command (if it is a procedure) at the
+specified level.  <i>level</i> defaults to the current level.
+
+<DT> <CODE>idebug break</CODE> <I>?id?</I>
+<DD> Creates a breakpoint within a procedure.  This will only trigger if
+idebug is on and the id matches the pattern.  If so, TkCon will pop to the
+front with the prompt changed to an idebug prompt.  You are given the basic
+ability to observe the call stack an query/set variables or execute Tcl
+commands at any level.  A separate history is maintained in debugging mode.
+
+<DT> <CODE>idebug {echo ?id?}</CODE> <I>?args?</I>
+<DD> Behaves just like <code>echo</code>, but only triggers when idebug is
+on.  You can specify an optional id to further restrict triggering.  If no
+id is specified, it defaults to the name of the command in which the call
+was made.
+
+<DT> <CODE>idebug id</CODE> <I>?id?</I>
+<DD> Query or set the idebug id.  This id is used by other idebug methods
+to determine if they should trigger or not.  The idebug id can be a glob
+pattern and defaults to *.
+
+<DT> <CODE>idebug off</CODE>
+<DD> Turns idebug off.
+
+<DT> <CODE>idebug on</CODE> <I>?id?</I>
+<DD> Turns idebug on.  If <i>id</i> is specified, it sets the id to it.
+
+<DT> <CODE>idebug {puts ?id?}</CODE> <I>args</I>
+<DD> Behaves just like <code>puts</code>, but only triggers when idebug is
+on.  You can specify an optional id to further restrict triggering.  If no
+id is specified, it defaults to the name of the command in which the call
+was made.
+
+<DT> <CODE>idebug show</CODE> <I>type ?level? ?VERBOSE?</I>
+<DD> <i>type</i> must be one of vars, locals or globals.  This method
+will output the variables/locals/globals present in a particular level.
+If VERBOSE is added, then it actually 'dump's out the values as well.
+<i>level</i> defaults to the level in which this method was called.
+
+<DT> <CODE>idebug trace</CODE> <I>?level?</I>
+<DD> Prints out the stack trace from the specified level up to the top
+level.  <i>level</i> defaults to the current level.
+
+</DL>
+
+<HR NOSHADE SIZE=1>
+<ADDRESS><FONT SIZE=2>&copy;
+<A HREF="mailto:jeff.hobbs@acm.org">Jeffrey Hobbs</A></FONT></ADDRESS>
+
+</BODY>
+</HTML>

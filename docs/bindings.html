@@ -1,0 +1,130 @@
+<HTML>
+<HEAD>
+<TITLE>TkCon: Special Bindings</TITLE>
+</HEAD>
+
+<BODY BGCOLOR=#FFFFFF>
+<H1>TkCon: Special Bindings</H1>
+
+<TABLE COLS=4 BORDER=0 CELLPADDING=1 CELLSPACING=3 BGCOLOR=#CCCCCC>
+<TR>
+<TD BGCOLOR=#FFFF33><B><A HREF="index.html">TkCon Docs</A></B></TD>
+<TD><B><A HREF="purpose.html">Purpose &amp; Features</A></B></TD>
+<TD><B><A HREF="limits.html">Limitations</A></B></TD>
+<TD><B><A HREF="todo.html">To&nbsp;Do</A></B></TD>
+</TR>
+<TD><B><A HREF="changes.txt">Changes</A></B></TD>
+<TD><B><A HREF="license.terms">License Terms</A></B></TD>
+<TD COLSPAN=2><B><A HREF="nontcl.html">Using TkCon with other Tk Languages</A></B></TD>
+</TR>
+</TABLE>
+
+<TABLE COLS=4 BORDER=0 CELLPADDING=1 CELLSPACING=3 BGCOLOR=#CCCCCC>
+<TR>
+<TD><B><A HREF="start.html">Getting Started</A></B></TD>
+<TD BGCOLOR=#CCFF99><B><A HREF="bindings.html">Special Bindings</A></B></TD>
+<TD><B><A HREF="procs.html">Procedures</A></B></TD>
+</TR>
+<TR>
+<TD><B><A HREF="dump.html"><CODE>dump</CODE></A></B></TD>
+<TD><B><A HREF="tkcon.html"><CODE>tkcon</CODE></A></B></TD>
+<TD><B><A HREF="idebug.html"><CODE>idebug</CODE></A></B></TD>
+<TD><B><A HREF="observe.html"><CODE>observe</CODE></A></B></TD>
+</TR>
+</TABLE>
+
+ <P>
+Most of the bindings are the same as for the Text widget.  Some have been
+modified to make sure that the integrity of the console is maintained.
+Others have been added to enhance the usefulness of the console.  Only
+the modified or new bindings are listed here.
+ <P>
+
+<DL compact>
+<DT> <B>Control-x</B> or <B>Cut</B> (on Sparc5 keyboards)
+<DD> Cut
+<DT> <B>Control-c</B> or <B>Copy</B> (on Sparc5 keyboards)
+<DD> Copy
+<DT> <B>Control-v</B> or <B>Paste</B> (on Sparc5 keyboards)
+<DD> Paste
+<DT> <B>Insert</B>
+<DD> Insert (duh).
+ <P>
+<DT> <B>Up</B>
+<DD> Goes up one level in the commands line history when cursor is on the
+prompt line, otherwise it moves through the buffer
+<DT> <B>Down</B>
+<DD> Goes down one level in the commands line history when cursor is on the
+last line of the buffer, otherwise it moves through the buffer
+<DT> <B>Control-p</B>
+<DD> Goes up one level in the commands line history
+<DT> <B>Control-n</B>
+<DD> Goes down one level in the commands line history
+ <P>
+<DT> <B>Tab</B>
+<DD> Tries to expand file path names, then variable names, then proc names.
+<DT> <B>Escape</B>
+<DD> Tries to expand file path names.
+<DT> <B>Control-P</B>
+<DD> Tries to expand procedure names.  The procedure names will be those
+that are actually in the attached interpreter (unless nontcl is specified,
+in which case it always does the lookup in the default slave interpreter).
+<DT> <B>Control-V</B>
+<DD> Tries to expand variable names (those returned by [info vars]).
+It's search behavior is like that for procedure names.
+ <P>
+<DT> <B>Return</B> or <B>Enter</B>
+<DD> Evaluates the current command line if it is a complete command,
+otherwise it just goes to a new line
+<DT> <B>Control-a</B>
+<DD> Go to the beginning of the current command line
+<DT> <B>Control-l</B>
+<DD> Clear the entire console buffer
+<DT> <B>Control-r</B>
+<DD> Searches backwards in the history for a command starting with the
+current command line.  Repeatable to search farther back.
+<DT> <B>Control-s</B>
+<DD> As above, but searches forward (only useful if you searched too far back).
+<DT> <B>Control-t</B>
+<DD> Transposes characters
+<DT> <B>Control-u</B>
+<DD> Clear the current command line
+<DT> <B>Control-z</B>
+<DD> Saves current command line in a buffer that can be retrieved with 
+another <B>Control-z</B>.  If the current command line is empty, then any
+saved command is retrieved without being overwritten, otherwise the
+current contents get swapped with what's in the saved command buffer.
+ <P>
+<DT> <B>Control-Key-1</B>
+<DD> Attaches console to the console's slave interpreter
+<DT> <B>Control-Key-2</B>
+<DD> Attaches console to the console's master interpreter
+<DT> <B>Control-Key-3</B>
+<DD> Attaches console to main TkCon interpreter
+<DT> <B>Control-A</B>
+<DD> Pops up the "About" dialog
+<DT> <B>Control-N</B>
+<DD> Creates a new console.  Each console has separate state, including
+it's own widget hierarchy (it's a slave interpreter).
+<DT> <B>Control-q</B>
+<DD> Close the current console OR Quit the program (depends on the value
+of TKCON(slaveexit)).
+<DT> <B>Control-w</B>
+<DD> Closes the current console.  Closing the main console will exit the
+program (something has to control all the slaves...)
+</DL>
+
+TkCon also has <B>electric bracing</B> (similar to that in emacs).  It will
+highlight matching pairs of {}'s, []'s, ()'s and ""'s.  For the first three,
+if there is no matching left element for the right, then it blinks the
+entire current command line.  For the double quote, if there is no proper
+match then it just blinks the current double quote character.  It does
+properly recognize most escaping (except escaped escapes), but does not look
+for commenting (why would you interactively put comments in?).
+
+<HR NOSHADE SIZE=1>
+<ADDRESS><FONT SIZE=2>&copy;
+<A HREF="mailto:jeff.hobbs@acm.org">Jeffrey Hobbs</A></FONT></ADDRESS>
+
+</BODY>
+</HTML>
