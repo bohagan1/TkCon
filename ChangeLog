@@ -1,3 +1,10 @@
+2002-01-23  Jeff Hobbs  <jeffh@ActiveState.com>
+
+	* docs/procs.html:
+	* tkcon.tcl (what): changed to differentiate between 'array' and
+	'scalar' instead of just returning 'variable'.
+	(which): called what in uplevel to get scope right.
+
 2002-01-22  Jeff Hobbs  <jeffh@ActiveState.com>
 
 	* tkcon.tcl (ExpandPathname): use a safer regsub to first unescape

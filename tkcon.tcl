@@ -196,7 +196,7 @@ proc ::tkcon::Init {} {
 	    tkcon_puts tkcon_gets observe observe_var unalias which what
 	}
 	version		2.2
-	RCS		{RCS: @(#) $Id: tkcon.tcl,v 1.49 2002/01/23 02:54:48 hobbs Exp $}
+	RCS		{RCS: @(#) $Id: tkcon.tcl,v 1.50 2002/01/23 03:32:48 hobbs Exp $}
 	HEADURL		{http://cvs.sourceforge.net/cgi-bin/viewcvs.cgi/tkcon/tkcon/tkcon.tcl?rev=HEAD}
 	docs		"http://tkcon.sourceforge.net/"
 	email		{jeff@hobbs.org}
@@ -3640,7 +3640,7 @@ proc observe_var {name el op} {
 ## 
 proc which cmd {
     ## This tries to auto-load a command if not recognized
-    set types [what $cmd 1]
+    set types [uplevel 1 [list what $cmd 1]]
     if {[llength $types]} {
 	set out {}
 	
@@ -3650,7 +3650,7 @@ proc which cmd {
 		procedure	{ set res "$cmd: procedure" }
 		command		{ set res "$cmd: internal command" }
 		executable	{ lappend out [auto_execok $cmd] }
-		variable	{ lappend out "$cmd: variable" }
+		variable	{ lappend out "$cmd: $type" }
 	    }
 	    if {[info exists res]} {
 		global auto_index
@@ -3693,7 +3693,12 @@ proc what {str {autoload 0}} {
 	}
     }
     if {[llength [uplevel 1 info vars $str]]} {
-	lappend types "variable"
+	upvar 1 $str var
+	if {[array exists var]} {
+	    lappend types array variable
+	} else {
+	    lappend types scalar variable
+	}
     }
     if {[file isdirectory $str]} {
 	lappend types "directory"
