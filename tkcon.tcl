@@ -92,8 +92,8 @@ proc tkConInit {} {
     errorInfo	{}
     slavealias	{ tkcon }
     slaveprocs	{ alias clear dir dump lremove puts echo tclindex idebug \
-	unknown tcl_unknown unalias which observe observe_var }
-    version	0.68
+	unknown tcl_unknown unalias which observe observe_var auto_execok }
+    version	0.69
     release	{November 1996}
     root	.
   }
@@ -1603,19 +1603,30 @@ proc unalias {cmd} {
 ## dump - outputs variables/procedure/widget info in source'able form.
 ## Accepts glob style pattern matching for the names
 # ARGS:	type	- type of thing to dump: must be variable, procedure, widget
-# OPTS: -nocomplain	don't complain if no vars match something
-# Returns:	the values of the variables in a 'source'able form
+# OPTS: -nocomplain
+#		don't complain if no vars match something
+#	-filter pattern
+#		specifies a glob filter pattern to be used by the variable
+#		method as an array filter pattern (it filters down for
+#		nested elements) and in the widget method as a config
+#		option filter pattern
+#	--	forcibly ends options recognition
+# Returns:	the values of the requested items in a 'source'able form
 ## 
 proc dump {type args} {
   set whine 1
-  set code ok
-  if [string match \-n* [lindex $args 0]] {
-    set whine 0
-    set args [lreplace $args 0 0]
+  set code  ok
+  while {[string match -* $args]} {
+    switch -glob -- [lindex $args 0] {
+      -n* { set whine 0; set args [lreplace $args 0 0] }
+      -f* { set fltr [lindex $args 1]; set args [lreplace $args 0 1] }
+      --  { set args [lreplace $args 0 0]; break }
+      default { return -code error "unknown option \"[lindex $args 0]\"" }
+    }
   }
   if {$whine && [string match {} $args]} {
-    return -code error "wrong \# args:\
-	[lindex [info level 0] 0] ?-nocomplain? pattern ?pattern ...?"
+    return -code error "wrong \# args: [lindex [info level 0] 0]\
+	?-nocomplain? ?-filter pattern? ?--? pattern ?pattern ...?"
   }
   set res {}
   switch -glob -- $type {
@@ -1629,7 +1640,7 @@ proc dump {type args} {
 	    if {[lsearch -exact [interp aliases] $cmd] > -1} {
 	      append res "\#\# ALIAS:   $cmd => [interp alias {} $cmd]\n"
 	    } elseif {[string comp {} [info procs $cmd]]} {
-	      if {[catch {dump p $cmd} msg] && $whine} { set code error }
+	      if {[catch {dump p -- $cmd} msg] && $whine} { set code error }
 	      append res $msg\n
 	    } else {
 	      append res "\#\# COMMAND: $cmd\n"
@@ -1644,6 +1655,7 @@ proc dump {type args} {
     v* {
       # variable
       # outputs variables value(s), whether array or simple.
+      if ![info exists fltr] { set fltr * }
       foreach arg $args {
 	if {[string match {} [set vars [uplevel info vars [list $arg]]]]} {
 	  if {[uplevel info exists $arg]} {
@@ -1659,11 +1671,12 @@ proc dump {type args} {
 	  if {[array exists v]} {
 	    set nest {}
 	    append res "array set $var \{\n"
-	    foreach i [lsort [array names v]] {
+	    foreach i [lsort [array names v $fltr]] {
 	      upvar 0 v\($i\) __ary
 	      if {[array exists __ary]} {
 		append nest "\#\# NESTED ARRAY ELEMENT: $i\n"
-		append nest "upvar 0 [list $var\($i\)] __ary; [dump v __ary]\n"
+		append nest "upvar 0 [list $var\($i\)] __ary;\
+		    [dump v -filter $fltr __ary]\n"
 	      } else {
 		append res "    [list $i]\t[list $v($i)]\n"
 	      }
@@ -1704,6 +1717,7 @@ proc dump {type args} {
       if [string match {} [info command winfo]] {
 	return -code error "winfo not present, cannot dump widgets"
       }
+      if ![info exists fltr] { set fltr .* }
       foreach arg $args {
 	if [string comp {} [set ws [info command $arg]]] {
 	  foreach w [lsort $ws] {
@@ -1715,7 +1729,9 @@ proc dump {type args} {
 		append res "\#\# [winfo class $w] $w\n$w configure"
 		foreach c $cfg {
 		  if {[llength $c] != 5} continue
-		  append res " \\\n\t[list [lindex $c 0] [lindex $c 4]]"
+		  if {[regexp -nocase -- $fltr $c]} {
+		    append res " \\\n\t[list [lindex $c 0] [lindex $c 4]]"
+		  }
 		}
 		append res \n
 	      }
@@ -1930,7 +1946,7 @@ proc observe {opt name args} {
   global tcl_observe
   switch -glob -- $opt {
     co* {
-      if [regexp {^(set|puts|for|incr|info|uplevel)$} $name] {
+      if [regexp {^(catch|lreplace|set|puts|for|incr|info|uplevel)$} $name] {
 	return -code error \
 	    "cannot observe \"$name\": infinite eval loop will occur"
       }
@@ -3268,7 +3284,7 @@ proc tkConSafeLoad {i f p} {
       $i alias $command tkConSafeManage $i $command
     }
     if [string comp {} [info command event]] {
-      $i alias $command tkConSafeManage $i $command
+      $i alias event tkConSafeManage $i $command
     }
     frame .${i}_dot -width 300 -height 300 -relief raised
     pack .${i}_dot -side left
