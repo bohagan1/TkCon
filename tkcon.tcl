@@ -165,9 +165,10 @@ proc ::tkcon::Init {} {
 	    tkcon_puts tkcon_gets observe observe_var unalias which what
 	}
 	version		2.1+
-	RCS		{RCS: @(#) $Id: tkcon.tcl,v 1.34 2001/06/20 03:17:09 hobbs Exp $}
+	RCS		{RCS: @(#) $Id: tkcon.tcl,v 1.35 2001/06/20 22:34:14 hobbs Exp $}
+	HEADURL		{http://cvs.sourceforge.net/cgi-bin/viewcvs.cgi/tkcon/tkcon/tkcon.tcl?rev=HEAD}
 	release		{May 2001}
-	docs		"http://tkcon.sf.net/"
+	docs		"http://tkcon.sourceforge.net/"
 	email		{jeff@hobbs.org}
 	root		.
     } {
@@ -1214,6 +1215,8 @@ proc ::tkcon::InitMenus {w title} {
     foreach m [list [menu $w.help] [menu $w.pop.help]] {
 	$m add command -label "About " -underline 0 -accel Ctrl-A \
 		-command ::tkcon::About
+	$m add command -label "Retrieve Latest Version" -underline 0 \
+		-command ::tkcon::Retrieve
     }
 }
 
@@ -4954,6 +4957,52 @@ proc ::tkcon::SafeWindow {i w option args} {
 	}
     }
     return -code $code $msg
+}
+
+proc ::tkcon::Retrieve {} {
+    # A little bit'o'magic to grab the latest tkcon from CVS and
+    # save it locally.  It doesn't support proxies though...
+    variable PRIV
+
+    set defExt ""
+    if {[string match "windows" $::tcl_platform(platform)]} {
+	set defExt ".tcl"
+    }
+    set file [tk_getSaveFile -title "Save Latest tkcon to ..." \
+	    -defaultextension $defExt \
+	    -initialdir  [file dirname $PRIV(SCRIPT)] \
+	    -initialfile [file tail $PRIV(SCRIPT)] \
+	    -parent $PRIV(root) \
+	    -filetypes {{"Tcl Files" {.tcl .tk}} {"All Files" {*.*}}}]
+    if {[string compare $file ""]} {
+	package require http 2
+	set token [::http::geturl $PRIV(HEADURL) -timeout 30000]
+	::http::wait $token
+	set code [catch {
+	    if {[::http::status $token] == "ok"} {
+		set fid [open $file w]
+		# We don't want newline mode to change
+		fconfigure $fid -translation binary
+		set data [::http::data $token]
+		puts -nonewline $fid $data
+		close $fid
+		regexp {Id: tkcon.tcl,v (\d+\.\d+)} $data -> rcsVersion
+		regexp {version\s+(\d+\.\d[^\n]*)} $data -> tkconVersion
+	    }
+	} err]
+	::http::cleanup $token
+	if {$code} {
+	    return -code error $err
+	} elseif {[tk_messageBox -type yesno -icon info -parent $PRIV(root) \
+		-title "Retrieved tkcon v$tkconVersion, RCS $rcsVersion" \
+		-message "Successfully retrieved tkcon v$tkconVersion,\
+		RCS $rcsVersion.  Shall I resource (not restart) this\
+		version now?"] == "yes"} {
+	    set PRIV(SCRIPT) $file
+	    set PRIV(version) $tkconVersion-$rcsVersion
+	    ::tkcon::Resource
+	}
+    }
 }
 
 ## ::tkcon::Resource - re'source's this script into current console
