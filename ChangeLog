@@ -1,3 +1,10 @@
+2002-02-22  Jeff Hobbs  <jeffh@ActiveState.com>
+
+	* tkcon.tcl (AddSlaveHistory): changed history to not add the
+	command if it is the same as the previous command (it will still
+	be evaluated).  (soderstrom)
+	Added panedwindow and labelframe as recognized Tk commands.
+
 2002-01-24  Jeff Hobbs  <jeffh@ActiveState.com>
 
 	**** TKCON 2.3 RELEASE ****

@@ -196,7 +196,7 @@ proc ::tkcon::Init {} {
 	    tkcon_puts tkcon_gets observe observe_var unalias which what
 	}
 	version		2.3
-	RCS		{RCS: @(#) $Id: tkcon.tcl,v 1.51 2002/01/24 19:44:53 hobbs Exp $}
+	RCS		{RCS: @(#) $Id: tkcon.tcl,v 1.52 2002/01/24 19:50:36 hobbs Exp $}
 	HEADURL		{http://cvs.sourceforge.net/cgi-bin/viewcvs.cgi/tkcon/tkcon/tkcon.tcl?rev=HEAD}
 	docs		"http://tkcon.sourceforge.net/"
 	email		{jeff@hobbs.org}
@@ -702,7 +702,7 @@ proc ::tkcon::EvalCmd {w cmd} {
 		    $w insert output $cmd\n stdin
 		}
 	    } elseif {$OPT(calcmode) && ![catch {expr $cmd} err]} {
-		EvalSlave history add $cmd
+		AddSlaveHistory $cmd
 		set cmd $err
 		set code -1
 	    }
@@ -735,7 +735,7 @@ proc ::tkcon::EvalCmd {w cmd} {
 		    }
 		}
 	    }
-	    EvalSlave history add $cmd
+	    AddSlaveHistory $cmd
 	    if {$code} {
 		if {$OPT(hoterrors)} {
 		    set tag [UniqueTag $w]
@@ -778,6 +778,21 @@ proc ::tkcon::EvalOther { app type args } {
 	return [Slave $app $args]
     } else {
 	return [uplevel 1 send [list $app] $args]
+    }
+}
+
+## ::tkcon::AddSlaveHistory - 
+## Command is added to history only if different from previous command.
+## This also doesn't cause the history id to be incremented, although the
+## command will be evaluated.
+# ARGS: cmd	- command to add
+##
+proc ::tkcon::AddSlaveHistory cmd {
+    set ev [EvalSlave history nextid]
+    incr ev -1
+    set code [catch {EvalSlave history event $ev} lastCmd]
+    if {$code || [string compare $cmd $lastCmd]} {
+	EvalSlave history add $cmd
     }
 }
 
@@ -4062,8 +4077,8 @@ proc tcl_unknown args {
 	    lappend tkcmds bell bind bindtags button \
 		    canvas checkbutton clipboard destroy \
 		    entry event focus font frame grab grid image \
-		    label listbox lower menu menubutton message \
-		    option pack place radiobutton raise \
+		    label labelframe listbox lower menu menubutton message \
+		    option pack panedwindow place radiobutton raise \
 		    scale scrollbar selection send spinbox \
 		    text tk tkwait toplevel winfo wm
 	    if {[lsearch -exact $tkcmds $name] >= 0 && \
