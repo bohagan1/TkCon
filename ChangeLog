@@ -1,3 +1,8 @@
+2001-12-12  Jeff Hobbs  <jeffh@ActiveState.com>
+
+	* tkcon.tcl (EvalSocketEvent): changed EvalSocketClosed to only
+	occur after gets, then eof check. (Gerold Jury)
+
 2001-11-14  Jeff Hobbs  <jeffh@ActiveState.com>
 
 	* tkcon.tcl: added catch around file type call

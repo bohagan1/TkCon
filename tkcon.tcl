@@ -196,7 +196,7 @@ proc ::tkcon::Init {} {
 	    tkcon_puts tkcon_gets observe observe_var unalias which what
 	}
 	version		2.2
-	RCS		{RCS: @(#) $Id: tkcon.tcl,v 1.44 2001/10/14 19:20:20 hobbs Exp $}
+	RCS		{RCS: @(#) $Id: tkcon.tcl,v 1.45 2001/11/14 22:18:12 hobbs Exp $}
 	HEADURL		{http://cvs.sourceforge.net/cgi-bin/viewcvs.cgi/tkcon/tkcon/tkcon.tcl?rev=HEAD}
 	docs		"http://tkcon.sourceforge.net/"
 	email		{jeff@hobbs.org}
@@ -867,8 +867,10 @@ proc ::tkcon::EvalSocket cmd {
 proc ::tkcon::EvalSocketEvent {} {
     variable PRIV
 
-    if {[eof $PRIV(app)] || ([gets $PRIV(app) line] == -1)} {
-	EvalSocketClosed
+    if {[gets $PRIV(app) line] == -1} {
+	if {[eof $PRIV(app)]} {
+	    EvalSocketClosed
+	}
 	return
     }
     puts $line
