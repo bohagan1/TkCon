@@ -22,10 +22,13 @@ exec wish "$0" ${1+"$@"}
 ## source beer_ware.tcl
 ##
 
-if [catch {package require Tk [expr $tcl_version-3.4]}] {
+if {$tcl_version>=8.0} {
+  package require Tk
+} elseif {[catch {package require -exact Tk [expr $tcl_version-3.4]}]} {
   return -code error \
       "TkCon requires at least the stable version of tcl7.5/tk4.1"
 }
+
 foreach pkg [info loaded {}] {
   set file [lindex $pkg 0]
   set name [lindex $pkg 1]
@@ -35,6 +38,8 @@ foreach pkg [info loaded {}] {
   }
 }
 catch {unset file name version}
+
+set tkCon(WWW) [info exists embed_args]
 
 ## tkConInit - inits tkCon
 # ARGS:	root	- widget pathname of the tkCon console root
@@ -74,24 +79,29 @@ proc tkConInit {} {
     autoload		{}
     maineval		{}
     nontcl		0
-    prompt1		{([file tail [pwd]]) [history nextid] % }
     rcfile		.tkconrc
-    scrollypos		left
+    scrollypos		right
     showmultiple	1
     showmenu		1
     slaveeval		{}
     subhistory		1
 
     exec slave app {} appname {} apptype slave cmd {} cmdbuf {} cmdsave {}
-    event 1 svnt 1 cols 80 rows 24 deadapp 0 debugging 0
+    event 1 svnt 1 cols 80 rows 24 deadapp 0 debugging 0 histid 0
     find {} find,case 0 find,reg 0
     errorInfo	{}
-    slavealias	{ tkcon warn }
+    slavealias	{ tkcon }
     slaveprocs	{ alias clear dir dump lremove puts echo tclindex idebug \
-	auto_execpath unknown tcl_unknown unalias which observe observe_var }
-    version	0.64
-    release	{October 1996}
+	unknown tcl_unknown unalias which observe observe_var }
+    version	0.65
+    release	{November 1996}
     root	.
+  }
+
+  if $tkCon(WWW) {
+    set tkCon(prompt1) {[history nextid] % }
+  } else {
+    set tkCon(prompt1) {([file tail [pwd]]) [history nextid] % }
   }
 
   ## If there appear to be children of '.', then make sure we use
@@ -119,7 +129,7 @@ proc tkConInit {} {
     }
   }
 
-  if [file exists $tkCon(rcfile)] {
+  if {!$tkCon(WWW) && [file exists $tkCon(rcfile)]} {
     set code [catch [list uplevel \#0 source $tkCon(rcfile)] err]
   }
 
@@ -129,27 +139,14 @@ proc tkConInit {} {
     eval lappend auto_path $tkCon(library)
   }
 
-  set dir [file dirname [info nameofexec]]
-  ## Change to work with IncrTcl
-  ##foreach dir [list $dir [file join [file dirname $dir] lib]]
-  if [string comp {} [info commands ensemble]] {
-    set lib [file join lib itcl]
-  } else {
-    set lib lib
-  }
-  foreach dir [list $dir [file join [file dirname $dir] $lib]] {
-    if [file exists [file join $dir pkgIndex.tcl]] {
-      if {[lsearch -exact $auto_path $dir] < 0} {
-	lappend auto_path $dir
-      }
+  if {![info exists tcl_pkgPath]} {
+    set dir [file join [file dirname [info nameofexec]] lib]
+    if [string comp {} [info commands @scope]] {
+      set dir [file join $dir itcl]
     }
+    catch {source [file join $dir pkgIndex.tcl]}
   }
-
-  foreach dir $auto_path {
-    if [file exists [file join $dir pkgIndex.tcl]] {
-      source [file join $dir pkgIndex.tcl]
-    }
-  }
+  tclPkgUnknown dummy-name dummy-version
 
   ## Handle rest of command line arguments after sourcing resource file
   ## and slave is created, but before initializing UI or setting packages.
@@ -231,6 +228,8 @@ proc tkConInit {} {
       puts stdout "returned from $tkCon(rcfile):\n$err"
     }
   }
+  tkConStateCheckpoint [concat $tkCon(name) $tkCon(exec)] slave
+  tkConStateCheckpoint $tkCon(name) slave
 }
 
 ## tkConInitSlave - inits the slave by placing key procs and aliases in it
@@ -316,39 +315,40 @@ proc tkConInitUI {title} {
 
   set root $tkCon(root)
   if [string match . $root] { set w {} } else { set w [toplevel $root] }
+  catch {wm withdraw $root}
   set tkCon(base) $w
-  wm withdraw $root
 
+  ## Menus
   option add *Menu.font $tkCon(font) widgetDefault
   set tkCon(menubar) [frame $w.mbar -relief raised -bd 2]
-  set tkCon(console) [text $w.text -font $tkCon(font) -wrap char \
-      -yscrollcommand "$w.sy set" -setgrid 1 -foreground $tkCon(color,stdin)]
-  bindtags $w.text "$w.text PreCon Console PostCon $root all"
-  set tkCon(scrolly) [scrollbar $w.sy -takefocus 0 -bd 1 \
-			  -command "$w.text yview"]
+  set tkCon(console) [set con [text $w.text -font $tkCon(font) -wrap char \
+      -yscrollcommand "$w.sy set" -setgrid 1 -foreground $tkCon(color,stdin) \
+      -width $tkCon(cols) -height $tkCon(rows)]]
+  bindtags $con "$con PreCon Console PostCon $root all"
+  set tkCon(scrolly) [scrollbar $w.sy -takefocus 0 -bd 1 -command "$con yview"]
 
   tkConInitMenus $tkCon(menubar) $title
   tkConBindings
 
   if $tkCon(showmenu) { pack $tkCon(menubar) -fill x }
-  pack $tkCon(scrolly) -side $tkCon(scrollypos) -fill y
-  pack $tkCon(console) -fill both -expand 1
+  pack $w.sy -side $tkCon(scrollypos) -fill y
+  pack $con -fill both -expand 1
 
   tkConPrompt "$title console display active\n"
 
   foreach col {prompt stdout stderr stdin proc} {
-    $w.text tag configure $col -foreground $tkCon(color,$col)
+    $con tag configure $col -foreground $tkCon(color,$col)
   }
-  $w.text tag configure blink -background $tkCon(color,blink)
-  $w.text tag configure find -background $tkCon(color,blink)
+  $con tag configure blink -background $tkCon(color,blink)
+  $con tag configure find -background $tkCon(color,blink)
 
-  bind $w.text <Configure> {
-    scan [wm geometry [winfo toplevel %W]] "%%dx%%d" tkCon(cols) tkCon(rows)
+  if ![catch {wm title $root "tkCon $tkCon(version) $title"}] {
+    bind $con <Configure> {
+      scan [wm geometry [winfo toplevel %W]] "%%dx%%d" tkCon(cols) tkCon(rows)
+    }
+    wm deiconify $root
   }
-
-  wm title $root "tkCon $tkCon(version) $title"
-  wm deiconify $root
-  focus -force $w.text
+  focus -force $tkCon(console)
 }
 
 ## tkConEval - evaluates commands input into console window
@@ -391,10 +391,10 @@ proc tkConEvalCmd {w cmd} {
       if {[string match !! $cmd]} {
 	set err [catch {tkConEvalSlave history event $ev} cmd]
 	if !$err {$w insert output $cmd\n stdin}
-      } elseif [regexp {^!(.+)$} $cmd dummy event] {
+      } elseif {[regexp {^!(.+)$} $cmd dummy event]} {
 	set err [catch {tkConEvalSlave history event $event} cmd]
 	if !$err {$w insert output $cmd\n stdin}
-      } elseif [regexp {^\^([^^]*)\^([^^]*)\^?$} $cmd dummy old new] {
+      } elseif {[regexp {^\^([^^]*)\^([^^]*)\^?$} $cmd dummy old new]} {
 	if ![set err [catch {tkConEvalSlave history event $ev} cmd]] {
 	  regsub -all -- $old $cmd $new cmd
 	  $w insert output $cmd\n stdin
@@ -429,7 +429,7 @@ proc tkConEvalCmd {w cmd} {
       tkConEvalSlave history add $cmd
       if $err {
 	$w insert output $res\n stderr
-      } elseif [string comp {} $res] {
+      } elseif {[string comp {} $res]} {
 	$w insert output $res\n stdout
       }
     }
@@ -570,8 +570,8 @@ proc tkConAbout {} {
   global tkCon
   tk_dialog $tkCon(base).about "About TkCon v$tkCon(version)" \
       "Jeffrey Hobbs, Copyright 1995-96\njhobbs@cs.uoregon.edu\
-	\nhttp://www.cs.uoregon.edu/~jhobbs/\
-	\nRelease Date: $tkCon(release)" questhead 0 OK
+      \nhttp://www.cs.uoregon.edu/~jhobbs/\
+      \nRelease Date: v$tkCon(version), $tkCon(release)" questhead 0 OK
 }
 
 ## tkConHelp - gives help info for tkCon
@@ -586,7 +586,9 @@ proc tkConHelp {} {
     update
     if {[catch {exec netscape -remote "openURL($page)"}]
 	&& [catch {exec netscape $page &}]} {
-      warn "Couldn't launch Netscape.\nSorry."
+      tk_dialog $tkCon(base).dialog "Couldn't exec Netscape" \
+	  "Couldn't exec Netscape.\nMake sure it's in your path" \
+	  warning 0 Bummer
     }
   }
 }
@@ -597,7 +599,11 @@ proc tkConHelp {} {
 proc tkConInitMenus {w title} {
   global tkCon
 
-  menu $w.pop -tearoff 0
+  if [catch {menu $w.pop -tearoff 0}] {
+    label $w.label -text "Menus not available in plugin mode" -state disabled
+    pack $w.label
+    return
+  }
   bind [winfo toplevel $w] <Button-3> "tk_popup $w.pop %X %Y"
 
   pack [menubutton $w.con  -text "Console"  -un 0 -menu $w.con.m] -side left
@@ -611,6 +617,9 @@ proc tkConInitMenus {w title} {
 
   pack [menubutton $w.pref -text "Prefs"    -un 0 -menu $w.pref.m] -side left
   $w.pop add cascade -label "Prefs"   -un 0 -menu $w.pop.pref
+
+  pack [menubutton $w.hist -text "History"  -un 0 -menu $w.hist.m] -side left
+  $w.pop add cascade -label "History"   -un 0 -menu $w.pop.hist
 
   pack [menubutton $w.help -text "Help"     -un 0 -menu $w.help.m] -side right
   $w.pop add cascade -label "Help"    -un 0 -menu $w.pop.help
@@ -662,9 +671,9 @@ proc tkConInitMenus {w title} {
     $m add checkbutton -label "Non-Tcl Attachments"   -var tkCon(nontcl)
     $m add checkbutton -label "Show Multiple Matches" -var tkCon(showmultiple)
     $m add checkbutton -label "Show Menubar"	      -var tkCon(showmenu) \
-	-command "if \$tkCon(showmenu) { 
-			pack $w -fill x -before $tkCon(scrolly)
-		  } else { pack forget $w }"
+	-command "if \$tkCon(showmenu) { \
+	pack $w -fill x -before $tkCon(console) -before $tkCon(scrolly) \
+      } else { pack forget $w }"
     $m add cascade -label Scrollbar -un 0 -menu $m.scroll
 
     ## Scrollbar Menu
@@ -678,12 +687,43 @@ proc tkConInitMenus {w title} {
     }
   }
 
+  ## History Menu
+  ##
+  foreach m [list $w.hist.m $w.pop.hist] {
+    menu $m -disabledfore $tkCon(color,prompt) -postcom "tkConHistoryMenu $m"
+  }
+
   ## Help Menu
   ##
   foreach m [list [menu $w.help.m] [menu $w.pop.help]] {
     $m add command -label "About " -un 0 -acc Ctrl-A -command tkConAbout
     $m add separator
     $m add command -label "Help" -un 0 -acc Ctrl-H -command tkConHelp
+  }
+}
+
+## tkConHistoryMenu - dynamically build the menu for attached interpreters
+##
+# ARGS:	w	- menu widget
+##
+proc tkConHistoryMenu w {
+  global tkCon
+
+  if ![winfo exists $w] return
+  set id [tkConEvalSlave history nextid]
+  if {$tkCon(histid)==$id} return
+  set tkCon(histid) $id
+  $w delete 0 end
+  while {($id>$tkCon(histid)-10) && \
+      ![catch {tkConEvalSlave history event [incr id -1]} tmp]} {
+    set lbl [lindex [split $tmp "\n"] 0]
+    if {[string len $lbl]>32} { set lbl [string range $tmp 0 30]... }
+    $w add command -label "$id: $lbl" -command "
+    $tkCon(console) delete limit end
+    $tkCon(console) insert limit [list $tmp]
+    $tkCon(console) see end
+    tkConEval $tkCon(console)
+    "
   }
 }
 
@@ -710,41 +750,41 @@ proc tkConInterpMenu w {
   set isnew [tkConEvalAttached expr \[info tclversion\]>7.4]
   set hastk [tkConEvalAttached info exists tk_library]
 
-  if [string comp {} [package provide TkConInspect]] {
-    ## Inspect Cascaded Menu
-    ##
-    $w add cascade -label Inspect -un 0 -menu $w.ins
-    set m $w.ins
-    if [winfo exists $m] {
-      $m delete 0 end
-    } else {
-      menu $m -tearoff no -disabledfore $tkCon(color,prompt)
-    }
-    $m add command -label "Procedures" \
-	-command [list tkConInspect $app $type procs]
-    $m add command -label "Global Vars" \
-	-command [list tkConInspect $app $type vars]
+  if 0 {
+  ## Inspect Cascaded Menu
+  ##
+  $w add cascade -label Inspect -un 0 -menu $w.ins
+  set m $w.ins
+  if [winfo exists $m] {
+    $m delete 0 end
+  } else {
+    menu $m -tearoff no -disabledfore $tkCon(color,prompt)
+  }
+  $m add check -label "Procedures" \
+      -command [list tkConInspect $app $type procs]
+  $m add check -label "Global Vars" \
+      -command [list tkConInspect $app $type vars]
+  if $isnew {
+    $m add check -label "Interpreters" \
+	-command [list tkConInspect $app $type interps]
+    $m add check -label "Aliases" \
+	-command [list tkConInspect $app $type aliases]
+  }
+  if $hastk {
+    $m add separator
+    $m add check -label "All Widgets" \
+	-command [list tkConInspect $app $type widgets]
+    $m add check -label "Canvas Widgets" \
+	-command [list tkConInspect $app $type canvases]
+    $m add check -label "Menu Widgets" \
+	-command [list tkConInspect $app $type menus]
+    $m add check -label "Text Widgets" \
+	-command [list tkConInspect $app $type texts]
     if $isnew {
-      $m add command -label "Interpreters" \
-	  -command [list tkConInspect $app $type interps]
-      $m add command -label "Aliases" \
-	  -command [list tkConInspect $app $type aliases]
+      $m add check -label "Images" \
+	  -command [list tkConInspect $app $type images]
     }
-    if $hastk {
-      $m add separator
-      $m add command -label "All Widgets" \
-	  -command [list tkConInspect $app $type widgets]
-      $m add command -label "Canvas Widgets" \
-	  -command [list tkConInspect $app $type canvases]
-      $m add command -label "Menu Widgets" \
-	  -command [list tkConInspect $app $type menus]
-      $m add command -label "Text Widgets" \
-	  -command [list tkConInspect $app $type texts]
-      if $isnew {
-	$m add command -label "Images" \
-	    -command [list tkConInspect $app $type images]
-      }
-    }
+  }
   }
 
   if $isnew {
@@ -763,7 +803,7 @@ proc tkConInterpMenu w {
       set version [tkConEvalAttached package provide $pkg]
       if [string comp {} $version] {
 	set loaded($pkg) $version
-      } elseif ![info exists loaded($pkg)] {
+      } elseif {![info exists loaded($pkg)]} {
 	set loadable($pkg) [list package require $pkg]
       }
     }
@@ -883,7 +923,8 @@ proc tkConFindBox {w {str {}}} {
     bind $base.f.e <Return> [list $base.btn.fnd invoke]
     bind $base.f.e <Escape> [list $base.btn.dis invoke]
   }
-  $base.btn.fnd config -command "tkConFind $w \$tkCon(find)"
+  $base.btn.fnd config -command "tkConFind $w \$tkCon(find) \
+      -case \$tkCon(find,case) -reg \$tkCon(find,reg)"
   $base.btn.clr config -command "
   $w tag remove find 1.0 end
   set tkCon(find) {}
@@ -907,15 +948,23 @@ proc tkConFindBox {w {str {}}} {
 ## If $str is empty, it just deletes any highlighting
 # ARGS: w	- text widget
 #	str	- string to search for
+#	-case	TCL_BOOLEAN	whether to be case sensitive	DEFAULT: 0
+#	-regexp	TCL_BOOLEAN	whether to use $str as pattern	DEFAULT: 0
 ##
-proc tkConFind {w str} {
-  global tkCon
+proc tkConFind {w str args} {
   $w tag remove find 1.0 end
-  ## FIX ; should accept -case and -regexp switches
-  if [string match {} $str] { return } else { set tkCon(find) $str }
+  set truth {^(1|yes|true|on)$}
+  set opts  {}
+  foreach {key val} $args {
+    switch -glob -- $key {
+      -c* { if [regexp -nocase $truth $val] { set case 1 } }
+      -r* { if [regexp -nocase $truth $val] { lappend opts -regexp } }
+      default { return -code error "Unknown option $key" }
+    }
+  }
+  if ![info exists case] { lappend opts -nocase }
+  if [string match {} $str] return
   $w mark set findmark 1.0
-  if $tkCon(find,case) { append opts {} } else { set opts {-nocase } }
-  if $tkCon(find,reg) { append opts -regexp } else { append opts -exact }
   while {[string comp {} [set ix [eval $w search $opts -count numc -- \
       [list $str] findmark end]]]} {
     $w tag add find $ix ${ix}+${numc}c
@@ -996,9 +1045,9 @@ proc tkConAttach {{an <NONE>} {type slave}} {
     slave {
       if [string match {} $an] {
 	interp alias {} tkConEvalAttached {} tkConEvalSlave eval
-      } elseif [string match Main $tkCon(app)] {
+      } elseif {[string match Main $tkCon(app)]} {
 	interp alias {} tkConEvalAttached {} tkConMain eval
-      } elseif [string match $tkCon(name) $tkCon(app)] {
+      } elseif {[string match $tkCon(name) $tkCon(app)]} {
 	interp alias {} tkConEvalAttached {} uplevel \#0
       } else {
 	interp alias {} tkConEvalAttached {} tkConMain interp eval $tkCon(app)
@@ -1073,15 +1122,16 @@ proc tkConMainInit {} {
     $tmp eval set argc $argc \; set argv [list $argv] \; \
 	set argv0 [list $argv0]
     $tmp eval [list set tkCon(name) $tmp]
-    $tmp eval [list source $tkCon(SCRIPT)]
     $tmp alias tkConDestroy		tkConDestroy $tmp
     $tmp alias tkConNew			tkConNew
     $tmp alias tkConMain		tkConInterpEval Main
     $tmp alias tkConSlave		tkConInterpEval
     $tmp alias tkConInterps		tkConInterps
     $tmp alias tkConStateCheckpoint	tkConStateCheckpoint
+    $tmp alias tkConStateCleanup	tkConStateCleanup
     $tmp alias tkConStateCompare	tkConStateCompare
     $tmp alias tkConStateRevert		tkConStateRevert
+    $tmp eval [list source $tkCon(SCRIPT)]
     return $tmp
   }
 
@@ -1104,6 +1154,7 @@ proc tkConMainInit {} {
       set tkCon(slaves)  [lremove $tkCon(slaves) [list $slave]]
       interp delete $slave
     }
+    tkConStateCleanup $slave
   }
 
   ## tkConInterpEval - passes evaluation to another named interpreter
@@ -1114,7 +1165,7 @@ proc tkConMainInit {} {
     if [string match {} $slave] {
       global tkCon
       return $tkCon(slaves)
-    } elseif [string match {[Mm]ain} $slave] {
+    } elseif {[string match {[Mm]ain} $slave]} {
       set slave {}
     }
     if [string match {} $args] {
@@ -1146,8 +1197,6 @@ proc tkConMainInit {} {
   ## revert.  Only with this knowledge in mind should you use these.
   ##
 
-  ## FIX ; cleanup state data when attached app is deleted
-
   ## tkConStateCheckpoint - checkpoints the current state of the system
   ## This allows you to return to this state with tkConStateRevert
   # ARGS:
@@ -1157,8 +1206,8 @@ proc tkConMainInit {} {
     upvar \#0 tkCon($type,$app) a
     if {[array exists a] &&
 	[tk_dialog $tkCon(base).warning "Overwrite Previous State?" \
-	     "Are you sure you want to lose previously checkpointed state of $type \"$app\"?" \
-	     questhead 1 "Do It" "Cancel"]} return
+	     "Are you sure you want to lose previously checkpointed\
+	     state of $type \"$app\"?" questhead 1 "Do It" "Cancel"]} return
     set a(cmd) [tkConEvalOther $app $type info comm *]
     set a(var) [tkConEvalOther $app $type info vars *]
     return
@@ -1252,14 +1301,29 @@ proc tkConMainInit {} {
       }
     }
   }
-}
 
-## warn - little helper proc to pop up a tk_dialog warning message
-# ARGS:	msg	- message you want to display to user
-##
-proc warn { msg } {
-  bell
-  tk_dialog ._warning Warning $msg warning 0 OK
+  ## tkConStateCleanup - cleans up state information in master array
+  #
+  ##
+  proc tkConStateCleanup {args} {
+    global tkCon
+    if [string match {} $args] {
+      foreach state [array names tkCon slave,*] {
+	if ![interp exists [string range $state 6 end]] { unset tkCon($state) }
+      }
+    } else {
+      set app  [lindex $args 0]
+      set type [lindex $args 1]
+      if [regexp {^(|slave)$} $type] {
+	foreach state [concat [array names tkCon slave,$app] \
+	    [array names tkCon "slave,$app *"]] {
+	  if ![interp exists [string range $state 6 end]] {unset tkCon($state)}
+	}
+      } else {
+	catch {unset tkCon($type,$app)}
+      }
+    }
+  }
 }
 
 ## tkcon - command that allows control over the console
@@ -1467,8 +1531,15 @@ if ![catch {rename puts tcl_puts}] {
       }
       tkcon console see output
     } else {
-      eval tcl_puts $args
+      global errorCode errorInfo
+      if [catch "tcl_puts $args" msg] {
+	regsub tcl_puts $msg puts msg
+	regsub -all tcl_puts $errorInfo puts errorInfo
+      }
+      return -errorcode $errorCode $msg
+      #eval tcl_puts $args
     }
+    if $len update
   }
 }
 
@@ -1548,7 +1619,7 @@ proc dump {type args} {
 	  foreach cmd [lsort $cmds] {
 	    if {[lsearch -exact [interp aliases] $cmd] > -1} {
 	      append res "\#\# ALIAS:   $cmd => [interp alias {} $cmd]\n"
-	    } elseif [string comp {} [info procs $cmd]] {
+	    } elseif {[string comp {} [info procs $cmd]]} {
 	      if {[catch {dump p $cmd} msg] && $whine} { set code error }
 	      append res $msg\n
 	    } else {
@@ -1583,10 +1654,9 @@ proc dump {type args} {
 	      upvar 0 v\($i\) __ary
 	      if {[array exists __ary]} {
 		append nest "\#\# NESTED ARRAY ELEMENT: $i\n"
-		append nest "upvar 0 $var\($i\) __ary; [dump v __ary]\n"
-		#if $whine { set code error }
+		append nest "upvar 0 [list $var\($i\)] __ary; [dump v __ary]\n"
 	      } else {
-		append res "    [list $i $v($i)]\n"
+		append res "    [list $i]\t[list $v($i)]\n"
 	      }
 	    }
 	    append res "\}\n$nest"
@@ -1686,8 +1756,8 @@ proc idebug {opt args} {
 	tkcon show
 	tkcon master eval set tkCon(prompt2) \$tkCon(prompt1)
 	tkcon master eval set tkCon(prompt1) \$tkCon(debugPrompt)
-	set slave  [tkcon set tkCon(exec)]
-	set event  [tkcon set tkCon(event)]
+	set slave [tkcon set tkCon(exec)]
+	set event [tkcon set tkCon(event)]
 	tkcon set tkCon(exec) [tkcon master interp create debugger]
 	tkcon set tkCon(event) 1
       }
@@ -1944,13 +2014,13 @@ proc which cmd {
       ([auto_load $cmd] && [string comp {} [info commands $cmd]])} {
     if {[lsearch -exact [interp aliases] $cmd] > -1} {
       return "$cmd:\taliased to [alias $cmd]"
-    } elseif [string comp {} [info procs $cmd]] {
+    } elseif {[string comp {} [info procs $cmd]]} {
       return "$cmd:\tinternal proc"
     } else {
       return "$cmd:\tinternal command"
     }
-  } elseif [auto_execok $cmd] {
-    return [auto_execpath $cmd]
+  } elseif {[string comp {} [auto_execok $cmd]]} {
+    return [auto_execok $cmd]
   } else {
     return -code error "$cmd:\tunknown command"
   }
@@ -1961,64 +2031,137 @@ proc which cmd {
 # ARGS:	cmd	- command name
 # Returns:	where command is found or {} if not found
 ## 
-if {[string match windows $tcl_platform(platform)]} {
-  proc auto_execpath name {
-    global auto_execpath tcl_platform env
+if {[info tclversion]<7.6} {
+if {[string match $tcl_platform(platform) windows]} {
 
-    if [info exists auto_execpath($name)] {
-      return $auto_execpath($name)
+# auto_execok --
+#
+# Returns string that indicates name of program to execute if 
+# name corresponds to a shell builtin or an executable in the
+# Windows search path, or "" otherwise.  Builds an associative 
+# array auto_execs that caches information about previous checks, 
+# for speed.
+#
+# Arguments: 
+# name -			Name of a command.
+
+# Windows version.
+#
+# Note that info executable doesn't work under Windows, so we have to
+# look for files with .exe, .com, or .bat extensions.  Also, the path
+# may be in the Path or PATH environment variables, and path
+# components are separated with semicolons, not colons as under Unix.
+#
+proc auto_execok name {
+    global auto_execs env tcl_platform
+
+    if [info exists auto_execs($name)] {
+	return $auto_execs($name)
     }
-    set auto_execpath($name) {}
-    if {[string comp relative [file pathtype $name]]} {
-      foreach ext {{} .exe .bat .cmd} {
-	if {[file exists ${name}${ext}] && \
-	    ![file isdirectory ${name}${ext}]} {
-	  set auto_execpath($name) $name
+    set auto_execs($name) ""
+
+    if {[lsearch -exact {cls copy date del erase dir echo mkdir md rename 
+	    ren rmdir rd time type ver vol} $name] != -1} {
+	if {[info exists env(COMSPEC)]} {
+	    set comspec $env(COMSPEC) 
+	} elseif {[info exists env(ComSpec)]} {
+	    set comspec $env(ComSpec)
+	} elseif {$tcl_platform(os) == "Windows NT"} {
+	    set comspec "cmd.exe"
+	} else {
+	    set comspec "command.com"
 	}
-      }
-      return $auto_execpath($name)
+	return [set auto_execs($name) [list $comspec /c $name]]
     }
-    if {[info exists env(PATH)]} {
-      set path $env(PATH)
+
+    if {[llength [file split $name]] != 1} {
+	foreach ext {{} .com .exe .bat} {
+	    set file ${name}${ext}
+	    if {[file exists $file] && ![file isdirectory $file]} {
+		return [set auto_execs($name) $file]
+	    }
+	}
+	return ""
+    }
+
+    set path "[file dirname [info nameof]];.;"
+    if {[info exists env(WINDIR)]} {
+	set windir $env(WINDIR) 
+    } elseif {[info exists env(windir)]} {
+	set windir $env(windir)
+    }
+    if {[info exists windir]} {
+	if {$tcl_platform(os) == "Windows NT"} {
+	    append path "$windir/system32;"
+	}
+	append path "$windir/system;$windir;"
+    }
+
+    if {! [info exists env(PATH)]} {
+	if [info exists env(Path)] {
+	    append path $env(Path)
+	} else {
+	    return ""
+	}
     } else {
-      if [info exists env(Path)] { set path $env(Path) } else { return {} }
+	append path $env(PATH)
     }
-    foreach dir [split $path {;}] {
-      if {[string match {} $dir]} { set dir . }
-      foreach ext {{} .exe .bat .cmd} {
-	set file [file join $dir ${name}${ext}]
-	if {[file exists $file] && ![file isdirectory $file]} {
-	  set auto_execpath($name) $file
-	  break
-	}
-      }
-    }
-    return $auto_execpath($name)
-  }
-} else {
-  proc auto_execpath name {
-    global auto_execpath env
 
-    if [info exists auto_execpath($name)] {
-      return $auto_execpath($name)
+    foreach dir [split $path {;}] {
+	if {$dir == ""} {
+	    set dir .
+	}
+	foreach ext {{} .com .exe .bat} {
+	    set file [file join $dir ${name}${ext}]
+	    if {[file exists $file] && ![file isdirectory $file]} {
+		return [set auto_execs($name) $file]
+	    }
+	}
     }
-    set auto_execpath($name) {}
-    if {[string comp relative [file pathtype $name]]} {
-      if {[file executable $name] && ![file isdirectory $name]} {
-	set auto_execpath($name) $name
-      }
-      return $auto_execpath($name)
+    return ""
+}
+
+} else {
+
+# auto_execok --
+#
+# Returns string that indicates name of program to execute if 
+# name corresponds to an executable in the path. Builds an associative 
+# array auto_execs that caches information about previous checks, 
+# for speed.
+#
+# Arguments: 
+# name -			Name of a command.
+
+# Unix version.
+#
+proc auto_execok name {
+    global auto_execs env
+
+    if [info exists auto_execs($name)] {
+	return $auto_execs($name)
+    }
+    set auto_execs($name) ""
+    if {[llength [file split $name]] != 1} {
+	if {[file executable $name] && ![file isdirectory $name]} {
+	    set auto_execs($name) $name
+	}
+	return $auto_execs($name)
     }
     foreach dir [split $env(PATH) :] {
-      if {[string match {} $dir]} { set dir . }
-      set file [file join $dir $name]
-      if {[file executable $file] && ![file isdirectory $file]} {
-	set auto_execpath($name) $file
-	break
-      }
+	if {$dir == ""} {
+	    set dir .
+	}
+	set file [file join $dir $name]
+	if {[file executable $file] && ![file isdirectory $file]} {
+	    set auto_execs($name) $file
+	    return $file
+	}
     }
-    return $auto_execpath($name)
-  }
+    return ""
+}
+
+}
 }
 
 ## dir - directory list
@@ -2329,11 +2472,12 @@ proc tcl_unknown args {
   if {[info level] == 1 && [string match {} [info script]] \
 	  && [info exists tcl_interactive] && $tcl_interactive} {
     if ![info exists auto_noexec] {
-      if [auto_execok $name] {
+      set new [auto_execok $name]
+      if {$new != ""} {
 	set errorCode $savedErrorCode
 	set errorInfo $savedErrorInfo
-	return [uplevel exec $args]
-	#return [uplevel exec >&@stdout <@stdin $args]
+	return [uplevel exec [list $new] [lrange $args 1 end]]
+	#return [uplevel exec >&@stdout <@stdin $new [lrange $args 1 end]]
       }
     }
     set errorCode $savedErrorCode
@@ -2469,15 +2613,19 @@ proc tkConBindings {} {
   ## Get all Text bindings into Console except Unix cut/copy/paste
   ## and newline insertion
   foreach ev [lremove [bind Text] {<Control-Key-y> <Control-Key-w> \
-				       <Meta-Key-w> <Control-Key-o> \
-				       <<Cut>> <<Copy>> <<Paste>>}] {
+      <Meta-Key-w> <Control-Key-o> <<Cut>> <<Copy>> <<Paste>>}] {
     bind Console $ev [bind Text $ev]
   }
 
   ## Redefine for Console what we need
   ##
-  tkConClipboardKeysyms F16 F20 F18
-  tkConClipboardKeysyms Control-c Control-x Control-v
+  if [string compare {} [info command event]] {
+    event delete <<Paste>> <Control-V>
+    tkConClipboardKeysyms <Copy> <Cut> <Paste>
+  } else {
+    tkConClipboardKeysyms F16 F20 F18
+    tkConClipboardKeysyms Control-c Control-x Control-v
+  }
 
   bind Console <Insert> {catch {tkConInsert %W [selection get -displayof %W]}}
 
@@ -2499,8 +2647,8 @@ proc tkConBindings {} {
       if {$tkCon(event) == [tkConEvalSlave history nextid]} {
 	set tkCon(cmdbuf) [tkConCmdGet %W]
       }
-      if [catch {tkConEvalSlave \
-		     history event [incr tkCon(event) -1]} tkCon(tmp)] {
+      if [catch {tkConEvalSlave history event \
+	  [incr tkCon(event) -1]} tkCon(tmp)] {
 	incr tkCon(event)
       } else {
 	%W delete limit end
@@ -2528,6 +2676,7 @@ proc tkConBindings {} {
   ## <<TkCon_ExpandFile>>
   bind Console <Tab> {
     if [%W compare insert > limit] {tkConExpand %W path}
+    break
   }
   ## <<TkCon_ExpandProc>>
   bind Console <Control-P> {
@@ -2550,9 +2699,9 @@ proc tkConBindings {} {
   bind Console <KP_Enter> [bind Console <Return>]
   bind Console <Delete> {
     if {[string comp {} [%W tag nextrange sel 1.0 end]] \
-	    && [%W compare sel.first >= limit]} {
+	&& [%W compare sel.first >= limit]} {
       %W delete sel.first sel.last
-    } elseif [%W compare insert >= limit] {
+    } elseif {[%W compare insert >= limit]} {
       %W delete insert
       %W see insert
     }
@@ -2807,8 +2956,7 @@ proc tkConMatchPair {w c1 c2 {lim 1.0}} {
       }
       if {!$j} break
       set i1 $ix
-      while {$j &&
-	     [string comp {} [set ix [$w search -back $c1 $ix $lim]]]} {
+      while {$j && [string comp {} [set ix [$w search -back $c1 $ix $lim]]]} {
 	if {[string match {\\} [$w get $ix-1c]]} continue
 	incr j -1
       }
@@ -2933,7 +3081,7 @@ proc tkConExpandPathname str {
       set tmp [tkConExpandBestMatch $m [file tail $str]]
       if [string match ?*/* $str] {
 	set tmp [file dirname $str]/$tmp
-      } elseif [string match /* $str] {
+      } elseif {[string match /* $str]} {
 	set tmp /$tmp
       }
       regsub -all { } $tmp {\\ } tmp
@@ -2944,7 +3092,7 @@ proc tkConExpandPathname str {
       if [file isdir $match] {append match /}
       if [string match ?*/* $str] {
 	set match [file dirname $str]/$match
-      } elseif [string match /* $str] {
+      } elseif {[string match /* $str]} {
 	set match /$match
       }
       regsub -all { } $match {\\ } match
@@ -3003,11 +3151,11 @@ proc tkConExpandVariable str {
 
 ## tkConExpandBestMatch2 - finds the best unique match in a list of names
 ## Improves upon the speed of the below proc only when $l is small
-## or $e is {}.
+## or $e is {}.  $e is extra for compatibility with proc below.
 # ARGS:	l	- list to find best unique match in
 # Returns:	longest unique match in the list
 ## 
-proc tkConExpandBestMatch2 l {
+proc tkConExpandBestMatch2 {l {e {}}} {
   set s [lindex $l 0]
   if {[llength $l]>1} {
     set i [expr [string length $s]-1]
@@ -3046,17 +3194,19 @@ proc tkConExpandBestMatch {l {e {}}} {
 ## links until the ultimate source is found.
 ## 
 set tkCon(SCRIPT) [info script]
-while {[string match link [file type $tkCon(SCRIPT)]]} {
-  set link [file readlink $tkCon(SCRIPT)]
-  if [string match relative [file pathtype $link]] {
-    set tkCon(SCRIPT) [file join [file dirname $tkCon(SCRIPT)] $link]
-  } else {
-    set tkCon(SCRIPT) $link
+if !$tkCon(WWW) {
+  while {[string match link [file type $tkCon(SCRIPT)]]} {
+    set link [file readlink $tkCon(SCRIPT)]
+    if [string match relative [file pathtype $link]] {
+      set tkCon(SCRIPT) [file join [file dirname $tkCon(SCRIPT)] $link]
+    } else {
+      set tkCon(SCRIPT) $link
+    }
   }
-}
-catch {unset link}
-if [string match relative [file pathtype $tkCon(SCRIPT)]] {
-  set tkCon(SCRIPT) [file join [pwd] $tkCon(SCRIPT)]
+  catch {unset link}
+  if [string match relative [file pathtype $tkCon(SCRIPT)]] {
+    set tkCon(SCRIPT) [file join [pwd] $tkCon(SCRIPT)]
+  }
 }
 proc tkConResource {} {
   global tkCon
