@@ -3566,7 +3566,7 @@ proc dir {args} {
 		} else {
 		    set mode [string index $st(type) 0]
 		}
-		foreach j [split [format %o [expr {$st(mode)&0777}]] {}] {
+		foreach j [split [format %03o [expr {$st(mode)&0777}]] {}] {
 		    append mode $s($j)
 		}
 		if {$st(mtime)>$old} {
