@@ -1,3 +1,10 @@
+2004-07-26  Jeff Hobbs  <jeffh@ActiveState.com>
+
+	**** TKCON 2.4 TAGGED FOR RELEASE ****
+
+	* index.html, docs/*.html: remove email links, update 2.4 info
+	* docs/plugin.html: update plugin page embed code
+
 2004-06-24  Jeff Hobbs  <jeffh@ActiveState.com>
 
 	* tkcon.tcl (DeleteTab, Destroy): improve the 'exit' handling so
