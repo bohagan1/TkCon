@@ -1,15 +1,14 @@
 WHAT:   Enhanced Tk Console for all Tk platforms
 
 WHERE:  http://www.purl.org/net/hobbs/tcl/script/tkcon/
-	http://www.hobbs.wservice.com/tcl/script/tkcon/
-	http://www.neosoft.com/tcl/ (somewhere in the devel area)
+	http://tkcon.sourceforge.net/
 
-REQUIREMENTS: Tcl 7.6 / Tk 4.2 (as least the stable versions)
-	Tested through Tcl/Tk8.4.
-        TkCon is all Tcl/Tk code, no compiling required
+REQUIREMENTS: Tcl/Tk 8.0+
+	Tested through Tcl/Tk 8.4.
+        tkcon is all Tcl/Tk code, no compiling required
 
-TkCon is a replacement for the standard console that comes with Tk (on
-Windows/Mac, but also works on Unix).  TkCon provides many more features
+tkcon is a replacement for the standard console that comes with Tk (on
+Windows/Mac, but also works on Unix).  tkcon provides many more features
 than the standard console and works on all platforms where Tcl/Tk is
 available.  It is meant primarily to aid one when working with the little
 details inside tcl and tk and to give Unix users the GUI console provided
@@ -30,11 +29,11 @@ FEATURES:
         (including non-tcl ones)
     Works on all Tk platforms
 
-CONTACT: Jeffrey Hobbs, jeff.hobbs at acm.org
+CONTACT: Jeffrey Hobbs, jeff.hobbs at acm.org or jeff at hobbs.org
 
 GETTING STARTED:
 
-TkCon is a single drop-in file.  On Windows, I place this on the desktop
+tkcon is a single drop-in file.  On Windows, I place this on the desktop
 and double-click on it instead of wish/tclsh.  On Unix, I place it in a
 known bin directory and run this instead of wish.  I don't have a Mac...
 

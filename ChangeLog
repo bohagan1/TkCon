@@ -1,3 +1,14 @@
+2001-05-04  Jeff Hobbs  <jeffh@ActiveState.com>
+
+	* docs/style.css: new file for html files to use.
+	* README.txt:
+	* index.html:
+	* doc/*: updated for 2.1 release.
+
+	* tkcon.tcl: allowed 'tkcon font ...' and 'tkcon buffer ...' to
+	work before the main console have been created.
+	Changed "TkCon" -> "tkcon", updated for new release.
+
 2001-03-28  Jeff Hobbs  <jeffh@activestate.com>
 
 	* tkcon.tcl (::tkcon::Init): added safe interp check around 'cd'

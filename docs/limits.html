@@ -1,27 +1,47 @@
 <HTML>
 <HEAD>
-<TITLE>TkCon: Limitations</TITLE>
+<TITLE>tkcon: Limitations</TITLE>
+<LINK REL="STYLESHEET" TYPE="text/css" HREF="./style.css">
 </HEAD>
 
 <BODY BGCOLOR=#FFFFFF>
-<H1>TkCon: Limitations</H1>
 
-<TABLE COLS=4 BORDER=0 CELLPADDING=1 CELLSPACING=3 BGCOLOR=#CCCCCC>
+<TABLE WIDTH=100% BORDER=0 CELLSPACING=2 CELLPADDING=0 BGCOLOR=#000000><TR><TD>
+<!-- start header info -->
+<TABLE WIDTH=100% BORDER=0 CELLSPACING=0 CELLPADDING=0 BGCOLOR=#FFFFFF>
 <TR>
-<TD><B><A HREF="index.html">TkCon Docs</A></B></TD>
-<TD><B><A HREF="purpose.html">Purpose &amp; Features</A></B></TD>
-<TD BGCOLOR=#FFFF33><B><A HREF="limits.html">Limitations</A></B></TD>
-<TD><B><A HREF="todo.html">To&nbsp;Do</A></B></TD>
-</TR>
-<TD><B><A HREF="changes.txt">Changes</A></B></TD>
-<TD><B><A HREF="license.terms">License Terms</A></B></TD>
-<TD COLSPAN=2><B><A HREF="nontcl.html">Using TkCon with other Tk Languages</A></B></TD>
+<TH><FONT SIZE=+3>tkcon: Limitations</FONT></TH>
+<TD align=right>
+<A href="http://tkcon.sourceforge.net/"> 
+<IMG src="http://sourceforge.net/sflogo.php?group_id=11462&type=1" width="88"
+height="31" border="0" alt="SourceForge Logo"></A>
+</TD>
 </TR>
 </TABLE>
+<!-- end header info -->
 
+</TD></TR><TR><TD>
+<!-- start main navigation table -->
+<TABLE BORDER=1 CELLPADDING=2 CELLSPACING=2 BGCOLOR=#CCCCCC width=100%>
+<TR>
+<TH><A HREF="index.html">Documentation</A></TH>
+<TH><A HREF="purpose.html">Purpose &amp; Features</A></TH>
+<TH CLASS="hi"><A HREF="limits.html" CLASS="hi">Limitations</A></TH>
+<TH><A HREF="todo.html">To&nbsp;Do</A></TH>
+<TH><A HREF="license.terms">License</A></TH>
+</TR><TR>
+<TH COLSPAN=2><A HREF="plugin.html">Online Demo</A>
+(requires <A HREF="http://tcl.activestate.com/software/plugin/">Tk plugin</A>)</TH>
+<TH COLSPAN=3><A HREF="nontcl.html">Using TkCon with other Tk Languages</A></TH>
+</TR>
+</TABLE>
+<!-- end main navigation table -->
+
+</TD></TR><TR><TD BGCOLOR=#FFFFFF>
+<DIV CLASS="indent">
 <H3>Limitations:</H3>
 
-TkCon requires Tk4.2+.  Since TkCon is meant to behave like the original Tk
+TkCon requires Tk8.0+.  Since TkCon is meant to behave like the original Tk
 console, it does not separate itself from the environment (it does not use
 send to function, except when attached to foreign Tk interpreters).  This
 means that it can be can be altered or destroyed by any sourced
@@ -46,6 +66,8 @@ When connecting to non-Tcl Tk interpreters (ie - PerlTk, SchemeTk, ...),
 you must use the syntax of the target environment.  See my
 <A HREF="nontcl.html">notes on using other Tk-embedded languages</A> for
 more info.
+</DIV>
+</TD></TR></TABLE>
 
 <HR NOSHADE SIZE=1>
 <ADDRESS><FONT SIZE=2>&copy;
