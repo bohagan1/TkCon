@@ -1,3 +1,7 @@
+2000-09-27  Jeff Hobbs  <hobbs@scriptics.com>
+
+	* tkcon.tcl (::tkcon::About): added 'variable COLOR' decl (Zaers).
+
 2000-09-20  Jeff Hobbs  <hobbs@scriptics.com>
 
 	* tkcon.tcl (InitMenus): restricted the Attach Socket

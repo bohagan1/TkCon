@@ -977,6 +977,7 @@ proc ::tkcon::Prompt {{pre {}} {post {}} {prompt {}}} {
 proc ::tkcon::About {} {
     variable OPT
     variable PRIV
+    variable COLOR
 
     set w $PRIV(base).about
     if {[winfo exists $w]} {
