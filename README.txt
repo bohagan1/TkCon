@@ -17,7 +17,8 @@ by default in the Mac and Windows Tk.
 FEATURES:
     Command history
     Path (Unix style) / Proc / Variable name expansion
-    Multiple consoles, each with its own state (via multiple interpreters)
+    Multiple and tabbed consoles, each with its own state (via multiple
+        interpreters)
     Captures stdout and stderr to console window (puts overridden)
     Hot errors (click on error result to see stack trace)
     Electric character matching (a la emacs)
