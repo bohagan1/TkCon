@@ -1,5 +1,7 @@
 2000-09-19  Jeff Hobbs  <hobbs@scriptics.com>
 
+	* index.html: added toplevel html index doc
+
 	* tkcon.tcl: updated v2.0 to v2.1 alpha version
 	All tkcon procedures have been namespaced, except for the ones
 	that are visible to the user.  TkCon has added the ability to
