@@ -185,7 +185,7 @@ proc ::tkcon::Init {args} {
 	    alias clear dir dump echo idebug lremove
 	    tkcon_puts tkcon_gets observe observe_var unalias which what
 	}
-	RCS		{RCS: @(#) $Id: tkcon.tcl,v 1.57 2002/10/01 21:40:09 hobbs Exp $}
+	RCS		{RCS: @(#) $Id: tkcon.tcl,v 1.58 2002/10/08 18:51:00 hobbs Exp $}
 	HEADURL		{http://cvs.sourceforge.net/cgi-bin/viewcvs.cgi/tkcon/tkcon/tkcon.tcl?rev=HEAD}
 	docs		"http://tkcon.sourceforge.net/"
 	email		{jeff@hobbs.org}
@@ -5303,6 +5303,17 @@ if {!$::tkcon::PRIV(WWW) && [string compare $::tkcon::PRIV(SCRIPT) {}]} {
 	catch {unset link}
 	if {[string match relative [file pathtype $::tkcon::PRIV(SCRIPT)]]} {
 	    set ::tkcon::PRIV(SCRIPT) [file join [pwd] $::tkcon::PRIV(SCRIPT)]
+	}
+    }
+}
+
+if {$::tkcon::PRIV(WWW)} {
+    rename tk ::tkcon::_tk
+    proc tk {cmd args} {
+	if {$cmd == "appname"} {
+	    return "tkcon/WWW"
+	} else {
+	    return [uplevel 1 ::tkcon::_tk [list $cmd] $args]
 	}
     }
 }
