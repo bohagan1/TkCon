@@ -93,7 +93,7 @@ proc tkConInit {} {
     slavealias	{ tkcon }
     slaveprocs	{ alias clear dir dump lremove puts echo tclindex idebug \
 	unknown tcl_unknown unalias which observe observe_var }
-    version	0.65
+    version	0.66
     release	{November 1996}
     root	.
   }
@@ -146,7 +146,7 @@ proc tkConInit {} {
     }
     catch {source [file join $dir pkgIndex.tcl]}
   }
-  tclPkgUnknown dummy-name dummy-version
+  catch {tclPkgUnknown dummy-name dummy-version}
 
   ## Handle rest of command line arguments after sourcing resource file
   ## and slave is created, but before initializing UI or setting packages.
@@ -239,11 +239,20 @@ proc tkConInit {} {
 #	args	- args to pass to a slave as argv/argc
 ##
 proc tkConInitSlave {slave args} {
-  global tkCon argv0 tcl_interactive
+  global tkCon argv0 tcl_interactive tcl_library env
   if [string match {} $slave] {
     return -code error "Don't init the master interpreter, goofball"
   }
   if ![interp exists $slave] { interp create $slave }
+  if {[interp eval $slave info command source] == ""} {
+    $slave alias source tkConSafeSource $slave
+    $slave alias load tkConSafeLoad $slave
+    $slave alias open tkConSafeOpen $slave
+    $slave alias exit exit
+    $slave alias file file
+    interp eval $slave [dump var tcl_library env]
+    interp eval $slave [list source [file join $tcl_library init.tcl]]
+  }
   interp eval $slave {catch {rename puts tcl_puts}}
   foreach cmd $tkCon(slaveprocs) { interp eval $slave [dump proc $cmd] }
   foreach cmd $tkCon(slavealias) { interp alias $slave $cmd {} $cmd }
@@ -600,7 +609,7 @@ proc tkConInitMenus {w title} {
   global tkCon
 
   if [catch {menu $w.pop -tearoff 0}] {
-    label $w.label -text "Menus not available in plugin mode" -state disabled
+    label $w.label -text "Menus not available in plugin mode"
     pack $w.label
     return
   }
@@ -3187,6 +3196,248 @@ proc tkConExpandBestMatch {l {e {}}} {
     }
   }
   return $ec
+}
+
+# Here is a group of functions that is only used when Tkcon is
+# executed in a safe interpreter. It provides safe versions of
+# missing functions. For example:
+#
+# - "tk appname" returns "tkcon.tcl" but cannot be set
+# - "toplevel" is equivalent to "frame", only it is automatically
+#   packed.
+# - The "source", "load", "open", "file" and "exit" functions are
+#   mapped to corresponding functions in the parent interpreter.
+#
+# Further on, Tk cannot be really loaded. Still the safe "load"
+# provedes a speciall case. The Tk can be divided into 4 groups,
+# that each has a safe handling procedure.
+#
+# - "tkConSafeItem" handles commands like "button", "canvas" ......
+#   Each of these functions has the window name as first argument.
+# - "tkConSafeManage" handles commands like "pack", "place", "grid",
+#   "winfo", which can have multiple window names as arguments.
+# - "tkConSafeWindow" handles all windows, such as ".". For every
+#   window created, a new alias is formed which also is handled by
+#   this function.
+# - Other (e.g. bind, bindtag, image), which need their own function.
+#
+## These functions courtesy Jan Nijtmans (nijtmans@nici.kun.nl)
+##
+if {[string compare [info command tk] tk]} {
+  proc tk {option args} {
+    if {![string match app* $option]} {
+      error "wrong option \"$option\": should be appname"
+    }
+    return "tkcon.tcl"
+  }
+}
+ 
+if {[string compare [info command toplevel] toplevel]} {
+  proc toplevel {name args} {
+    eval frame $name $args
+    pack $name
+  }
+}
+
+proc tkConSafeSource {i f} {
+  set fd [open $f r]
+  set r [read $fd]
+  close $fd
+  if {[catch {interp eval $i $r} msg]} {
+    error $msg
+  }
+}
+
+proc tkConSafeOpen {i f m} {
+    set fd [open $f $m]
+    interp transfer {} $fd $i
+    return $fd
+}
+
+proc tkConSafeLoad {i f p} {
+  global tk_version tk_patchLevel tk_library
+  if [string compare $p Tk] {
+    load $f $p $i
+  } else {
+    foreach command {button canvas checkbutton entry frame label
+      listbox message radiobutton scale scrollbar text toplevel} {
+      $i alias $command tkConSafeItem $i $command
+    }
+    $i alias image tkConSafeImage $i
+    foreach command {pack place grid destroy winfo} {
+      $i alias $command tkConSafeManage $i $command
+    }
+    frame .${i}_dot -width 300 -height 300 -relief raised
+    pack .${i}_dot -side left
+    $i alias tk tk
+    $i alias bind tkConSafeBind $i
+    $i alias bindtags tkConSafeBindtags $i
+    $i alias . tkConSafeWindow $i {}
+    foreach var {tk_version tk_patchLevel tk_library} {
+      $i eval set $var [set $var]
+    }
+    $i eval package provide Tk $tk_version
+    return ""
+  }
+}
+
+proc tkConSafeSubst {i a} {
+  set arg1 ""
+  foreach {arg value} $a {
+    if {![string compare $arg -textvariable] ||
+      ![string compare $arg -variable]} {
+      set newvalue "[list $i] $value"
+      global $newvalue
+      if [interp eval $i info exists $value] {
+      set $newvalue [interp eval $i set $value]
+      } else {
+      catch {unset $newvalue}
+      }
+      $i eval trace variable $value rwu \{[list tkcon set $newvalue $i]\}
+      set value $newvalue
+    } elseif {![string compare $arg -command]} {
+      set value [list $i eval $value]
+    }
+    lappend arg1 $arg $value
+  }
+  return $arg1
+}
+
+proc tkConSafeItem {i command w args} {
+  set args [tkConSafeSubst $i $args]
+  set code [catch "$command [list .${i}_dot$w] $args" msg]
+  $i alias $w tkConSafeWindow $i $w
+  regsub -all .${i}_dot $msg {} msg
+  return -code $code $msg
+}
+
+proc tkConSafeManage {i command args} {
+  set args1 ""
+  foreach arg $args {
+    if [string match . $arg] {
+      set arg .${i}_dot
+    } elseif [string match .* $arg] {
+      set arg ".${i}_dot$arg"
+    }
+    lappend args1 $arg
+  }
+  set code [catch "$command $args1" msg]
+  regsub -all .${i}_dot $msg {} msg
+  return -code $code $msg
+}
+
+#
+# FIX: this funcion doesn't work yet if the binding starts with "+".
+#
+proc tkConSafeBind {i w args} {
+  if [string match . $w] {
+    set w .${i}_dot
+  } elseif [string match .* $w] {
+    set w ".${i}_dot$w"
+  }
+  if {[llength $args] > 1} {
+    set args [list [lindex $args 0] "[list $i] eval [list [lindex $args 1]]"]
+  }
+  set code [catch "bind $w $args" msg]
+  if {[llength $args] <2 && code == 0} {
+    set msg [lindex $msg 3]
+  }
+  return -code $code $msg
+}
+
+proc tkConSafeImage {i option args} {
+  set code [catch "image $option $args" msg]
+  if {[string match cr* $option]} {
+    $i alias $msg $msg
+  }
+  return -code $code $msg
+}
+
+proc tkConSafeBindtags {i w {tags {}}} {
+  if [string match . $w] {
+    set w .${i}_dot
+  } elseif [string match .* $w] {
+    set w ".${i}_dot$w"
+  }
+  set newtags {}
+  foreach tag $tags {
+    if [string match . $tag] {
+      lappend newtags .${i}_dot
+    } elseif [string match .* $tag] {
+      lappend newtags ".${i}_dot$tag"
+    } else {
+      lappend newtags $tag
+    }
+  }
+  if [string match $tags {}] {
+    set code [catch {bindtags $w} msg]
+    regsub -all \\.${i}_dot $msg {} msg
+  } else {
+    set code [catch {bindtags $w $newtags} msg]
+  }
+  return -code $code $msg
+}
+
+proc tkConSafeWindow {i w option args} {
+  if {[string match conf* $option] && [llength $args] > 1} {
+    set args [tkConSafeSubst $i $args]
+  } elseif {[string match itemco* $option] && [llength $args] > 2} {
+    set args "[list [lindex $args 0]] [tkConSafeSubst $i [lrange $args 1 end]\
+]"
+  } elseif {[string match cr* $option]} {
+    if {[llength $args]%2} {
+      set args "[list [lindex $args 0]] [tkConSafeSubst $i [lrange $args 1 en\
+d]]"
+    } else {
+      set args [tkConSafeSubst $i $args]
+    }
+  } elseif {[string match bi* $option] && [llength $args] > 2} {
+    set args [list [lindex $args 0] [lindex $args 1] "[list $i] eval [list [l\
+index $args 2]]"]
+  }
+  set code [catch ".${i}_dot$w $option $args" msg]
+  if {$code} {
+    regsub -all .${i}_dot $msg {} msg
+  } elseif {[string match conf* $option] || [string match itemco* $option]} {
+    if {[llength $args] == 1} {
+      switch -- $args {
+      -textvariable - -variable {
+        set msg "[lrange $msg 0 3] [list [lrange [lindex $msg 4] 1 end]]"
+      }
+      -command - updatecommand {
+        set msg "[lrange $msg 0 3] [list [lindex [lindex $msg 4] 2]]"
+      }
+      }
+    } elseif {[llength $args] == 0} {
+      set args1 ""
+      foreach el $msg {
+      switch -- [lindex $el 0] {
+        -textvariable - -variable {
+          set el "[lrange $el 0 3] [list [lrange [lindex $el 4] 1 end]]"
+        }
+        -command - updatecommand {
+          set el "[lrange $el 0 3] [list [lindex [lindex $el 4] 2]]"
+        }
+      }
+      lappend args1 $el
+      }
+      set msg $args1
+    }
+  } elseif {[string match cg* $option] || [string match itemcg* $option]} {
+    switch -- $args {
+      -textvariable - -variable {
+        set msg [lrange $msg 1 end]
+      }
+      -command - updatecommand {
+      set msg [lindex $msg 2]
+      }
+    }
+  } elseif [string match bi* $option] {
+    if {[llength $args] == 2 && $code == 0} {
+      set msg [lindex $msg 2]
+    }
+  }
+  return -code $code $msg
 }
 
 ## tkConResource - re'source's this script into current console
