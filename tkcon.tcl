@@ -189,7 +189,7 @@ proc ::tkcon::Init {} {
     switch $tcl_platform(platform) {
 	macintosh	{
 	    set envHome PREF_FOLDER
-	    cd [file dirname [info script]]
+	    if {![interp issafe]} {cd [file dirname [info script]]}
 	    set PRIV(rcfile)	tkcon.cfg
 	    set PRIV(histfile)	tkcon.hst
 	    catch {console hide}

@@ -1,3 +1,8 @@
+2001-03-28  Jeff Hobbs  <jeffh@activestate.com>
+
+	* tkcon.tcl (::tkcon::Init): added safe interp check around 'cd'
+	call for Macs
+
 2000-10-30  Jeff Hobbs  <hobbs@ajubasolutions.com>
 
 	* tkcon.tcl (dir): fixed bug where permissions wouldn't print
