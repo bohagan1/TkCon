@@ -1,5 +1,10 @@
 2001-05-28  Jeff Hobbs  <jeffh@ActiveState.com>
 
+	* docs/start.html: added note about ::tkcon::OPT(gets) var.
+	* docs/tkcon.html: improved docs for tkcon *get* methods.
+	* tkcon.tcl: reinstituted override of gets by default to use the
+	tkcon console based gets.
+
 	* tkcon.tcl (dump): corrected outputting local vars with dump.
 	Added RCS info to PRIV array and About box.
 	(tkcon congets) corrected congets to set the limit and insert

@@ -236,6 +236,14 @@ the interpreter to reappear.  Otherwise TkCon will prompt you.
 <DD> Font to use for tkcon text widgets (also specified with -font).
 Defaults to the system default, or a fixed width equivalent.
 
+<DT> <CODE>::tkcon::OPT(gets)</CODE>
+<DD> Controls whether tkcon will overload the gets command to work with
+tkcon.  The valid values are: <code>congets</code> (the default), which
+will redirect <code>stdin</code> requests to the tkcon window;
+<code>gets</code>, which will pop up a dialog to get input; and {} (empty
+string) which tells tkcon not to overload gets.  This value must be set at
+startup to alter tkcon's behavior.
+
 <DT> <CODE>::tkcon::OPT(history)</CODE>
 <DD> The size of the history list to keep.  Defaults to 48.
 

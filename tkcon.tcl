@@ -124,6 +124,7 @@ proc ::tkcon::Init {} {
 	slaveexit	close
 	subhistory	1
 	gc-delay	60000
+	gets		{congets}
 
 	exec		slave
     }
@@ -149,10 +150,10 @@ proc ::tkcon::Init {} {
 	slavealias	{ edit more less tkcon }
 	slaveprocs	{
 	    alias clear dir dump echo idebug lremove
-	    tkcon_puts observe observe_var unalias which what
+	    tkcon_puts tkcon_gets observe observe_var unalias which what
 	}
 	version		2.1+
-	RCS		{RCS: @(#) $Id: runbench.tcl,v 1.10 2001/05/23 05:37:23 hobbs Exp $}
+	RCS		{RCS: @(#) $Id: tkcon.tcl,v 1.30 2001/05/28 07:31:45 hobbs Exp $}
 	release		{May 2001}
 	docs		"http://tkcon.sf.net/"
 	email		{jeff@hobbs.org}
@@ -288,9 +289,9 @@ proc ::tkcon::Init {} {
     if {![catch {rename ::puts ::tkcon_tcl_puts}]} {
 	interp alias {} ::puts {} ::tkcon_puts
     }
-    #if {![catch {rename ::gets ::tkcon_tcl_gets}]} {
-	#interp alias {} ::gets {} ::tkcon_gets
-    #}
+    if {($OPT(gets) != "") && ![catch {rename ::gets ::tkcon_tcl_gets}]} {
+	interp alias {} ::gets {} ::tkcon_gets
+    }
 
     EvalSlave history keep $OPT(history)
     if {[info exists MainInit]} {
@@ -386,15 +387,18 @@ proc ::tkcon::InitSlave {slave args} {
     }
     $slave alias exit exit
     interp eval $slave {
-	catch {rename ::puts ::tkcon_tcl_puts}
-	#catch {rename ::gets ::tkcon_tcl_gets}
+	# Do package require before changing around puts/gets
 	catch {package require bogus-package-name}
+	catch {rename ::puts ::tkcon_tcl_puts}
     }
     foreach cmd $PRIV(slaveprocs) { $slave eval [dump proc $cmd] }
     foreach cmd $PRIV(slavealias) { $slave alias $cmd $cmd }
     interp alias $slave ::ls $slave ::dir -full
     interp alias $slave ::puts $slave ::tkcon_puts
-    #interp alias $slave ::gets $slave ::tkcon_gets
+    if {$OPT(gets) != ""} {
+	interp eval $slave { catch {rename ::gets ::tkcon_tcl_gets} }
+	interp alias $slave ::gets $slave ::tkcon_gets
+    }
     if {[info exists argv0]} {interp eval $slave [list set argv0 $argv0]}
     interp eval $slave set tcl_interactive $tcl_interactive \; \
 	    set argc [llength $args] \; \
@@ -435,10 +439,7 @@ proc ::tkcon::InitInterp {name type} {
     set oldname $PRIV(namesp)
     catch {
 	Attach $name $type
-	EvalAttached {
-	    catch {rename ::puts ::tkcon_tcl_puts}
-	    #catch {rename ::gets ::tkcon_tcl_gets}
-	}
+	EvalAttached { catch {rename ::puts ::tkcon_tcl_puts} }
 	foreach cmd $PRIV(slaveprocs) { EvalAttached [dump proc $cmd] }
 	switch -exact $type {
 	    slave {
@@ -459,9 +460,14 @@ proc ::tkcon::InitInterp {name type} {
 	    if {[catch {interp alias {} ::puts {} ::tkcon_puts}]} {
 		catch {rename ::tkcon_puts ::puts}
 	    }
-	    #if {[catch {interp alias {} ::gets {} ::tkcon_gets}]} {
-		#catch {rename ::tkcon_gets ::gets}
-	    #}
+	}
+	if {$OPT(gets) != ""} {
+	    EvalAttached {
+		catch {rename ::gets ::tkcon_tcl_gets}
+		if {[catch {interp alias {} ::gets {} ::tkcon_gets}]} {
+		    catch {rename ::tkcon_gets ::gets}
+		}
+	    }
 	}
 	return
     } {err}
@@ -2451,8 +2457,31 @@ proc tkcon {cmd args} {
 		    $::tkcon::OPT(buffer)
 	}
 	congets {
-	    ## 'congets' a replacement for [gets stdin varname]
+	    ## 'congets' a replacement for [gets stdin]
+	    # Use the 'gets' alias of 'tkcon_gets' command instead of
+	    # calling the *get* methods directly for best compatability
+	    if {[llength $args]} {
+		return -code error "wrong # args: must be \"tkcon congets\""
+	    }
+	    set old [bind TkConsole <<TkCon_Eval>>]
+	    bind TkConsole <<TkCon_Eval>> { set ::tkcon::PRIV(wait) 0 }
+	    set w $::tkcon::PRIV(console)
+	    # Make sure to move the limit to get the right data
+	    $w mark set insert end
+	    $w mark set limit insert
+	    $w see end
+	    vwait ::tkcon::PRIV(wait)
+	    set line [::tkcon::CmdGet $w]
+	    $w insert end \n
+	    bind TkConsole <<TkCon_Eval>> $old
+	    return $line
+	}
+	getc* {
+	    ## 'getcommand' a replacement for [gets stdin]
 	    ## This forces a complete command to be input though
+	    if {[llength $args]} {
+		return -code error "wrong # args: must be \"tkcon getcommand\""
+	    }
 	    set old [bind TkConsole <<TkCon_Eval>>]
 	    bind TkConsole <<TkCon_Eval>> { set ::tkcon::PRIV(wait) 0 }
 	    set w $::tkcon::PRIV(console)
@@ -2470,15 +2499,9 @@ proc tkcon {cmd args} {
 		$w see end
 	    }
 	    bind TkConsole <<TkCon_Eval>> $old
-	    if {![llength $args]} {
-		return $line
-	    } else {
-		upvar 1 [lindex $args 0] data
-		set data $line
-		return [string length $line]
-	    }
+	    return $line
 	}
-	get*	{
+	get - gets {
 	    ## 'gets' - a replacement for [gets stdin]
 	    ## This pops up a text widget to be used for stdin (local grabbed)
 	    if {[llength $args]} {
@@ -2743,7 +2766,9 @@ proc tkcon_gets args {
     if {[string compare stdin [lindex $args 0]]} {
 	return [uplevel 1 tkcon_tcl_gets $args]
     }
-    set data [tkcon gets]
+    set gtype [tkcon set ::tkcon::OPT(gets)]
+    if {$gtype == ""} { set gtype congets }
+    set data [tkcon $gtype]
     if {$len == 2} {
 	upvar 1 [lindex $args 1] var
 	set var $data
@@ -3205,9 +3230,11 @@ proc idebug {opt args} {
 	    while 1 {
 		set err {}
 		if {$tkcon} {
+		    # tkcon's overload of gets is advanced enough to not need
+		    # this, but we get a little better control this way.
 		    tkcon evalSlave set level $level
 		    tkcon prompt
-		    set line [tkcon congets]
+		    set line [tkcon getcommand]
 		    tkcon console mark set output end
 		} else {
 		    puts -nonewline stderr "(level \#$level) debug > "

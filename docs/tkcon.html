@@ -61,7 +61,7 @@ This provides lots of useful control over a console:
 <DL>
 
 <DT> <CODE>tkcon <b>attach</b></CODE> <I>interpreter</I>
-<DD> Attaches TkCon to the named interpreter.  The name must be that
+<DD> Attaches tkcon to the named interpreter.  The name must be that
 returned by <CODE>[tk appname]</CODE> or a valid path to a slave
 interpreter.  It's best to use this via the <CODE>Console->Attach
 Console</CODE> menu.
@@ -72,17 +72,26 @@ The text widget will automatically delete leading lines once this number
 has been exceeded (read: this is the scroll buffer size).
 
 <DT> <CODE>tkcon <b>bgerror</b></CODE> ?<I>msg errorInfo</I>?
-<DD> Does bgerror stuff in the TkCon master interpreter.
+<DD> Does bgerror stuff in the tkcon master interpreter.
 
 <DT> <CODE>tkcon <b>close</b></CODE> or <CODE>tkcon <b>destroy</b></CODE>
-<DD> Destroys this TkCon widget.
+<DD> Destroys this tkcon widget.
+
+<DT> <CODE>tkcon <b>congets</b></CODE>
+<DD> Behaves like the traditional Tcl <code>gets</code>, but instead of
+using <code>stdin</code>, it uses the tkcon console window.  By default,
+tkcon replaces the standard gets with this command.  This behavior can be
+controlled by altering the <code>::tkcon::OPT(gets)</code> parameter at
+startup.  This should not be called directly - instead rely on the
+overloaded <code>gets</code>, which has support for the optional varName
+parameter.
 
 <DT> <CODE>tkcon <b>console</b></CODE> <I>args</I>
-<DD> Passes the args to the TkCon text widget (the console).
+<DD> Passes the args to the tkcon text widget (the console).
 
 <DT> <CODE>tkcon <b>error</b></CODE>
 <DD> Pops up a dialog that gives the user a full trace of the last error
-received in the TkCon console.
+received in the tkcon console.
 
 <DT> <CODE>tkcon <b>find</b></CODE> <I>string ?-case TCL_BOOLEAN
 -regexp TCL_BOOLEAN?</I>
@@ -92,20 +101,25 @@ is empty, it clears any previous highlighting.
 <DT> <CODE>tkcon <b>font</b></CODE> ?<I>fontname</I>?
 <DD> Sets or returns the font used by tkcon text widgets.
 
-<DT> <CODE>tkcon <b>gets</b></CODE> ?<I>varname</I>?
-<DD> Behaves like the traditional Tcl <code>gets</code>, but uses the
-TkCon console instead of <code>stdin</code>.
+<DT> <CODE>tkcon <b>gets</b></CODE>
+<DD> Behaves like the traditional Tcl <code>gets</code>, but instead of
+needing <code>stdin</code>, it pops a dialog box up for the user.  The
+overloaded <code>gets</code> has support for the optional varName parameter.
+
+<DT> <CODE>tkcon <b>getcommand</b></CODE>
+<DD> A variation of the <CODE><b>congets</b></CODE> method that requires a
+full command to be input before returning.
 
 <DT> <CODE>tkcon <b>hide</b></CODE>
-<DD> Withdraw the TkCon display from the screen (make sure you have
+<DD> Withdraw the tkcon display from the screen (make sure you have
 a way to get it back).
 
 <DT> <CODE>tkcon <b>history</b></CODE> ?<i>-newline</i>?
-<DD> Displays the TkCon history in sourceable form.  If <i>-newline</i> is
+<DD> Displays the tkcon history in sourceable form.  If <i>-newline</i> is
 specified, it separates each command by an extra newline.
 
 <DT> <CODE>tkcon <b>iconify</b></CODE>
-<DD> Iconifies the TkCon display.
+<DD> Iconifies the tkcon display.
 
 <DT> <CODE>tkcon <b>load</b></CODE> <I>filename</I>
 <DD> Sources named file into the slave interpreter.  If no filename is
@@ -113,7 +127,7 @@ given, it will attempt to call <CODE>tk_getOpenFile</CODE> to pop up the
 file select box.
 
 <DT> <CODE>tkcon <b>main</b></CODE> ?<I>arg arg ...</I>?
-<DD> Passes the args to the main TkCon interpreter to be evaluated and
+<DD> Passes the args to the main tkcon interpreter to be evaluated and
 returns the result.
 
 <DT> <CODE>tkcon <b>master</b></CODE> <I>args</I>
@@ -121,7 +135,7 @@ returns the result.
 returns the result.
 
 <DT> <CODE>tkcon <b>new</b></CODE>
-<DD> Creates a new TkCon widget.
+<DD> Creates a new tkcon widget.
 
 <DT> <CODE>tkcon <b>save</b></CODE> ?<I>filename</I> ?<I>type</I>??
 <DD> Saves the console buffer to the given filename.  If no filename is
@@ -139,20 +153,20 @@ what portion of the text you want to save.
 <DD> Like set, but uses <CODE>lappend</CODE> on the variable.
 
 <DT> <CODE>tkcon <b>show</b></CODE> or <CODE>tkcon deiconify</CODE>
-<DD> Redisplays TkCon on the screen.
+<DD> Redisplays tkcon on the screen.
 
 <DT> <CODE>tkcon <b>slave</b></CODE> ?<I>slavename ?arg arg ...?</I>?
-<DD> If called with no args, it returns the name of all the TkCon
+<DD> If called with no args, it returns the name of all the tkcon
 interpreters.  Otherwise given an interp name it passes the args
 to the named interpreter to be evaluated and returns the result.
 If no args are passed, then it returns the <CODE>[tk appname]</CODE>
 of that interpreter.
 
 <DT> <CODE>tkcon <b>title</b></CODE> ?<I>title</I>?
-<DD> Sets or returns the title for TkCon.
+<DD> Sets or returns the title for tkcon.
 
 <DT> <CODE>tkcon <b>version</b></CODE>
-<DD> Returns of version of TkCon.
+<DD> Returns of version of tkcon.
 
 </DL>
 </DIV>
