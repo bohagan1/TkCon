@@ -44,6 +44,11 @@ returned by <CODE>[tk appname]</CODE> or a valid path to a slave
 interpreter.  It's best to use this via the <CODE>Console->Attach
 Console</CODE> menu.
 
+<DT> <CODE>tkcon buffer</CODE> ?<I>size</I>?
+<DD> Sets or queries the allowed size of the console text widget in lines.
+The text widget will automatically delete leading lines once this number
+has been exceeded (read: this is the scroll buffer size).
+
 <DT> <CODE>tkcon bgerror</CODE> ?<I>msg errorInfo</I>?
 <DD> Does bgerror stuff in the TkCon master interpreter.
 

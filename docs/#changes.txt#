@@ -14,7 +14,8 @@ no attribution is made, assume (Hobbs).
 Expanded tkConSave to support use in 'edit'.
 
 Added tkConGarbageCollect proc for periodic cleanup tasks
-(currently, cleaning up error tags in the console widget).
+(currently, cleaning up error tags in the console widget),
+with new gc-delay TKCON var.
 
 Revised error handling (errors are now hot in the console).
 

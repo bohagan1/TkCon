@@ -130,6 +130,10 @@ Defaults to <font color=#FF0000>red</font>.
 <DD> Packages to automatically load into the slave interpreter (ie - 'Tk').
 This is a list.  Defaults to {} (none).
 
+<DT> <CODE>buffer</CODE>
+<DD> The size of the console scroll buffer (in lines).
+Defaults to 512.
+
 <DT> <CODE>blinktime</CODE>
 <DD> The amount of time (in millisecs) that braced sections should
 <I>blink</I> for.  Defaults to 500 (.5 secs), must be at least 100.
@@ -153,6 +157,13 @@ the interpreter to reappear.  Otherwise TkCon will prompt you.
 
 <DT> <CODE>history</CODE>
 <DD> The size of the history list to keep.  Defaults to 32.
+
+<DT> <CODE>hoterrors</CODE>
+<DD> Whether hot errors are enabled or not.  When enabled, errors that
+are returned to the console are marked with a link to the error info
+that will pop up in an minimal editor.  This requires more memory because
+each error that occurs will maintain bindings for this feature, as long
+as the error is in the text widget.  Defaults to on.
 
 <DT> <CODE>library</CODE>
 <DD> The path to any tcl library directories (these are appended to the
