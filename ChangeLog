@@ -1,3 +1,8 @@
+2001-07-04  Jeff Hobbs  <jeffh@ActiveState.com>
+
+	* tkcon.tcl (tkcon): made tkcon console return whatever result it
+	received.  Fixed Bug #438281.
+
 2001-06-20  Jeff Hobbs  <jeffh@ActiveState.com>
 
 	TKCON 2.2 RELEASE

@@ -165,7 +165,7 @@ proc ::tkcon::Init {} {
 	    tkcon_puts tkcon_gets observe observe_var unalias which what
 	}
 	version		2.2
-	RCS		{RCS: @(#) $Id: tkcon.tcl,v 1.36 2001/06/20 23:40:48 hobbs Exp $}
+	RCS		{RCS: @(#) $Id: tkcon.tcl,v 1.37 2001/06/21 02:17:07 hobbs Exp $}
 	HEADURL		{http://cvs.sourceforge.net/cgi-bin/viewcvs.cgi/tkcon/tkcon/tkcon.tcl?rev=HEAD}
 	release		{June 2001}
 	docs		"http://tkcon.sourceforge.net/"
@@ -1891,7 +1891,7 @@ proc ::tkcon::Save { {fn ""} {type ""} {opt ""} {mode w} } {
     if {[catch {open $fn $mode} fid]} {
 	return -code error "Save Error: Unable to open '$fn' for writing\n$fid"
     }
-    puts $fid $data
+    puts -nonewline $fid $data
     close $fid
 }
 
@@ -2481,9 +2481,10 @@ proc tkcon {cmd args} {
 	}
 	cons* {
 	    ## 'console' - passes the args to the text widget of the console.
-	    uplevel 1 $::tkcon::PRIV(console) $args
+	    set result [uplevel 1 $::tkcon::PRIV(console) $args]
 	    ::tkcon::ConstrainBuffer $::tkcon::PRIV(console) \
 		    $::tkcon::OPT(buffer)
+	    return $result
 	}
 	congets {
 	    ## 'congets' a replacement for [gets stdin]
