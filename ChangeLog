@@ -1,3 +1,7 @@
+2001-11-14  Jeff Hobbs  <jeffh@ActiveState.com>
+
+	* tkcon.tcl: added catch around file type call
+
 2001-10-14  Jeff Hobbs  <jeffh@ActiveState.com>
 
 	* tkcon.tcl (Init): corrected loading of rcfile when it was in a

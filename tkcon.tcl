@@ -196,7 +196,7 @@ proc ::tkcon::Init {} {
 	    tkcon_puts tkcon_gets observe observe_var unalias which what
 	}
 	version		2.2
-	RCS		{RCS: @(#) $Id: tkcon.tcl,v 1.43 2001/08/31 21:59:34 hobbs Exp $}
+	RCS		{RCS: @(#) $Id: tkcon.tcl,v 1.44 2001/10/14 19:20:20 hobbs Exp $}
 	HEADURL		{http://cvs.sourceforge.net/cgi-bin/viewcvs.cgi/tkcon/tkcon/tkcon.tcl?rev=HEAD}
 	docs		"http://tkcon.sourceforge.net/"
 	email		{jeff@hobbs.org}
@@ -5189,17 +5189,22 @@ proc ::tkcon::Retrieve {} {
 ## 
 set ::tkcon::PRIV(SCRIPT) [info script]
 if {!$::tkcon::PRIV(WWW) && [string compare $::tkcon::PRIV(SCRIPT) {}]} {
-    while {[string match link [file type $::tkcon::PRIV(SCRIPT)]]} {
-	set link [file readlink $::tkcon::PRIV(SCRIPT)]
-	if {[string match relative [file pathtype $link]]} {
-	    set ::tkcon::PRIV(SCRIPT) [file join [file dirname $::tkcon::PRIV(SCRIPT)] $link]
-	} else {
-	    set ::tkcon::PRIV(SCRIPT) $link
+    # we use a catch here because some wrap apps choke on 'file type'
+    # because TclpLstat wasn't wrappable until 8.4.
+    catch {
+	while {[string match link [file type $::tkcon::PRIV(SCRIPT)]]} {
+	    set link [file readlink $::tkcon::PRIV(SCRIPT)]
+	    if {[string match relative [file pathtype $link]]} {
+		set ::tkcon::PRIV(SCRIPT) \
+			[file join [file dirname $::tkcon::PRIV(SCRIPT)] $link]
+	    } else {
+		set ::tkcon::PRIV(SCRIPT) $link
+	    }
 	}
-    }
-    catch {unset link}
-    if {[string match relative [file pathtype $::tkcon::PRIV(SCRIPT)]]} {
-	set ::tkcon::PRIV(SCRIPT) [file join [pwd] $::tkcon::PRIV(SCRIPT)]
+	catch {unset link}
+	if {[string match relative [file pathtype $::tkcon::PRIV(SCRIPT)]]} {
+	    set ::tkcon::PRIV(SCRIPT) [file join [pwd] $::tkcon::PRIV(SCRIPT)]
+	}
     }
 }
 
