@@ -60,7 +60,7 @@ foreach pkg [info loaded {}] {
 catch {unset pkg file name version}
 
 # Tk 8.4 makes previously exposed stuff private.
-# FIX: Update tkcon to not rely on tje private Tk code.
+# FIX: Update tkcon to not rely on the private Tk code.
 #
 if {![llength [info globals tkPriv]]} {
     ::tk::unsupported::ExposePrivateVariable tkPriv
@@ -159,6 +159,7 @@ proc ::tkcon::Init {} {
 	scrollypos	right
 	showmenu	1
 	showmultiple	1
+	showstatusbar	0
 	slaveeval	{}
 	slaveexit	close
 	subhistory	1
@@ -196,7 +197,7 @@ proc ::tkcon::Init {} {
 	    tkcon_puts tkcon_gets observe observe_var unalias which what
 	}
 	version		2.2
-	RCS		{RCS: @(#) $Id: tkcon.tcl,v 1.39 2001/07/05 17:52:45 hobbs Exp $}
+	RCS		{RCS: @(#) $Id: tkcon.tcl,v 1.40 2001/08/20 19:10:48 hobbs Exp $}
 	HEADURL		{http://cvs.sourceforge.net/cgi-bin/viewcvs.cgi/tkcon/tkcon/tkcon.tcl?rev=HEAD}
 	release		{June 2001}
 	docs		"http://tkcon.sourceforge.net/"
@@ -571,7 +572,7 @@ proc ::tkcon::InitUI {title} {
     if {!$PRIV(WWW)} {
 	$con configure -setgrid 1 -width $OPT(cols) -height $OPT(rows)
     }
-    bindtags $con [list $con PreCon TkConsole PostCon $root all]
+    bindtags $con [list $con TkConsole TkConsolePost $root all]
     ## Menus
     ## catch against use in plugin
     if {[catch {menu $w.mbar} PRIV(menubar)]} {
@@ -589,6 +590,22 @@ proc ::tkcon::InitUI {title} {
     }
     pack $w.sy -side $OPT(scrollypos) -fill y
     pack $con -fill both -expand 1
+
+    set PRIV(statusbar) [set sbar [frame $w.sbar]]
+    label $sbar.attach -relief sunken -bd 1 -anchor w \
+	    -textvariable ::tkcon::PRIV(StatusAttach)
+    label $sbar.mode -relief sunken -bd 1 -anchor w  \
+	    -textvariable ::tkcon::PRIV(StatusMode)
+    label $sbar.cursor -relief sunken -bd 1 -anchor w -width 6 \
+	    -textvariable ::tkcon::PRIV(StatusCursor)
+    grid $sbar.attach $sbar.mode $sbar.cursor -sticky news -padx 1
+    grid columnconfigure $sbar 0 -weight 1
+    grid columnconfigure $sbar 1 -weight 1
+    grid columnconfigure $sbar 2 -weight 0
+
+    if {$OPT(showstatusbar)} {
+	pack $sbar -side bottom -fill x -before $::tkcon::PRIV(scrolly)
+    }
 
     foreach col {prompt stdout stderr stdin proc} {
 	$con tag configure $col -foreground $COLOR($col)
@@ -1011,11 +1028,13 @@ proc ::tkcon::Prompt {{pre {}} {post {}} {prompt {}}} {
     set w $PRIV(console)
     if {[string compare {} $pre]} { $w insert end $pre stdout }
     set i [$w index end-1c]
-    if {[string compare {} $PRIV(appname)]} {
-	$w insert end ">$PRIV(appname)< " prompt
-    }
-    if {[string compare :: $PRIV(namesp)]} {
-	$w insert end "<$PRIV(namesp)> " prompt
+    if {!$OPT(showstatusbar)} {
+	if {[string compare {} $PRIV(appname)]} {
+	    $w insert end ">$PRIV(appname)< " prompt
+	}
+	if {[string compare :: $PRIV(namesp)]} {
+	    $w insert end "<$PRIV(namesp)> " prompt
+	}
     }
     if {[string compare {} $prompt]} {
 	$w insert end $prompt prompt
@@ -1028,6 +1047,7 @@ proc ::tkcon::Prompt {{pre {}} {post {}} {prompt {}}} {
     $w mark gravity limit left
     if {[string compare {} $post]} { $w insert end $post stdin }
     ConstrainBuffer $w $OPT(buffer)
+    set ::tkcon::PRIV(StatusCursor) [$w index insert]
     $w see end
 }
 
@@ -1218,10 +1238,16 @@ proc ::tkcon::InitMenus {w title} {
 		-underline 0 -variable ::tkcon::OPT(showmultiple)
 	$m add check -label "Show Menubar" \
 		-underline 5 -variable ::tkcon::OPT(showmenu) \
-		-command "if {\$::tkcon::OPT(showmenu)} { \
-		pack $w -fill x -before $::tkcon::PRIV(console) \
-		-before $::tkcon::PRIV(scrolly) \
-	    } else { pack forget $w }"
+		-command {$::tkcon::PRIV(root) configure -menu [expr \
+		{$::tkcon::OPT(showmenu) ? $::tkcon::PRIV(menubar) : {}}]}
+	$m add check -label "Show Statusbar" \
+		-underline 5 -variable ::tkcon::OPT(showstatusbar) \
+		-command {
+	    if {$::tkcon::OPT(showstatusbar)} {
+		pack $::tkcon::PRIV(statusbar) -side bottom -fill x \
+			-before $::tkcon::PRIV(scrolly)
+	    } else { pack forget $::tkcon::PRIV(statusbar) }
+	}
 	$m add cascade -label "Scrollbar" -underline 2 -menu $m.scroll
 
 	## Scrollbar Menu
@@ -1662,7 +1688,8 @@ proc ::tkcon::Attach {{name <NONE>} {type slave}} {
     variable PRIV
     variable OPT
 
-    if {[string match <NONE> $name]} {
+    if {[llength [info level 0]] == 1} {
+	# no args were specified, return the attach info instead
 	if {[string match {} $PRIV(appname)]} {
 	    return [list [concat $PRIV(name) $OPT(exec)] $PRIV(apptype)]
 	} else {
@@ -1773,6 +1800,7 @@ proc ::tkcon::Attach {{name <NONE>} {type slave}} {
 	    (!$OPT(nontcl) && [regexp {^(interp|dpy)} $type])} {
 	set PRIV(namesp) ::
     }
+    set PRIV(StatusAttach) "$PRIV(app) ($PRIV(apptype))"
     return
 }
 
@@ -1807,6 +1835,7 @@ proc ::tkcon::AttachNamespace { name } {
 		[interp alias {} ::tkcon::EvalAttached] [list $name]
     }
     set PRIV(namesp) $name
+    set PRIV(StatusAttach) "$PRIV(app) $PRIV(namesp) ($PRIV(apptype))"
 }
 
 ## ::tkcon::NewSocket - called to create a socket to connect to
@@ -2359,10 +2388,12 @@ proc ::tkcon::Event {int {str {}}} {
 		    break
 		} elseif {
 		    ![catch {EvalSlave history event $event} res] &&
-		    ![string compare $PRIV(cmdbuf) [string range $res 0 $len]]
+		    [set p [string first $PRIV(cmdbuf) $res]] > -1
 		} {
+		    set p2 [expr {$p + [string length $PRIV(cmdbuf)]}]
 		    $w delete limit end
 		    $w insert limit $res
+		    Blink $w "limit + $p c" "limit + $p2 c"
 		    break
 		}
 	    }
@@ -2370,15 +2401,16 @@ proc ::tkcon::Event {int {str {}}} {
 	} else {
 	    ## Search history reverse
 	    while {![catch {EvalSlave history event [incr event -1]} res]} {
-		if {![string compare $PRIV(cmdbuf) \
-			[string range $res 0 $len]]} {
+		if {[set p [string first $PRIV(cmdbuf) $res]] > -1} {
+		    set p2 [expr {$p + [string length $PRIV(cmdbuf)]}]
 		    $w delete limit end
 		    $w insert limit $res
 		    set PRIV(event) $event
+		    Blink $w "limit + $p c" "limit + $p2 c"
 		    break
 		}
 	    }
-	} 
+	}
     } else {
 	## String is empty, just get next/prev event
 	if {$int > 0} {
@@ -4068,10 +4100,10 @@ proc ::tkcon::Bindings {} {
 	::tkcon::PopupMenu %X %Y
     }
 
-    ## Menu items need null PostCon bindings to avoid the TagProc
+    ## Menu items need null TkConsolePost bindings to avoid the TagProc
     ##
     foreach ev [bind $PRIV(root)] {
-	bind PostCon $ev {
+	bind TkConsolePost $ev {
 	    # empty
 	}
     }
@@ -4312,36 +4344,49 @@ proc ::tkcon::Bindings {} {
     ##
     ## Bindings for doing special things based on certain keys
     ##
-    bind PostCon <Key-parenright> {
+    bind TkConsolePost <Key-parenright> {
 	if {$::tkcon::OPT(lightbrace) && $::tkcon::OPT(blinktime)>99 && \
 		[string compare \\ [%W get insert-2c]]} {
 	    ::tkcon::MatchPair %W \( \) limit
 	}
+	set ::tkcon::PRIV(StatusCursor) [%W index insert]
     }
-    bind PostCon <Key-bracketright> {
+    bind TkConsolePost <Key-bracketright> {
 	if {$::tkcon::OPT(lightbrace) && $::tkcon::OPT(blinktime)>99 && \
 		[string compare \\ [%W get insert-2c]]} {
 	    ::tkcon::MatchPair %W \[ \] limit
 	}
+	set ::tkcon::PRIV(StatusCursor) [%W index insert]
     }
-    bind PostCon <Key-braceright> {
+    bind TkConsolePost <Key-braceright> {
 	if {$::tkcon::OPT(lightbrace) && $::tkcon::OPT(blinktime)>99 && \
 		[string compare \\ [%W get insert-2c]]} {
 	    ::tkcon::MatchPair %W \{ \} limit
 	}
+	set ::tkcon::PRIV(StatusCursor) [%W index insert]
     }
-    bind PostCon <Key-quotedbl> {
+    bind TkConsolePost <Key-quotedbl> {
 	if {$::tkcon::OPT(lightbrace) && $::tkcon::OPT(blinktime)>99 && \
 		[string compare \\ [%W get insert-2c]]} {
 	    ::tkcon::MatchQuote %W limit
 	}
+	set ::tkcon::PRIV(StatusCursor) [%W index insert]
     }
 
-    bind PostCon <KeyPress> {
+    bind TkConsolePost <KeyPress> {
 	if {$::tkcon::OPT(lightcmd) && [string compare {} %A]} {
 	    ::tkcon::TagProc %W
 	}
+	set ::tkcon::PRIV(StatusCursor) [%W index insert]
     }
+
+    bind TkConsolePost <Button-1> {
+	set ::tkcon::PRIV(StatusCursor) [%W index insert]
+    }
+    bind TkConsolePost <B1-Motion> {
+	set ::tkcon::PRIV(StatusCursor) [%W index insert]
+    }
+
 }
 
 ##
@@ -4518,7 +4563,7 @@ proc ::tkcon::MatchQuote {w {lim 1.0}} {
 ## 
 proc ::tkcon::Blink {w args} {
     eval [list $w tag add blink] $args
-    after $::tkcon::OPT(blinktime) eval [list $w tag remove blink] $args
+    after $::tkcon::OPT(blinktime) [list $w] tag remove blink $args
     return
 }
 

@@ -103,8 +103,9 @@ otherwise it just goes to a new line
 <DT> <B>Control-l</B>
 <DD> Clear the entire console buffer
 <DT> <B>Control-r</B>
-<DD> Searches backwards in the history for a command starting with the
-current command line.  Repeatable to search farther back.
+<DD> Searches backwards in the history for any command that contains the
+string in the current command line.  Repeatable to search farther back.
+The matching substring off the found command will blink.
 <DT> <B>Control-s</B>
 <DD> As above, but searches forward (only useful if you searched too far back).
 <DT> <B>Control-t</B>

@@ -1,3 +1,11 @@
+2001-08-22  Jeff Hobbs  <jeffh@ActiveState.com>
+
+	* docs/bindings.html: noted ^r/^s change. 
+
+	* tkcon.tcl (Event): changed event ^r/^s searching to search for
+	any matching substring, and blink the substring.
+	Added statusbar, default off (not much in status yet).
+
 2001-08-20  Jeff Hobbs  <jeffh@ActiveState.com>
 
 	* tkcon.tcl (EvalNamespace): fixed to work when attached to a
