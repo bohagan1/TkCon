@@ -7,6 +7,9 @@
 	they accept only one arg as the command string to be evaluated.
 	Prior behavior left some ambiguity as to what was eval'ed where.
 	EvalOther, EvalSlave may need some sanitation as well.
+	(EvalCmd): Changed EvalSocket functionality to have the \'s
+	substituted before sending data, to allow for special chars to be
+	added to the string.
 
 2000-09-19  Jeff Hobbs  <hobbs@scriptics.com>
 

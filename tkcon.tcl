@@ -771,6 +771,9 @@ proc ::tkcon::EvalSocket cmd {
 	    Prompt "\n\"$PRIV(app)\" alive\n" [CmdGet $PRIV(console)]
 	}
     }
+    # Sockets get \'s interpreted, so that users can
+    # send things like \n\r or explicit hex values
+    set cmd [subst -novariables -nocommands $cmd]
     #puts [list $PRIV(app) $cmd]
     set code [catch {puts $PRIV(app) $cmd ; flush $PRIV(app)} result]
     if {$code && [eof $PRIV(app)]} {
