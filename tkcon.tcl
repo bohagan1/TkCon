@@ -10,13 +10,10 @@ exec wish "$0" ${1+"$@"}
 ## (from "Practical Programming in Tcl and Tk")
 ##
 ## Thanks to the following (among many) for early bug reports & code ideas:
-## Steven Wahl <steven@indra.com>, Jan Nijtmans <nijtmans@nici.kun.nl>
-## Crimmins <markcrim@umich.edu>, Wart <wart@ugcs.caltech.edu>
+## Steven Wahl, Jan Nijtmans, Mark Crimmins, Wart
 ##
-## Copyright (c) 1995-2002 Jeffrey Hobbs
+## Copyright (c) 1995-2004 Jeffrey Hobbs, jeff(a)hobbs(.)org
 ## Initiated: Thu Aug 17 15:36:47 PDT 1995
-##
-## jeff.hobbs@acm.org, jeff@hobbs.org
 ##
 ## source standard_disclaimer.tcl
 ## source bourbon_ware.tcl
@@ -24,7 +21,7 @@ exec wish "$0" ${1+"$@"}
 
 # Proxy support for retrieving the current version of Tkcon.
 #
-# Mon Jun 25 12:19:56 2001 - Pat Thoyts <Pat.Thoyts@bigfoot.com>
+# Mon Jun 25 12:19:56 2001 - Pat Thoyts
 #
 # In your tkcon.cfg or .tkconrc file put your proxy details into the
 # `proxy' member of the `PRIV' array. e.g.:
@@ -40,6 +37,11 @@ exec wish "$0" ${1+"$@"}
 #
 #    tkcon master set ::tkcon:PRIV(proxy) wwwproxy:8080
 #
+
+if {[string match windows $tcl_platform(platform)]} {
+    # used for a send alternative
+    #package require dde
+}
 
 if {$tcl_version < 8.0} {
     return -code error "tkcon requires at least Tcl/Tk8"
@@ -187,10 +189,10 @@ proc ::tkcon::Init {args} {
 	    alias clear dir dump echo idebug lremove
 	    tkcon_puts tkcon_gets observe observe_var unalias which what
 	}
-	RCS		{RCS: @(#) $Id: tkcon.tcl,v 1.66 2003/11/05 02:54:55 hobbs Exp $}
+	RCS		{RCS: @(#) $Id: tkcon.tcl,v 1.67 2003/11/18 20:36:39 hobbs Exp $}
 	HEADURL		{http://cvs.sourceforge.net/cgi-bin/viewcvs.cgi/tkcon/tkcon/tkcon.tcl?rev=HEAD}
 	docs		"http://tkcon.sourceforge.net/"
-	email		{jeff@hobbs.org}
+	email		{jeff(a)hobbs(.)org}
 	root		.
     } {
 	if {![info exists PRIV($key)]} { set PRIV($key) $default }
@@ -201,6 +203,8 @@ proc ::tkcon::Init {args} {
 	if {![info exists PRIV($key)]} { set PRIV($key) [subst $default] }
     }
     set PRIV(version) $VERSION
+
+    option add *Menu.tearOff 0
 
     if {[info exists PRIV(name)]} {
 	set title $PRIV(name)
@@ -512,9 +516,9 @@ proc ::tkcon::InitInterp {name type} {
 		}
 	    }
 	    interp {
-		set thistkcon [tk appname]
+		set thistkcon [::send::appname]
 		foreach cmd $PRIV(slavealias) {
-		    EvalAttached "proc $cmd args { send [list $thistkcon] $cmd \$args }"
+		    EvalAttached "proc $cmd args { ::send::send [list $thistkcon] $cmd \$args }"
 		}
 	    }
 	}
@@ -817,7 +821,7 @@ proc ::tkcon::EvalOther { app type args } {
     if {[string compare slave $type]==0} {
 	return [Slave $app $args]
     } else {
-	return [uplevel 1 send [list $app] $args]
+	return [uplevel 1 ::send::send [list $app] $args]
     }
 }
 
@@ -847,7 +851,7 @@ proc ::tkcon::EvalSend cmd {
     variable PRIV
 
     if {$PRIV(deadapp)} {
-	if {[lsearch -exact [winfo interps] $PRIV(app)]<0} {
+	if {[lsearch -exact [::send::interps] $PRIV(app)]<0} {
 	    return
 	} else {
 	    set PRIV(appname) [string range $PRIV(appname) 5 end]
@@ -855,8 +859,8 @@ proc ::tkcon::EvalSend cmd {
 	    Prompt "\n\"$PRIV(app)\" alive\n" [CmdGet $PRIV(console)]
 	}
     }
-    set code [catch {send -displayof $PRIV(displayWin) $PRIV(app) $cmd} result]
-    if {$code && [lsearch -exact [winfo interps] $PRIV(app)]<0} {
+    set code [catch {::send::send -displayof $PRIV(displayWin) $PRIV(app) $cmd} result]
+    if {$code && [lsearch -exact [::send::interps] $PRIV(app)]<0} {
 	## Interpreter disappeared
 	if {[string compare leave $OPT(dead)] && \
 		([string match ignore $OPT(dead)] || \
@@ -1388,12 +1392,8 @@ proc ::tkcon::InterpMenu w {
     ## Packages Cascaded Menu
     ##
     $w add separator
-    $w add cascade -label Packages -underline 0 -menu $w.pkg
-    set m $w.pkg
-    if {![winfo exists $m]} {
-	menu $m -tearoff no -disabledforeground $COLOR(disabled) \
-		-postcommand [list ::tkcon::PkgMenu $m $app $type]
-    }
+    $w add command -label "Manage Packages" -underline 0 \
+	-command [list ::tkcon::InterpPkgs $app $type]
 
     ## State Checkpoint/Revert
     ##
@@ -1415,7 +1415,46 @@ proc ::tkcon::InterpMenu w {
 ## ::tkcon::PkgMenu - fill in  in the applications sub-menu
 ## with a list of all the applications that currently exist.
 ##
-proc ::tkcon::PkgMenu {m app type} {
+proc ::tkcon::InterpPkgs {app type} {
+    variable PRIV
+
+    set t $PRIV(base).interppkgs
+    if {![winfo exists $t]} {
+	toplevel $t
+	wm withdraw $t
+	wm title $t "$app Packages"
+	wm transient $t $PRIV(root)
+	wm group $t $PRIV(root)
+	bind $t <Escape> [list destroy $t]
+
+	label $t.ll -text "Loadable:" -anchor w
+	label $t.lr -text "Loaded:" -anchor w
+	listbox $t.loadable -bg white -bd 1 -font tkconfixed \
+	    -yscrollcommand [list $t.llsy set] -selectmode extended
+	listbox $t.loaded -bg white -bd 1 -font tkconfixed \
+	    -yscrollcommand [list $t.lrsy set]
+	scrollbar $t.llsy -bd 1 -command [list $t.loadable yview]
+	scrollbar $t.lrsy -bd 1 -command [list $t.loaded yview]
+	button $t.load -bd 1 -text ">>" -relief flat -overrelief raised \
+	    -command [list ::tkcon::InterpPkgLoad $app $type $t.loadable]
+
+	set f [frame $t.btns]
+	button $f.refresh -width 8 -text "Refresh" -command [info level 0]
+	button $f.dismiss -width 8 -text "Dismiss" -command [list destroy $t]
+	grid $f.refresh $f.dismiss -padx 4 -pady 3 -sticky ew
+
+	grid $t.ll x x $t.lr x -sticky ew
+	grid $t.loadable $t.llsy $t.load $t.loaded $t.lrsy -sticky news
+	grid $t.btns -sticky e -columnspan 5
+	grid columnconfigure $t {0 3} -weight 1
+	grid rowconfigure $t 1 -weight 1
+	grid configure $t.load -sticky ""
+
+	bind $t.loadable <Double-1> "[list $t.load invoke]; break"
+    }
+    $t.loaded delete 0 end
+    $t.loadable delete 0 end
+
     # just in case stuff has been added to the auto_path
     # we have to make sure that the errorInfo doesn't get screwed up
     EvalAttached {
@@ -1424,41 +1463,60 @@ proc ::tkcon::PkgMenu {m app type} {
 	set errorInfo ${__tkcon_error}
 	unset __tkcon_error
     }
-    $m delete 0 end
+    # get all packages loaded into current interp
     foreach pkg [EvalAttached [list info loaded {}]] {
-	set loaded([lindex $pkg 1]) [package provide $pkg]
+	set pkg [lindex $pkg 1]
+	set loaded($pkg) [package provide $pkg]
     }
+    # get all package names currently visible
     foreach pkg [lremove [EvalAttached {package names}] Tcl] {
 	set version [EvalAttached [list package provide $pkg]]
 	if {[string compare {} $version]} {
 	    set loaded($pkg) $version
 	} elseif {![info exists loaded($pkg)]} {
-	    set loadable($pkg) [list package require $pkg]
+	    set loadable($pkg) package
 	}
     }
+    # get packages that are loaded in any interp
     foreach pkg [EvalAttached {info loaded}] {
 	set pkg [lindex $pkg 1]
 	if {![info exists loaded($pkg)] && ![info exists loadable($pkg)]} {
-	    set loadable($pkg) [list load {} $pkg]
+	    set loadable($pkg) load
 	}
     }
-    set npkg 0
     foreach pkg [lsort -dictionary [array names loadable]] {
 	foreach v [EvalAttached [list package version $pkg]] {
-	    set brkcol [expr {([incr npkg]%23)==0}]
-	    $m add command -label "Load $pkg ($v)" -command \
-		    "::tkcon::EvalOther [list $app] $type $loadable($pkg) $v" \
-		    -columnbreak $brkcol
+	    $t.loadable insert end [list $pkg $v "($loadable($pkg))"]
 	}
     }
-    if {[info exists loaded] && [info exists loadable]} {
-	$m add separator
-    }
     foreach pkg [lsort -dictionary [array names loaded]] {
-	set brkcol [expr {([incr npkg]%23)==0}]
-	$m add command -label "${pkg}$loaded($pkg) Loaded" -state disabled \
-		    -columnbreak $brkcol
+	$t.loaded insert end [list $pkg $loaded($pkg)]
     }
+
+    wm deiconify $t
+    raise $t
+}
+
+proc ::tkcon::InterpPkgLoad {app type lb} {
+    # load the lb entry items into the interp
+    foreach sel [$lb curselection] {
+	foreach {pkg ver method} [$lb get $sel] { break }
+	if {$method == "(package)"} {
+	    set code [catch {::tkcon::EvalOther $app $type \
+				 package require $pkg $ver} msg]
+	} elseif {$method == "(load)"} {
+	    set code [catch {::tkcon::EvalOther $app $type load {} $pkg} msg]
+	} else {
+	    set code 1
+	    set msg "Incorrect entry in Loadable selection"
+	}
+	if {$code} {
+	    tk_messageBox -icon error -title "Error requiring $pkg" -type ok \
+		-message "Error requiring $pkg $ver:\n$msg\n$::errorInfo"
+	}
+    }
+    # refresh package list
+    InterpPkgs $app $type
 }
 
 ## ::tkcon::AttachMenu - fill in  in the applications sub-menu
@@ -1479,7 +1537,7 @@ proc ::tkcon::AttachMenu m {
 	    -command "::tkcon::Attach {}; $cmd"
     $m add separator
     $m add command -label "Foreign Tk Interpreters" -state disabled
-    foreach i [lsort [lremove [winfo interps] [array names tknames]]] {
+    foreach i [lsort [lremove [::send::interps] [array names tknames]]] {
 	$m add radio -label $i -variable ::tkcon::PRIV(app) -value $i \
 		-command "::tkcon::Attach [list $i] interp; $cmd"
     }
@@ -1790,7 +1848,7 @@ proc ::tkcon::Attach {{name <NONE>} {type slave}} {
 	} elseif {[interp exists [concat $OPT(exec) $name]]} {
 	    set name [concat $path $name]
 	    set type slave
-	} elseif {[lsearch -exact [winfo interps] $name] > -1} {
+	} elseif {[lsearch -exact [::send::interps] $name] > -1} {
 	    if {[EvalSlave info exists tk_library] \
 		    && [string match $name [EvalSlave tk appname]]} {
 		set name {}
@@ -1910,21 +1968,23 @@ proc ::tkcon::NewSocket {} {
 	wm withdraw $t
 	wm title $t "tkcon Create Socket"
 	label $t.lhost -text "Host: "
-	entry $t.host -width 20
+	entry $t.host -width 16
 	label $t.lport -text "Port: "
 	entry $t.port -width 4
-	button $t.ok -text "OK" -command {set ::tkcon::PRIV(grab) 1}
+	button $t.ok -text "OK" -command {set ::tkcon::PRIV(grab) 1} -width 4
 	bind $t.host <Return> [list focus $t.port]
 	bind $t.port <Return> [list focus $t.ok]
 	bind $t.ok   <Return> [list $t.ok invoke]
-	grid $t.lhost $t.host $t.lport $t.port -sticky ew
-	grid $t.ok	-	-	-	 -sticky ew
+	grid $t.lhost $t.host $t.lport $t.port $t.ok -sticky ew
+	grid configure $t.ok -padx 4 -pady 2
 	grid columnconfig $t 1 -weight 1
 	grid rowconfigure $t 1 -weight 1
 	wm transient $t $PRIV(root)
+	wm group $t $PRIV(root)
 	wm geometry $t +[expr {([winfo screenwidth $t]-[winfo \
 		reqwidth $t]) / 2}]+[expr {([winfo \
 		screenheight $t]-[winfo reqheight $t]) / 2}]
+	bind $t <Escape> [list destroy $t]
     }
     #$t.host delete 0 end
     #$t.port delete 0 end
@@ -2246,7 +2306,7 @@ proc ::tkcon::MainInit {} {
 	    if {![llength $interps]} {
 		error "No other Tk interpreters on $disp"
 	    }
-	    send -displayof $dt [lindex $interps 0] [list info tclversion]
+	    ::send::send -displayof $dt [lindex $interps 0] [list info tclversion]
 	} err]} {
 	    global env
 	    if {[info exists env(DISPLAY)]} {
@@ -4987,7 +5047,7 @@ proc ::tkcon::ExpandBestMatch {l {e {}}} {
 #   this function.
 # - Other (e.g. bind, bindtag, image), which need their own function.
 #
-## These functions courtesy Jan Nijtmans (nijtmans@nici.kun.nl)
+## These functions courtesy Jan Nijtmans
 ##
 if {[string compare [info command tk] tk]} {
     proc tk {option args} {
@@ -5323,31 +5383,115 @@ proc ::tkcon::Retrieve {} {
     }
 }
 
-## ::tkcon::Resource - re'source's this script into current console
-## Meant primarily for my development of this program.  It follows
-## links until the ultimate source is found.
-## 
-set ::tkcon::PRIV(SCRIPT) [info script]
-if {!$::tkcon::PRIV(WWW) && [string compare $::tkcon::PRIV(SCRIPT) {}]} {
-    # we use a catch here because some wrap apps choke on 'file type'
-    # because TclpLstat wasn't wrappable until 8.4.
-    catch {
-	while {[string match link [file type $::tkcon::PRIV(SCRIPT)]]} {
-	    set link [file readlink $::tkcon::PRIV(SCRIPT)]
-	    if {[string match relative [file pathtype $link]]} {
-		set ::tkcon::PRIV(SCRIPT) \
-			[file join [file dirname $::tkcon::PRIV(SCRIPT)] $link]
-	    } else {
-		set ::tkcon::PRIV(SCRIPT) $link
+## 'send' pacakge that handles multiple communication variants
+##
+# Try using Tk send first, then look for a winsend interp,
+# then try dde and finally have a go at comm
+namespace eval ::send {}
+proc ::send::send {args} {
+    array set opts [list displayof {} async 0]
+    while {[string match -* [lindex $args 0]]} {
+	switch -exact -- [lindex $args 0] {
+	    -displayof { set opts(displayof) [Pop args 1] }
+	    -async     { set opts(async) 1 }
+	    -- { Pop args ; break }
+	    default {
+		return -code error "bad option \"[lindex $args 0]\":\
+		    should be -displayof, -async or --"
 	    }
 	}
-	catch {unset link}
-	if {[string match relative [file pathtype $::tkcon::PRIV(SCRIPT)]]} {
-	    set ::tkcon::PRIV(SCRIPT) [file join [pwd] $::tkcon::PRIV(SCRIPT)]
-	}
+	Pop args
+    }
+    set app [Pop args]
+
+    if {[llength [info commands ::winfo]]
+	&& [lsearch -exact [::winfo interps] $app] > -1} {
+	set cmd [list ::send]
+	if {$opts(async) == 1} {lappend cmd -async}
+	if {$opts(displayof) != {}} {lappend cmd -displayof $opts(displayof)}
+	lappend cmd $app
+	eval $cmd $args
+    } elseif {[llength [info commands ::winsend]]
+	      && [lsearch -exact [::winsend interps] $app] > -1} {
+	eval [list ::winsend send $app] $args
+    } elseif {[llength [info commands ::dde]]
+	      && [lsearch -exact [dde services TclEval {}] \
+		      [list TclEval $app]] > -1} {
+	eval [list ::dde eval $app] $args
+    } elseif {[package provide comm] != {} && $::tcl_version >= 8.2
+	      && [string is integer -strict [lindex $app 0]]} {
+	#if {$opts(displayof) != {} && [llength $app] == 1} {
+	#    lappend app $opts(displayof)
+	#}
+	eval [list ::comm::comm send $app] $args
+    } else {
+	return -code error "bad interp: \"$app\" could not be found"
     }
 }
 
+proc ::send::interps {args} {
+    array set opts [list displayof {}]
+    while {[string match -* [lindex $args 0]]} {
+	switch -exact -- [lindex $args 0] {
+	    -displayof { set opts(displayof) [Pop args 1] }
+	    --	       { Pop args ; break }
+	    default {
+		return -code error "bad option \"[lindex $args 0]\":\
+		    should be -displayof or --"
+	    }
+	}
+	Pop args
+    }
+
+    set interps {}
+    if {[llength [info commands ::winfo]]} {
+	set cmd [list ::winfo interps]
+	if {$opts(displayof) != {}} {
+	    lappend cmd -displayof $opts(displayof)
+	}
+	set interps [concat $interps [eval $cmd]]
+    }
+    if {[llength [info commands ::winsend]]} {
+	set interps [concat $interps [::winsend interps]]
+    }
+    if {[llength [info commands ::dde]]} {
+	set servers {}
+	foreach server [::dde services TclEval {}] {
+	    lappend servers [lindex $server 1]
+	}
+	set interps [concat $interps $servers]
+    }
+    if {[package provide comm] != {}} {
+	set interps [concat $interps [::comm::comm interps]]
+    }
+    return $interps
+}
+
+proc ::send::appname {args} {
+    set appname {}
+    if {[llength [info commands ::tk]]} {
+	set appname [eval ::tk appname $args]
+    }
+    if {[llength [info commands ::winsend]]} {
+	set appname [concat $appname [eval ::winsend appname $args]]
+    }
+    if {[llength [info commands ::dde]]} {
+	set appname [concat $appname [eval ::dde servername $args]]
+    }
+    # comm? can set port num and local/global interface.
+    return [lsort -unique $appname]
+}
+
+proc ::send::Pop {varname {nth 0}} {
+    upvar $varname args
+    set r [lindex $args $nth]
+    set args [lreplace $args $nth $nth]
+    return $r
+}
+##
+## end 'send' pacakge
+
+## special case 'tk appname' in Tcl plugin
 if {$::tkcon::PRIV(WWW)} {
     rename tk ::tkcon::_tk
     proc tk {cmd args} {
@@ -5359,6 +5503,10 @@ if {$::tkcon::PRIV(WWW)} {
     }
 }
 
+## ::tkcon::Resource - re'source's this script into current console
+## Meant primarily for my development of this program.  It follows
+## links until the ultimate source is found.
+##
 proc ::tkcon::Resource {} {
     uplevel \#0 {
 	if {[catch {source -rsrc tkcon}]} { source $::tkcon::PRIV(SCRIPT) }
@@ -5367,12 +5515,48 @@ proc ::tkcon::Resource {} {
     InitSlave $::tkcon::OPT(exec)
 }
 
-## Initialize only if we haven't yet
+## Initialize only if we haven't yet, and do other stuff that prepares to
+## run.  It only actually inits (and runs) tkcon if it is the main script.
 ##
-if {(![info exists ::tkcon::PRIV(root)] \
-	|| ![winfo exists $::tkcon::PRIV(root)]) \
-	&& (![info exists argv0] || [info script] == $argv0)} {
-    eval ::tkcon::Init $argv
+proc ::tkcon::AtSource {argv} {
+    variable PRIV
+
+    # the info script assumes we always call this while being sourced
+    set PRIV(SCRIPT) [info script]
+    if {!$PRIV(WWW) && [string length $PRIV(SCRIPT)]} {
+	if {[info tclversion] >= 8.4} {
+	    set PRIV(SCRIPT) [file normalize $PRIV(SCRIPT)]
+	} else {
+	    # we use a catch here because some wrap apps choke on 'file type'
+	    # because TclpLstat wasn't wrappable until 8.4.
+	    catch {
+		while {[string match link [file type $PRIV(SCRIPT)]]} {
+		    set link [file readlink $PRIV(SCRIPT)]
+		    if {[string match relative [file pathtype $link]]} {
+			set PRIV(SCRIPT) \
+			    [file join [file dirname $PRIV(SCRIPT)] $link]
+		    } else {
+			set PRIV(SCRIPT) $link
+		    }
+		}
+		catch {unset link}
+		if {[string match relative [file pathtype $PRIV(SCRIPT)]]} {
+		    set PRIV(SCRIPT) [file join [pwd] $PRIV(SCRIPT)]
+		}
+	    }
+	}
+    }
+    # normalize argv0 if it was tkcon to ensure that we'll be able
+    # to load slaves correctly.
+    if {[info exists ::argv0] && [info script] == $::argv0} {
+	set ::argv0 $PRIV(SCRIPT)
+    }
+
+    if {(![info exists PRIV(root)] || ![winfo exists $PRIV(root)]) \
+	    && (![info exists ::argv0] || $PRIV(SCRIPT) == $::argv0)} {
+	eval ::tkcon::Init $argv
+    }
 }
+tkcon::AtSource $argv
 
 package provide tkcon $::tkcon::VERSION

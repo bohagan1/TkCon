@@ -1,3 +1,14 @@
+2004-01-28  Jeff Hobbs  <jeffh@ActiveState.com>
+
+	* tkcon.tcl: don't use menu tearoffs
+	remove recognizable email addresses from source
+	enabled more send variants (comm, dde, winsend) [bug 649257] (thoyts)
+	change Packages menu (that would be too large with many packages)
+	to a Manage Packages dialog.
+	tightened up Create Socket dialog, added <Escape> dismiss binding.
+	Moved source time initialization into ::tkcon::AtSource to guard
+	against leftover vars and just better encapsulate it.
+
 2003-11-18  Jeff Hobbs  <jeffh@ActiveState.com>
 
 	* tkcon.tcl (::tkcon::InitSlave): remove tk_library from the
