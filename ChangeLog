@@ -1,7 +1,15 @@
 2001-06-20  Jeff Hobbs  <jeffh@ActiveState.com>
 
+	TKCON 2.2 RELEASE
+
+	* README.txt:
+	* index.html:
+	* docs/index.html: updated for 2.2 release
+
 	* tkcon.tcl (InitUI): moved wm protocol inside check to not run
 	under plugin.
+	(::tkcon::Retrieve): added a new method to allow tkcon to retrieve
+	the latest version of itself.
 
 2001-06-19  Jeff Hobbs  <jeffh@ActiveState.com>
 

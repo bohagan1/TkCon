@@ -1,7 +1,7 @@
 WHAT:   Enhanced Tk Console for all Tk platforms
 
-WHERE:  http://www.purl.org/net/hobbs/tcl/script/tkcon/
-	http://tkcon.sourceforge.net/
+WHERE:  http://tkcon.sourceforge.net/
+	http://www.purl.org/net/hobbs/tcl/script/
 
 REQUIREMENTS: Tcl/Tk 8.0+
 	Tested through Tcl/Tk 8.4.
@@ -35,7 +35,7 @@ GETTING STARTED:
 
 tkcon is a single drop-in file.  On Windows, I place this on the desktop
 and double-click on it instead of wish/tclsh.  On Unix, I place it in a
-known bin directory and run this instead of wish.  I don't have a Mac...
+directory on my path and run this instead of wish.  I don't have a Mac...
 
 Documentation can be reading by starting with index.html in the docs/
 subdirectory.  Happying Tcl'ing!
