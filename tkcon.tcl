@@ -83,7 +83,7 @@ namespace eval ::tkcon {
     variable PRIV
     set PRIV(WWW) [info exists embed_args]
 
-    variable EXPECT 1
+    variable EXPECT 0
 }
 
 ## ::tkcon::Init - inits tkcon
@@ -186,7 +186,7 @@ proc ::tkcon::Init {args} {
 	    alias clear dir dump echo idebug lremove
 	    tkcon_puts tkcon_gets observe observe_var unalias which what
 	}
-	RCS		{RCS: @(#) $Id: tkcon.tcl,v 1.75 2004/03/01 21:56:12 hobbs Exp $}
+	RCS		{RCS: @(#) $Id: tkcon.tcl,v 1.76 2004/03/20 23:54:36 hobbs Exp $}
 	HEADURL		{http://cvs.sourceforge.net/viewcvs.py/*checkout*/tkcon/tkcon/tkcon.tcl?rev=HEAD}
 
 	docs		"http://tkcon.sourceforge.net/"
