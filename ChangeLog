@@ -1,3 +1,12 @@
+2001-06-18  Jeff Hobbs  <jeffh@ActiveState.com>
+
+	* tkcon.tcl: (InitUI) added WM_DELETE_WINDOW hook to exit to
+	correctly deconstruct slave consoles.
+	(tkcon congets/getc) added tkcon show to ensure that tkcon would
+	be displayed when input is expected.
+	(GetSelection) new command to handle getting selection, this
+	supports the new UTF8_STRING type.
+
 2001-05-28  Jeff Hobbs  <jeffh@ActiveState.com>
 
 	* docs/start.html: added note about ::tkcon::OPT(gets) var.
@@ -20,6 +29,8 @@
 	better control the root window.
 
 2001-05-04  Jeff Hobbs  <jeffh@ActiveState.com>
+
+	TKCON 2.1 RELEASE
 
 	* docs/style.css: new file for html files to use.
 	* README.txt:

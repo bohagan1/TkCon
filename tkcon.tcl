@@ -153,7 +153,7 @@ proc ::tkcon::Init {} {
 	    tkcon_puts tkcon_gets observe observe_var unalias which what
 	}
 	version		2.1+
-	RCS		{RCS: @(#) $Id: tkcon.tcl,v 1.30 2001/05/28 07:31:45 hobbs Exp $}
+	RCS		{RCS: @(#) $Id: tkcon.tcl,v 1.31 2001/05/28 08:47:12 hobbs Exp $}
 	release		{May 2001}
 	docs		"http://tkcon.sf.net/"
 	email		{jeff@hobbs.org}
@@ -492,6 +492,7 @@ proc ::tkcon::InitUI {title} {
     if {!$PRIV(WWW)} {
 	wm withdraw $root
     }
+    wm protocol $root WM_DELETE_WINDOW exit
     set PRIV(base) $w
 
     ## Text Console
@@ -990,7 +991,7 @@ proc ::tkcon::About {} {
     if {[winfo exists $w]} {
 	wm deiconify $w
     } else {
-	global tk_patchLevel tcl_patchLevel tcl_platform
+	global tk_patchLevel tcl_patchLevel
 	toplevel $w
 	wm title $w "About tkcon v$PRIV(version)"
 	button $w.b -text Dismiss -command [list wm withdraw $w]
@@ -2463,6 +2464,7 @@ proc tkcon {cmd args} {
 	    if {[llength $args]} {
 		return -code error "wrong # args: must be \"tkcon congets\""
 	    }
+	    tkcon show
 	    set old [bind TkConsole <<TkCon_Eval>>]
 	    bind TkConsole <<TkCon_Eval>> { set ::tkcon::PRIV(wait) 0 }
 	    set w $::tkcon::PRIV(console)
@@ -2482,6 +2484,7 @@ proc tkcon {cmd args} {
 	    if {[llength $args]} {
 		return -code error "wrong # args: must be \"tkcon getcommand\""
 	    }
+	    tkcon show
 	    set old [bind TkConsole <<TkCon_Eval>>]
 	    bind TkConsole <<TkCon_Eval>> { set ::tkcon::PRIV(wait) 0 }
 	    set w $::tkcon::PRIV(console)
@@ -4026,6 +4029,17 @@ proc ::tkcon::Bindings {} {
 	bind TkConsole <$paste>	{::tkcon::Paste %W}
     }
 
+    proc ::tkcon::GetSelection {w} {
+	if {
+	    ![catch {selection get -displayof $w -type UTF8_STRING} txt] ||
+	    ![catch {selection get -displayof $w} txt] ||
+	    ![catch {selection get -displayof $w -selection CLIPBOARD} txt]
+	} {
+	    return $txt
+	}
+	return -code error "could not find default selection"
+    }
+
     proc ::tkcon::Cut w {
 	if {[string match $w [selection own -displayof $w]]} {
 	    clipboard clear -displayof $w
@@ -4048,10 +4062,7 @@ proc ::tkcon::Bindings {} {
 	}
     }
     proc ::tkcon::Paste w {
-	if {
-	    ![catch {selection get -displayof $w} txt] ||
-	    ![catch {selection get -displayof $w -selection CLIPBOARD} txt]
-	} {
+	if {![catch {GetSelection $w} txt]} {
 	    if {[$w compare insert < limit]} { $w mark set insert end }
 	    $w insert insert $txt
 	    $w see insert
@@ -4065,7 +4076,7 @@ proc ::tkcon::Bindings {} {
     ::tkcon::ClipboardKeysyms <Copy> <Cut> <Paste>
 
     bind TkConsole <Insert> {
-	catch { ::tkcon::Insert %W [selection get -displayof %W] }
+	catch { ::tkcon::Insert %W [::tkcon::GetSelection %W] }
     }
 
     bind TkConsole <Triple-1> {+
@@ -4219,7 +4230,7 @@ proc ::tkcon::Bindings {} {
     bind TkConsole <ButtonRelease-2> {
 	if {
 	    (!$tkPriv(mouseMoved) || $tk_strictMotif) &&
-	    ![catch {selection get -displayof %W} ::tkcon::PRIV(tmp)]
+	    ![catch {::tkcon::GetSelection %W} ::tkcon::PRIV(tmp)]
 	} {
 	    if {[%W compare @%x,%y < limit]} {
 		%W insert end $::tkcon::PRIV(tmp)
