@@ -196,7 +196,7 @@ proc ::tkcon::Init {} {
 	    tkcon_puts tkcon_gets observe observe_var unalias which what
 	}
 	version		2.2
-	RCS		{RCS: @(#) $Id: tkcon.tcl,v 1.47 2001/12/15 00:13:14 hobbs Exp $}
+	RCS		{RCS: @(#) $Id: tkcon.tcl,v 1.48 2002/01/23 01:58:21 hobbs Exp $}
 	HEADURL		{http://cvs.sourceforge.net/cgi-bin/viewcvs.cgi/tkcon/tkcon/tkcon.tcl?rev=HEAD}
 	docs		"http://tkcon.sourceforge.net/"
 	email		{jeff@hobbs.org}
@@ -4653,13 +4653,13 @@ proc ::tkcon::Insert {w s} {
 # 	type	- type of expansion (path / proc / variable)
 # Calls:	::tkcon::Expand(Pathname|Procname|Variable)
 # Outputs:	The string to match is expanded to the longest possible match.
-#		If ::tkcon::OPT(showmultiple) is non-zero and the user longest match
-#		equaled the string to expand, then all possible matches are
-#		output to stdout.  Triggers bell if no matches are found.
+#		If ::tkcon::OPT(showmultiple) is non-zero and the user longest
+#		match equaled the string to expand, then all possible matches
+#		are output to stdout.  Triggers bell if no matches are found.
 # Returns:	number of matches found
 ## 
 proc ::tkcon::Expand {w {type ""}} {
-    set exp "\[^\\\\\]\[\[ \t\n\r\\\{\"\\\\\$\]"
+    set exp "\[^\\\\\]\[\[ \t\n\r\\\{\"$\]"
     set tmp [$w search -backwards -regexp $exp insert-1c limit-1c]
     if {[string compare {} $tmp]} {append tmp +2c} else {set tmp limit}
     if {[$w compare $tmp >= insert]} return
@@ -4699,6 +4699,8 @@ proc ::tkcon::Expand {w {type ""}} {
 ## 
 proc ::tkcon::ExpandPathname str {
     set pwd [EvalAttached pwd]
+    # Cause a string like {C:/Program\ Files/} to become "C:/Program Files/"
+    set str [subst $str]
     if {[catch {EvalAttached [list cd [file dirname $str]]} err]} {
 	return -code error $err
     }
@@ -4722,23 +4724,19 @@ proc ::tkcon::ExpandPathname str {
 	    } else {
 		set tmp [ExpandBestMatch $m $dir]
 	    }
-	    if {[string match ?*/* $str]} {
-		set tmp [file dirname $str]/$tmp
-	    } elseif {[string match /* $str]} {
-		set tmp /$tmp
+	    if {[string match */* $str]} {
+		set tmp [string trimright [file dirname $str] /]/$tmp
 	    }
-	    regsub -all { } $tmp {\\ } tmp
+	    regsub -all {([^\\]) } $tmp {\1\\ } tmp
 	    set match [linsert $m 0 $tmp]
 	} else {
 	    ## This may look goofy, but it handles spaces in path names
 	    eval append match $m
 	    if {[file isdir $match]} {append match /}
-	    if {[string match ?*/* $str]} {
-		set match [file dirname $str]/$match
-	    } elseif {[string match /* $str]} {
-		set match /$match
+	    if {[string match */* $str]} {
+		set match [string trimright [file dirname $str] /]/$match
 	    }
-	    regsub -all { } $match {\\ } match
+	    regsub -all {([^\\]) } $match {\1\\ } match
 	    ## Why is this one needed and the ones below aren't!!
 	    set match [list $match]
 	}
@@ -4765,10 +4763,10 @@ proc ::tkcon::ExpandProcname str {
 	}
     }
     if {[llength $match] > 1} {
-	regsub -all { } [ExpandBestMatch $match $str] {\\ } str
+	regsub -all {([^\\]) } [ExpandBestMatch $match $str] {\1\\ } str
 	set match [linsert $match 0 $str]
     } else {
-	regsub -all { } $match {\\ } match
+	regsub -all {([^\\]) } $match {\1\\ } match
     }
     return $match
 }
@@ -4792,10 +4790,10 @@ proc ::tkcon::ExpandVariable str {
     } else {
 	set match [EvalAttached [list info vars $str*]]
 	if {[llength $match] > 1} {
-	    regsub -all { } [ExpandBestMatch $match $str] {\\ } str
+	    regsub -all {([^\\]) } [ExpandBestMatch $match $str] {\1\\ } str
 	    set match [linsert $match 0 $str]
 	} else {
-	    regsub -all { } $match {\\ } match
+	    regsub -all {([^\\]) } $match {\1\\ } match
 	}
     }
     return $match
