@@ -2,6 +2,11 @@
 
 	* tkcon.tcl (InitMenus): restricted the Attach Socket
 	functionality to Tcl 8.3+ due to use of [file channels].
+	(InitUI): fixed Configure binding to use correct namespace for OPT
+	(EvalSocket, EvalSend, EvalAttached): cleaned up to require that
+	they accept only one arg as the command string to be evaluated.
+	Prior behavior left some ambiguity as to what was eval'ed where.
+	EvalOther, EvalSlave may need some sanitation as well.
 
 2000-09-19  Jeff Hobbs  <hobbs@scriptics.com>
 

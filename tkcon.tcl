@@ -544,7 +544,7 @@ proc ::tkcon::InitUI {title} {
 	wm title $root "TkCon $PRIV(version) $title"
 	bind $con <Configure> {
 	    scan [wm geometry [winfo toplevel %W]] "%%dx%%d" \
-		    OPT(cols) OPT(rows)
+		    ::tkcon::OPT(cols) ::tkcon::OPT(rows)
 	}
 	wm deiconify $root
     }
@@ -642,19 +642,19 @@ proc ::tkcon::EvalCmd {w cmd} {
 	    ## has a vwait or something in it
 	    $w mark set limit end
 	    if {$OPT(nontcl) && [string match interp $PRIV(apptype)]} {
-		set code [catch "EvalSend $cmd" res]
+		set code [catch {EvalSend $cmd} res]
 		if {$code == 1} {
 		    set PRIV(errorInfo) "Non-Tcl errorInfo not available"
 		}
 	    } elseif {[string match socket $PRIV(apptype)]} {
-		set code [catch "EvalSocket $cmd" res]
+		set code [catch {EvalSocket $cmd} res]
 		if {$code == 1} {
 		    set PRIV(errorInfo) "Socket-based errorInfo not available"
 		}
 	    } else {
 		set code [catch {EvalAttached $cmd} res]
 		if {$code == 1} {
-		    if {[catch {EvalAttached set errorInfo} err]} {
+		    if {[catch {EvalAttached [list set errorInfo]} err]} {
 			set PRIV(errorInfo) "Error getting errorInfo:\n$err"
 		    } else {
 			set PRIV(errorInfo) $err
@@ -710,10 +710,10 @@ proc ::tkcon::EvalOther { app type args } {
 ## ::tkcon::EvalSend - sends the args to the attached interpreter
 ## Varies from 'send' by determining whether attachment is dead
 ## when an error is received
-# ARGS:	args	- the args to send across
+# ARGS:	cmd	- the command string to send across
 # Returns:	the result of the command
 ##
-proc ::tkcon::EvalSend args {
+proc ::tkcon::EvalSend cmd {
     variable OPT
     variable PRIV
 
@@ -723,12 +723,10 @@ proc ::tkcon::EvalSend args {
 	} else {
 	    set PRIV(appname) [string range $PRIV(appname) 5 end]
 	    set PRIV(deadapp) 0
-	    Prompt "\n\"$PRIV(app)\" alive\n" \
-		    [CmdGet $PRIV(console)]
+	    Prompt "\n\"$PRIV(app)\" alive\n" [CmdGet $PRIV(console)]
 	}
     }
-    set code [catch {uplevel 1 [list send -displayof $PRIV(displayWin) \
-	    $PRIV(app)] $args} result]
+    set code [catch {send -displayof $PRIV(displayWin) $PRIV(app) $cmd} result]
     if {$code && [lsearch -exact [winfo interps] $PRIV(app)]<0} {
 	## Interpreter disappeared
 	if {[string compare leave $OPT(dead)] && \
@@ -749,16 +747,16 @@ proc ::tkcon::EvalSend args {
     return -code $code $result
 }
 
-## ::tkcon::EvalSocket - sends the args to an interpreter attached via
+## ::tkcon::EvalSocket - sends the string to an interpreter attached via
 ## a tcp/ip socket
 ##
 ## In the EvalSocket case, ::tkcon::PRIV(app) is the socket id
 ##
 ## Must determine whether socket is dead when an error is received
-# ARGS:	args	- the args to send across
+# ARGS:	cmd	- the data string to send across
 # Returns:	the result of the command
 ##
-proc ::tkcon::EvalSocket args {
+proc ::tkcon::EvalSocket cmd {
     variable OPT
     variable PRIV
     global tcl_version
@@ -770,12 +768,11 @@ proc ::tkcon::EvalSocket args {
 	} else {
 	    set PRIV(appname) [string range $PRIV(appname) 5 end]
 	    set PRIV(deadapp) 0
-	    Prompt "\n\"$PRIV(app)\" alive\n" \
-		    [CmdGet $PRIV(console)]
+	    Prompt "\n\"$PRIV(app)\" alive\n" [CmdGet $PRIV(console)]
 	}
     }
-    puts [list $PRIV(app) $args]
-    set code [catch {puts $PRIV(app) $args ; flush $PRIV(app)} result]
+    #puts [list $PRIV(app) $cmd]
+    set code [catch {puts $PRIV(app) $cmd ; flush $PRIV(app)} result]
     if {$code && [eof $PRIV(app)]} {
 	## Interpreter died or disappeared
 	puts "$code eof [eof $PRIV(app)]"
@@ -784,7 +781,7 @@ proc ::tkcon::EvalSocket args {
     return -code $code $result
 }
 
-## ::tkcon::EvalSocket - fileevent command for an interpreter attached
+## ::tkcon::EvalSocketEvent - fileevent command for an interpreter attached
 ## via a tcp/ip socket
 ## Must determine whether socket is dead when an error is received
 # ARGS:	args	- the args to send across
@@ -1045,11 +1042,16 @@ proc ::tkcon::InitMenus {w title} {
 	##
 	set s $m.save
 	menu $s -disabledforeground $COLOR(disabled) -tearoff 0
-	$s add command -label "All"	-und 0 -command {::tkcon::Save {} all}
-	$s add command -label "History"	-und 0 -command {::tkcon::Save {} history}
-	$s add command -label "Stdin"	-und 3 -command {::tkcon::Save {} stdin}
-	$s add command -label "Stdout"	-und 3 -command {::tkcon::Save {} stdout}
-	$s add command -label "Stderr"	-und 3 -command {::tkcon::Save {} stderr}
+	$s add command -label "All"	-underline 0 \
+		-command {::tkcon::Save {} all}
+	$s add command -label "History"	-underline 0 \
+		-command {::tkcon::Save {} history}
+	$s add command -label "Stdin"	-underline 3 \
+		-command {::tkcon::Save {} stdin}
+	$s add command -label "Stdout"	-underline 3 \
+		-command {::tkcon::Save {} stdout}
+	$s add command -label "Stderr"	-underline 3 \
+		-command {::tkcon::Save {} stderr}
     }
 
     ## Console Menu
@@ -1057,11 +1059,11 @@ proc ::tkcon::InitMenus {w title} {
     foreach m [list [menu $w.console -disabledfore $COLOR(disabled)] \
 	    [menu $w.pop.console -disabledfore $COLOR(disabled)]] {
 	$m add command -label "$title Console"	-state disabled
-	$m add command -label "New Console"	-und 0 -accel Ctrl-N \
+	$m add command -label "New Console"	-underline 0 -accel Ctrl-N \
 		-command ::tkcon::New
-	$m add command -label "Close Console"	-und 0 -accel Ctrl-w \
+	$m add command -label "Close Console"	-underline 0 -accel Ctrl-w \
 		-command ::tkcon::Destroy
-	$m add command -label "Clear Console"	-und 1 -accel Ctrl-l \
+	$m add command -label "Clear Console"	-underline 1 -accel Ctrl-l \
 		-command { clear; ::tkcon::Prompt }
 	if {[string match unix $tcl_platform(platform)]} {
 	    $m add separator
@@ -1069,14 +1071,14 @@ proc ::tkcon::InitMenus {w title} {
 		    -command ::tkcon::XauthSecure
 	}
 	$m add separator
-	$m add cascade -label "Attach To ..."	-und 0 -menu $m.attach
+	$m add cascade -label "Attach To ..."	-underline 0 -menu $m.attach
 
 	## Attach Console Menu
 	##
 	set sub [menu $m.attach -disabledforeground $COLOR(disabled)]
-	$sub add cascade -label "Interpreter"   -und 0 -menu $sub.apps
-	$sub add cascade -label "Namespace" -und 1 -menu $sub.name
-	$sub add cascade -label "Socket" -und 1 -menu $sub.sock \
+	$sub add cascade -label "Interpreter"   -underline 0 -menu $sub.apps
+	$sub add cascade -label "Namespace" -underline 1 -menu $sub.name
+	$sub add cascade -label "Socket" -underline 1 -menu $sub.sock \
 		-state [expr {([info tclversion] < 8.3)?"disabled":"normal"}]
 
 	## Attach Console Menu
@@ -1154,9 +1156,11 @@ proc ::tkcon::InitMenus {w title} {
 	## Scrollbar Menu
 	##
 	set m [menu $m.scroll -tearoff 0]
-	$m add radio -label "Left" -variable ::tkcon::OPT(scrollypos) -value left \
+	$m add radio -label "Left" -value left \
+		-variable ::tkcon::OPT(scrollypos) \
 		-command { pack config $::tkcon::PRIV(scrolly) -side left }
-	$m add radio -label "Right" -variable ::tkcon::OPT(scrollypos) -value right \
+	$m add radio -label "Right" -value right \
+		-variable ::tkcon::OPT(scrollypos) \
 		-command { pack config $::tkcon::PRIV(scrolly) -side right }
     }
 
@@ -1170,7 +1174,8 @@ proc ::tkcon::InitMenus {w title} {
     ## Help Menu
     ##
     foreach m [list [menu $w.help] [menu $w.pop.help]] {
-	$m add command -label "About " -und 0 -accel Ctrl-A -command ::tkcon::About
+	$m add command -label "About " -underline 0 -accel Ctrl-A \
+		-command ::tkcon::About
     }
 }
 
@@ -4248,13 +4253,13 @@ proc ::tkcon::PopupMenu {X Y} {
 	    }
 	    regsub -all $exp2 [$w get $i $j] {\\\0} word
 	    set word [string trim $word {\"$[]{}',?#*}]
-	    if {[llength [EvalAttached info commands [list $word]]]} {
+	    if {[llength [EvalAttached [list info commands $word]]]} {
 		lappend type "proc"
 	    }
-	    if {[llength [EvalAttached info vars [list $word]]]} {
+	    if {[llength [EvalAttached [list info vars $word]]]} {
 		lappend type "var"
 	    }
-	    if {[EvalAttached file isfile [list $word]]} {
+	    if {[EvalAttached [list file isfile $word]]} {
 		lappend type "file"
 	    }
 	}
@@ -4522,8 +4527,8 @@ proc ::tkcon::ExpandPathname str {
 proc ::tkcon::ExpandProcname str {
     set match [EvalAttached [list info commands $str*]]
     if {[llength $match] == 0} {
-	set ns [EvalAttached namespace children \
-		{[namespace current]} [list $str*]]
+	set ns [EvalAttached \
+		"namespace children \[namespace current\] [list $str*]"]
 	if {[llength $ns]==1} {
 	    set match [EvalAttached [list info commands ${ns}::*]]
 	} else {
