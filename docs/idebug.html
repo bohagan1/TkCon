@@ -63,7 +63,8 @@ console and put you into a "debugging" mode.  The <code>body, show &amp;
 trace</code> methods are intended for internal use only.
  <P>
 
-This procedure is experimental (to say the least).  Comments are encouraged.
+This procedure works for minimal debugging sessions.  Comments are
+encouraged.
 
 <DL>
 
@@ -77,6 +78,8 @@ idebug is on and the id matches the pattern.  If so, TkCon will pop to the
 front with the prompt changed to an idebug prompt.  You are given the basic
 ability to observe the call stack an query/set variables or execute Tcl
 commands at any level.  A separate history is maintained in debugging mode.
+To see the special commands available at the debug prompt, type <B>?</B>
+and hit return.
 
 <DT> <CODE>idebug {echo ?id?}</CODE> <I>?args?</I>
 <DD> Behaves just like <code>echo</code>, but only triggers when idebug is
