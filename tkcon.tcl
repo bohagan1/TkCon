@@ -186,7 +186,7 @@ proc ::tkcon::Init {args} {
 	    alias clear dir dump echo idebug lremove
 	    tkcon_puts tkcon_gets observe observe_var unalias which what
 	}
-	RCS		{RCS: @(#) $Id: tkcon.tcl,v 1.78 2004/05/12 21:09:10 hobbs Exp $}
+	RCS		{RCS: @(#) $Id: tkcon.tcl,v 1.79 2004/06/10 23:59:00 hobbs Exp $}
 	HEADURL		{http://cvs.sourceforge.net/viewcvs.py/*checkout*/tkcon/tkcon/tkcon.tcl?rev=HEAD}
 
 	docs		"http://tkcon.sourceforge.net/"
@@ -338,7 +338,7 @@ proc ::tkcon::Init {args} {
     }
 
     ## Create slave executable
-    if {[string compare {} $OPT(exec)]} {
+    if {"" != $OPT(exec)} {
 	uplevel \#0 ::tkcon::InitSlave $OPT(exec) $slaveargs
     } else {
 	set argc [llength $slaveargs]
@@ -349,6 +349,10 @@ proc ::tkcon::Init {args} {
     ## Attach to the slave, EvalAttached will then be effective
     Attach $PRIV(appname) $PRIV(apptype)
     InitUI $title
+    if {"" != $OPT(exec)} {
+	# override exit to DeleteTab now that tab has been created
+	$OPT(exec) alias exit ::tkcon::DeleteTab $PRIV(curtab) $OPT(exec)
+    }
 
     ## swap puts and gets with the tkcon versions to make sure all
     ## input and output is handled by tkcon
@@ -453,6 +457,7 @@ proc ::tkcon::InitSlave {slave args} {
 	interp eval $slave { catch {source [file join $tcl_library init.tcl]} }
 	interp eval $slave { catch unknown }
     }
+    # This will likely be overridden to call DeleteTab where possible
     $slave alias exit exit
     interp eval $slave {
 	# Do package require before changing around puts/gets
@@ -593,6 +598,19 @@ proc ::tkcon::InitUI {title} {
     set con [InitTab $w]
     set PRIV(curtab) $con
 
+    # Only apply this for the first console
+    $con configure -setgrid 1 -width $OPT(cols) -height $OPT(rows)
+    bind $PRIV(root) <Configure> {
+	if {"%W" == $::tkcon::PRIV(root)} {
+	    scan [wm geometry [winfo toplevel %W]] "%%dx%%d" \
+		::tkcon::OPT(cols) ::tkcon::OPT(rows)
+	    if {[info exists ::tkcon::EXP(spawn_id)]} {
+		catch {stty rows $::tkcon::OPT(rows) columns \
+			   $::tkcon::OPT(cols) < $::tkcon::EXP(slave,name)}
+	    }
+	}
+    }
+
     # scrollbar
     set sy [scrollbar $w.sy -takefocus 0 -bd 1 -command [list $con yview]]
     if {!$PRIV(WWW) && [string match "Windows CE" $::tcl_platform(os)]} {
@@ -688,16 +706,8 @@ proc ::tkcon::InitTab {w} {
 	    # Place it so that the titlebar underlaps the CE titlebar
 	    wm geometry $PRIV(root) +0+0
 	}
-	$con configure -setgrid 1 -width $OPT(cols) -height $OPT(rows)
-	# XXX: should this only be applied to one console?
-	bind $con <Configure> {
-	    scan [wm geometry [winfo toplevel %W]] "%%dx%%d" \
-		    ::tkcon::OPT(cols) ::tkcon::OPT(rows)
-	    if {[info exists ::tkcon::EXP(spawn_id)]} {
-		catch {stty rows $::tkcon::OPT(rows) columns $::tkcon::OPT(cols) < $::tkcon::EXP(slave,name)}
-	    }
-	}
     }
+    $con configure -height $OPT(rows) -width $OPT(cols)
 
     foreach col {prompt stdout stderr stdin proc} {
 	$con tag configure $col -foreground $COLOR($col)
@@ -746,8 +756,8 @@ proc ::tkcon::GotoTab {con} {
 
     # adjust console
     if {[winfo exists $PRIV(console)]} {
+	lower $PRIV(console)
 	$PRIV(console) configure -yscrollcommand {}
-	grid remove $PRIV(console)
 	set ATTACH($PRIV(console)) [Attach]
     }
     set PRIV(console) $con
@@ -757,8 +767,8 @@ proc ::tkcon::GotoTab {con} {
     # adjust attach
     eval [linsert $ATTACH($con) 0 Attach]
 
-    # must match placement in InitUI
-    grid $con -row 1 -column 1 -sticky news
+    set PRIV(curtab) $con
+
     raise $con
 
     if {[$con compare 1.0 == end-1c]} {
@@ -769,19 +779,17 @@ proc ::tkcon::GotoTab {con} {
     set PRIV(StatusCursor) [$con index insert]
 
     focus -force $con
-
-    set PRIV(curtab) $con
 }
 
 proc ::tkcon::NewTab {{con {}}} {
     variable PRIV
     variable ATTACH
 
-    set con [InitTab $PRIV(base)]
-    set tmp [interp create Slave[GetSlaveNum]]
-    InitSlave $tmp
-    $tmp alias exit ::tkcon::DeleteTab $con $tmp
-    set ATTACH($con) [list $tmp slave]
+    set con   [InitTab $PRIV(base)]
+    set slave [interp create Slave[GetSlaveNum]]
+    InitSlave $slave
+    $slave alias exit ::tkcon::DeleteTab $con $slave
+    set ATTACH($con) [list $slave slave]
     $PRIV(X) configure -state normal
     MenuConfigure Console "Delete Tab" -state normal
     GotoTab $con
@@ -795,7 +803,13 @@ proc ::tkcon::DeleteTab {{con {}} {slave {}}} {
 	$PRIV(X) configure -state disabled
 	MenuConfigure Console "Delete Tab" -state disabled
     }
-    if {$numtabs == 1} { return }
+    if {$numtabs == 1} {
+	# in the master, it should do the right thing
+	# currently the first master still exists - need rearch to fix
+	exit
+	# we might end up here, depending on how exit is rerouted
+	return
+    }
 
     if {$con == ""} {
 	set con $PRIV(console)
@@ -813,7 +827,7 @@ proc ::tkcon::DeleteTab {{con {}} {slave {}}} {
 
     GotoTab $nexttab
 
-    if {$slave != ""} {
+    if {$slave != "" && $slave != $::tkcon::OPT(exec)} {
 	interp delete $slave
     }
     destroy $PRIV(tabframe).cb[winfo name $con]
@@ -1252,6 +1266,7 @@ proc ::tkcon::Prompt {{pre {}} {post {}} {prompt {}}} {
     variable PRIV
 
     set w $PRIV(console)
+    if {![winfo exists $w]} { return }
     if {[string compare {} $pre]} { $w insert end $pre stdout }
     set i [$w index end-1c]
     if {!$OPT(showstatusbar)} {
@@ -2354,17 +2369,15 @@ proc ::tkcon::MainInit {} {
 	variable OPT
 
 	## Slave interpreter exit request
-	if {[string match exit $OPT(slaveexit)]} {
-	    ## Only exit if it specifically is stated to do so
+	if {[string match exit $OPT(slaveexit)]
+	    || [llength $PRIV(interps)] == 1} {
+	    ## Only exit if it specifically is stated to do so, or this
+	    ## is the last interp
 	    uplevel 1 exit $args
+	} else {
+	    ## Otherwise we will delete the slave interp and associated data
+	    Destroy $slave
 	}
-	## Otherwise we will delete the slave interp and associated data
-	set name [InterpEval $slave]
-	set PRIV(interps) [lremove $PRIV(interps) [list $name]]
-	set PRIV(slaves)  [lremove $PRIV(slaves) [list $slave]]
-	interp delete $slave
-	StateCleanup $slave
-	return
     }
 
     ## ::tkcon::Destroy - destroy console window
@@ -2375,20 +2388,25 @@ proc ::tkcon::MainInit {} {
     proc ::tkcon::Destroy {{slave {}}} {
 	variable PRIV
 
-	if {[string match {} $slave]} {
+	# Just close on the last one
+	if {[llength $PRIV(interps)] == 1} { exit }
+	if {"" == $slave} {
 	    ## Main interpreter close request
-	    if {[tk_dialog $PRIV(base).destroyme {Quit tkcon?} \
-		    {Closing the Main console will quit tkcon} \
-		    warning 0 "Don't Quit" "Quit tkcon"]} exit
+	    if {[tk_messageBox -parent $PRIV(root) -title "Quit tkcon?" \
+		     -message "Close all windows and exit tkcon?" \
+		     -icon question -type yesno] == "yes"} { exit }
+	    return
+	} elseif {$slave == $::tkcon::OPT(exec)} {
+	    set name  [tk appname]
+	    set slave "Main"
 	} else {
 	    ## Slave interpreter close request
 	    set name [InterpEval $slave]
-	    set PRIV(interps) [lremove $PRIV(interps) [list $name]]
-	    set PRIV(slaves)  [lremove $PRIV(slaves) [list $slave]]
 	    interp delete $slave
 	}
+	set PRIV(interps) [lremove $PRIV(interps) [list $name]]
+	set PRIV(slaves)  [lremove $PRIV(slaves) [list $slave]]
 	StateCleanup $slave
-	return
     }
 
     if {$OPT(overrideexit)} {
@@ -4868,8 +4886,8 @@ proc ::tkcon::Bindings {} {
     bind $PRIV(root) <<TkCon_Exit>>	exit
     bind $PRIV(root) <<TkCon_New>>	{ ::tkcon::New }
     bind $PRIV(root) <<TkCon_NewTab>>	{ ::tkcon::NewTab }
-    bind $PRIV(root) <<TkCon_NextTab>>	{ ::tkcon::GotoTab 1 }
-    bind $PRIV(root) <<TkCon_PrevTab>>	{ ::tkcon::GotoTab -1 }
+    bind $PRIV(root) <<TkCon_NextTab>>	{ ::tkcon::GotoTab 1 ; break }
+    bind $PRIV(root) <<TkCon_PrevTab>>	{ ::tkcon::GotoTab -1 ; break }
     bind $PRIV(root) <<TkCon_Close>>	{ ::tkcon::Destroy }
     bind $PRIV(root) <<TkCon_About>>	{ ::tkcon::About }
     bind $PRIV(root) <<TkCon_Help>>	{ ::tkcon::Help }

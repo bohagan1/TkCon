@@ -1,3 +1,16 @@
+2004-06-24  Jeff Hobbs  <jeffh@ActiveState.com>
+
+	* tkcon.tcl (DeleteTab, Destroy): improve the 'exit' handling so
+	that 'exit' in the first created tab doesn't do a full exit.
+	'exit' in the last tab of the first created console still exits
+	tkcon, fixing that requires a rearch of the console
+	creation/management.
+	(InitTab): Have the <Configure> binding only fire for the root
+	window, not for each tab.
+	(GotoTab): Keep tabs around - just raise/lower instead of grid
+	remove/add.  break on Next/Prev Tab binding to get focus right.
+	(Prompt): return if console w doesn't exist
+
 2004-06-10  Jeff Hobbs  <jeffh@ActiveState.com>
 
 	* tkcon.tcl: add [X] tab delete button and Console -> Delete Tab
