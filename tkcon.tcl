@@ -193,7 +193,7 @@ proc ::tkcon::Init {args} {
 	    alias clear dir dump echo idebug lremove
 	    tkcon_puts tkcon_gets observe observe_var unalias which what
 	}
-	RCS		{RCS: @(#) $Id: tkcon.tcl,v 1.53 2002/02/23 06:52:40 hobbs Exp $}
+	RCS		{RCS: @(#) $Id: tkcon.tcl,v 1.54 2002/06/04 02:25:59 hobbs Exp $}
 	HEADURL		{http://cvs.sourceforge.net/cgi-bin/viewcvs.cgi/tkcon/tkcon/tkcon.tcl?rev=HEAD}
 	docs		"http://tkcon.sourceforge.net/"
 	email		{jeff@hobbs.org}
@@ -251,11 +251,16 @@ proc ::tkcon::Init {args} {
 	}
     }
     if {[info exists env($envHome)]} {
+	set home $env($envHome)
+	if {[file pathtype $home] == "volumerelative"} {
+	    # Convert 'C:' to 'C:/' if necessary, innocuous otherwise
+	    append home /
+	}
 	if {![info exists PRIV(rcfile)]} {
-	    set PRIV(rcfile)	[file join $env($envHome) $rcfile]
+	    set PRIV(rcfile)	[file join $home $rcfile]
 	}
 	if {![info exists PRIV(histfile)]} {
-	    set PRIV(histfile)	[file join $env($envHome) $histfile]
+	    set PRIV(histfile)	[file join $home $histfile]
 	}
     }
 
