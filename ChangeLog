@@ -1,3 +1,9 @@
+2001-08-24  Jeff Hobbs  <jeffh@ActiveState.com>
+
+	* tkcon.tcl (NewSocket, NewDisplay): when nothing is specified,
+	just return.
+	(Display): fixed connecting to interps on other displays.
+
 2001-08-22  Jeff Hobbs  <jeffh@ActiveState.com>
 
 	* docs/bindings.html: noted ^r/^s change. 

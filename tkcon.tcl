@@ -197,7 +197,7 @@ proc ::tkcon::Init {} {
 	    tkcon_puts tkcon_gets observe observe_var unalias which what
 	}
 	version		2.2
-	RCS		{RCS: @(#) $Id: tkcon.tcl,v 1.40 2001/08/20 19:10:48 hobbs Exp $}
+	RCS		{RCS: @(#) $Id: tkcon.tcl,v 1.41 2001/08/23 00:50:25 hobbs Exp $}
 	HEADURL		{http://cvs.sourceforge.net/cgi-bin/viewcvs.cgi/tkcon/tkcon/tkcon.tcl?rev=HEAD}
 	release		{June 2001}
 	docs		"http://tkcon.sourceforge.net/"
@@ -1878,6 +1878,7 @@ proc ::tkcon::NewSocket {} {
     wm withdraw $t
     set host [$t.host get]
     set port [$t.port get]
+    if {$host == ""} { return }
     if {[catch {
 	set sock [socket $host $port]
     } err]} {
@@ -2127,20 +2128,16 @@ proc ::tkcon::MainInit {} {
 	variable DISP
 
 	set res {}
-	if {[string compare {} $disp]} {
-	    if {![info exists DISP($disp)]} {
-		return
-	    }
+	if {$disp != ""} {
+	    if {![info exists DISP($disp)]} { return }
 	    return [list $DISP($disp) [winfo interps -displayof $DISP($disp)]]
 	}
-	foreach d [array names DISP] {
-	    lappend res [string range $d 5 end]
-	}
-	return $res
+	return [lsort -dictionary [array names DISP]]
     }
 
     proc ::tkcon::NewDisplay {} {
 	variable PRIV
+	variable DISP
 
 	set t $PRIV(base).newdisp
 	if {![winfo exists $t]} {
@@ -2170,6 +2167,7 @@ proc ::tkcon::MainInit {} {
 	grab release $t
 	wm withdraw $t
 	set disp [$t.data get]
+	if {$disp == ""} { return }
 	regsub -all {\.} [string tolower $disp] ! dt
 	set dt $PRIV(base).$dt
 	destroy $dt
