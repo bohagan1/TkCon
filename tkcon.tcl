@@ -184,7 +184,7 @@ proc ::tkcon::Init {args} {
 	    alias clear dir dump echo idebug lremove
 	    tkcon_puts tkcon_gets observe observe_var unalias which what
 	}
-	RCS		{RCS: @(#) $Id: tkcon.tcl,v 1.72 2004/02/12 17:34:09 hobbs Exp $}
+	RCS		{RCS: @(#) $Id: tkcon.tcl,v 1.73 2004/02/12 20:35:22 hobbs Exp $}
 	HEADURL		{http://cvs.sourceforge.net/viewcvs.py/*checkout*/tkcon/tkcon/tkcon.tcl?rev=HEAD}
 
 	docs		"http://tkcon.sourceforge.net/"
@@ -1302,12 +1302,12 @@ proc ::tkcon::InitMenus {w title} {
     variable COLOR
     global tcl_platform
 
-    if {[catch {menu $w.pop -tearoff 0}]} {
+    if {[catch {menu $w.pop}]} {
 	label $w.label -text "Menus not available in plugin mode"
 	grid $w.label -sticky ew
 	return
     }
-    menu $w.context -tearoff 0 -disabledforeground $COLOR(disabled)
+    menu $w.context -disabledforeground $COLOR(disabled)
     set PRIV(context) $w.context
     set PRIV(popup) $w.pop
 
@@ -1334,7 +1334,7 @@ proc ::tkcon::InitMenus {w title} {
 	## Save Menu
 	##
 	set s $m.save
-	menu $s -disabledforeground $COLOR(disabled) -tearoff 0
+	menu $s -disabledforeground $COLOR(disabled)
 	$s add command -label "All"	-underline 0 \
 		-command {::tkcon::Save {} all}
 	$s add command -label "History"	-underline 0 \
@@ -1366,15 +1366,13 @@ proc ::tkcon::InitMenus {w title} {
 		    -command ::tkcon::XauthSecure
 	}
 	$m add separator
-	$m add cascade -label "Attach To ..."	-underline 0 -menu $m.attach
+	$m add cascade -label "Attach To ..." -underline 0 -menu $m.attach
 
 	## Attach Console Menu
 	##
 	set sub [menu $m.attach -disabledforeground $COLOR(disabled)]
-	$sub add cascade -label "Interpreter"   -underline 0 -menu $sub.apps
-	$sub add cascade -label "Namespace" -underline 1 -menu $sub.name
-	$sub add cascade -label "Socket" -underline 1 -menu $sub.sock \
-		-state [expr {([info tclversion] < 8.3)?"disabled":"normal"}]
+	$sub add cascade -label "Interpreter" -underline 0 -menu $sub.apps
+	$sub add cascade -label "Namespace"   -underline 0 -menu $sub.name
 
 	## Attach Console Menu
 	##
@@ -1383,25 +1381,24 @@ proc ::tkcon::InitMenus {w title} {
 
 	## Attach Namespace Menu
 	##
-	menu $sub.name -disabledforeground $COLOR(disabled) -tearoff 0 \
+	menu $sub.name -disabledforeground $COLOR(disabled) \
 		-postcommand [list ::tkcon::NamespaceMenu $sub.name]
 
 	if {$::tcl_version >= 8.3} {
-	    # This uses [file channels] to create the menu, so we only
-	    # want it for newer versions of Tcl.
-
 	    ## Attach Socket Menu
 	    ##
-	    menu $sub.sock -disabledforeground $COLOR(disabled) -tearoff 0 \
+	    # This uses [file channels] to create the menu, so we only
+	    # want it for newer versions of Tcl.
+	    $sub add cascade -label "Socket" -underline 0 -menu $sub.sock
+	    menu $sub.sock -disabledforeground $COLOR(disabled) \
 		    -postcommand [list ::tkcon::SocketMenu $sub.sock]
 	}
 
-	## Attach Display Menu
-	##
 	if {![string compare "unix" $tcl_platform(platform)]} {
-	    $sub add cascade -label "Display" -und 1 -menu $sub.disp
+	    ## Attach Display Menu
+	    ##
+	    $sub add cascade -label "Display" -underline 0 -menu $sub.disp
 	    menu $sub.disp -disabledforeground $COLOR(disabled) \
-		    -tearoff 0 \
 		    -postcommand [list ::tkcon::DisplayMenu $sub.disp]
 	}
     }
@@ -1460,7 +1457,7 @@ proc ::tkcon::InitMenus {w title} {
 
 	## Scrollbar Menu
 	##
-	set m [menu $m.scroll -tearoff 0]
+	set m [menu $m.scroll]
 	$m add radio -label "Left" -value left \
 		-variable ::tkcon::OPT(scrollypos) \
 		-command { grid configure $::tkcon::PRIV(scrolly) -column 0 }
@@ -2401,7 +2398,13 @@ proc ::tkcon::MainInit {} {
 	if {[llength $args]} {
 	    return [interp eval $slave uplevel \#0 $args]
 	} else {
-	    return [interp eval $slave tk appname]
+	    # beware safe interps with Tk
+	    if {[interp eval $slave {llength [info commands tk]}]} {
+		if {[catch {interp eval $slave tk appname} name]} {
+		    return "safetk"
+		}
+		return $name
+	    }
 	}
     }
 
@@ -2412,7 +2415,11 @@ proc ::tkcon::MainInit {} {
 	foreach i [interp slaves $interp] {
 	    if {[string compare {} $interp]} { set i "$interp $i" }
 	    if {[string compare {} [interp eval $i package provide Tk]]} {
-		lappend ls $i [interp eval $i tk appname]
+		# beware safe interps with Tk
+		if {[catch {interp eval $i tk appname} name]} {
+		    set name {}
+		}
+		lappend ls $i $name
 	    } else {
 		lappend ls $i {}
 	    }
