@@ -44,7 +44,9 @@ if {$tcl_version < 8.0} {
     package require -exact Tk $tcl_version
 }
 
-catch {package require bogus-package-name}
+# We need to load some package to get what's available, and we
+# choose ctext because we'll use it if its available in the editor
+catch {package require ctext}
 foreach pkg [info loaded {}] {
     set file [lindex $pkg 0]
     set name [lindex $pkg 1]
@@ -186,7 +188,7 @@ proc ::tkcon::Init {args} {
 	    alias clear dir dump echo idebug lremove
 	    tkcon_puts tkcon_gets observe observe_var unalias which what
 	}
-	RCS		{RCS: @(#) $Id: tkcon.tcl,v 1.79 2004/06/10 23:59:00 hobbs Exp $}
+	RCS		{RCS: @(#) $Id: tkcon.tcl,v 1.80 2004/06/24 22:17:58 hobbs Exp $}
 	HEADURL		{http://cvs.sourceforge.net/viewcvs.py/*checkout*/tkcon/tkcon/tkcon.tcl?rev=HEAD}
 
 	docs		"http://tkcon.sourceforge.net/"
@@ -2800,11 +2802,45 @@ proc ::tkcon::Event {int {str {}}} {
     $w see end
 }
 
-## ::tkcon::ErrorHighlight - magic error highlighting
+## ::tkcon::Highlight - magic highlighting
 ## beware: voodoo included
 # ARGS:
 ##
-proc ::tkcon::ErrorHighlight w {
+proc ::tkcon::Highlight {w type} {
+    variable COLOR
+    variable OPT
+
+    switch -exact $type {
+	"error" { HighlightError $w }
+	"tcl" - "test" {
+	    if {[winfo class $w] != "Ctext"} { return }
+
+	    foreach {app type} [tkcon attach] {break}
+	    set cmds [::tkcon::EvalOther $app $type info commands]
+
+	    set classes [list \
+		 [list comment ClassForRegexp "^\\s*#\[^\n\]*" $COLOR(stderr)] \
+		 [list var     ClassWithOnlyCharStart "\$" $COLOR(stdout)] \
+		 [list syntax  ClassForSpecialChars "\[\]{}\"" $COLOR(prompt)] \
+		 [list command Class $cmds $COLOR(proc)] \
+		]
+
+	    # Remove all highlight classes from a widget
+	    ctext::clearHighlightClasses $w
+	    foreach class $classes {
+		foreach {cname ctype cptn ccol} $class break
+		ctext::addHighlight$ctype $w $cname $ccol $cptn
+	    }
+	    $w highlight 1.0 end
+	}
+    }
+}
+
+## ::tkcon::HighlightError - magic error highlighting
+## beware: voodoo included
+# ARGS:
+##
+proc ::tkcon::HighlightError w {
     variable COLOR
     variable OPT
 
@@ -3626,7 +3662,12 @@ proc edit {args} {
 	    wm title $w "$word - tkcon Edit"
 	}
 
-	text $w.text -wrap none \
+	if {[package provide ctext] != ""} {
+	    set txt [ctext $w.text]
+	} else {
+	    set txt [text $w.text]
+	}
+	$w.text configure -wrap none \
 		-xscrollcommand [list $w.sx set] \
 		-yscrollcommand [list $w.sy set] \
 		-foreground $::tkcon::COLOR(stdin) \
@@ -3693,10 +3734,12 @@ proc edit {args} {
 	proc*	{
 	    $w.text insert 1.0 \
 		    [::tkcon::EvalOther $app $type dump proc [list $word]]
+	    after idle [::tkcon::Highlight $w.text tcl]
 	}
 	var*	{
 	    $w.text insert 1.0 \
 		    [::tkcon::EvalOther $app $type dump var [list $word]]
+	    after idle [::tkcon::Highlight $w.text tcl]
 	}
 	file	{
 	    $w.text insert 1.0 [::tkcon::EvalOther $app $type eval \
@@ -3708,10 +3751,12 @@ proc edit {args} {
 		return \$__tkcon(data)
 	    }
 	    ]]
+	    after idle [::tkcon::Highlight $w.text \
+			    [string trimleft [file extension $word] .]]
 	}
 	error*	{
 	    $w.text insert 1.0 [join $args \n]
-	    ::tkcon::ErrorHighlight $w.text
+	    after idle [::tkcon::Highlight $w.text error]
 	}
 	default	{
 	    $w.text insert 1.0 [join $args \n]
