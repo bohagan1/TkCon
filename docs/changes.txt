@@ -9,6 +9,10 @@ indicates an idea/bug report attribution fixed by myself.  Where
 no attribution is made, assume (Hobbs).
 -------------------------------------------------------------------------
 
+THIS FILE IS NO LONGER PERTINENT.
+
+All changes are now recorded in the ChangeLog.
+
 ---- March 31 1999 v1.6 ----
 
 Changed tkConInsert to not use catch (avoids any error generation).
