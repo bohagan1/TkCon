@@ -186,7 +186,7 @@ proc ::tkcon::Init {args} {
 	    alias clear dir dump echo idebug lremove
 	    tkcon_puts tkcon_gets observe observe_var unalias which what
 	}
-	RCS		{RCS: @(#) $Id: tkcon.tcl,v 1.77 2004/03/20 23:56:23 hobbs Exp $}
+	RCS		{RCS: @(#) $Id: tkcon.tcl,v 1.78 2004/05/12 21:09:10 hobbs Exp $}
 	HEADURL		{http://cvs.sourceforge.net/viewcvs.py/*checkout*/tkcon/tkcon/tkcon.tcl?rev=HEAD}
 
 	docs		"http://tkcon.sourceforge.net/"
@@ -565,19 +565,28 @@ proc ::tkcon::InitUI {title} {
     set PRIV(base) $w
 
     catch {font create tkconfixed -family Courier -size -12}
+    catch {font create tkconfixedbold -family Courier -size -12 -weight bold}
 
     set PRIV(statusbar) [set sbar [frame $w.fstatus]]
     set PRIV(tabframe)  [frame $sbar.tabs]
+    set PRIV(X) [button $sbar.deltab -text "X" -command ::tkcon::DeleteTab \
+		     -activeforeground red -fg red -font tkconfixedbold \
+		     -highlightthickness 0 -padx 2 -pady 0 -bd 1 \
+		     -state disabled -relief flat]
+    catch {$PRIV(X) configure -overrelief raised}
     label $sbar.cursor -relief sunken -bd 1 -anchor e -width 6 \
 	    -textvariable ::tkcon::PRIV(StatusCursor)
     set padx [expr {![info exists ::tcl_platform(os)]
 		    || ![string match "Windows CE" $::tcl_platform(os)]}]
-    grid $sbar.tabs $sbar.cursor -sticky ew -padx $padx
-    grid configure $sbar.tabs -sticky nsw
-    grid columnconfigure $sbar 0 -weight 1
+    grid $PRIV(X) $PRIV(tabframe) $sbar.cursor -sticky news -padx $padx
+    grid configure $PRIV(tabframe) -sticky nsw
+    grid configure $PRIV(X) -pady 0 -padx 0
+    grid columnconfigure $sbar 1 -weight 1
+    grid rowconfigure $sbar 0 -weight 1
+    grid rowconfigure $PRIV(tabframe) 0 -weight 1
     if {$::tcl_version >= 8.4 && [tk windowingsystem] == "aqua"} {
 	# give space for the corner resize handle
-	grid columnconfigure $sbar 2 -minsize 20
+	grid columnconfigure $sbar [lindex [grid size $sbar] 0] -minsize 20
     }
 
     ## Create console tab
@@ -708,7 +717,7 @@ proc ::tkcon::InitTab {w} {
     if {$::tcl_version >= 8.4} {
 	$rb configure -offrelief flat -overrelief raised
     }
-    grid $rb -row 0 -column [lindex [grid size $PRIV(tabframe)] 0]
+    grid $rb -row 0 -column [lindex [grid size $PRIV(tabframe)] 0] -sticky ns
     grid $con -row 1 -column 1 -sticky news
 
     lappend PRIV(tabs) $con
@@ -773,6 +782,8 @@ proc ::tkcon::NewTab {{con {}}} {
     InitSlave $tmp
     $tmp alias exit ::tkcon::DeleteTab $con $tmp
     set ATTACH($con) [list $tmp slave]
+    $PRIV(X) configure -state normal
+    MenuConfigure Console "Delete Tab" -state normal
     GotoTab $con
 }
 
@@ -780,6 +791,10 @@ proc ::tkcon::DeleteTab {{con {}} {slave {}}} {
     variable PRIV
 
     set numtabs [llength $PRIV(tabs)]
+    if {$numtabs <= 2} {
+	$PRIV(X) configure -state disabled
+	MenuConfigure Console "Delete Tab" -state disabled
+    }
     if {$numtabs == 1} { return }
 
     if {$con == ""} {
@@ -787,13 +802,14 @@ proc ::tkcon::DeleteTab {{con {}} {slave {}}} {
     }
     catch {unset ATTACH($con)}
     set curtab  [lsearch -exact $PRIV(tabs) $con]
-    set nexttab [expr {$curtab + 1}]
+    set PRIV(tabs) [lreplace $PRIV(tabs) $curtab $curtab]
+
+    set numtabs [llength $PRIV(tabs)]
+    set nexttab $curtab
     if {$nexttab >= $numtabs} {
-	set nexttab 0
+	set nexttab end
     }
     set nexttab [lindex $PRIV(tabs) $nexttab]
-    # splice out current tab
-    set PRIV(tabs) [lreplace $PRIV(tabs) $curtab $curtab]
 
     GotoTab $nexttab
 
@@ -1329,6 +1345,11 @@ proc ::tkcon::InitMenus {w title} {
 	$w add cascade -label $m -underline 0 -menu $w.$l
 	return $w.$l
     }
+    proc MenuConfigure {m l args} {
+	variable PRIV
+	eval [list $PRIV(menubar).[string tolower $m] entryconfigure $l] $args
+	eval [list $PRIV(popup).[string tolower $m] entryconfigure $l] $args
+    }
 
     foreach m [list File Console Edit Interp Prefs History Help] {
  	set l [string tolower $m]
@@ -1370,6 +1391,8 @@ proc ::tkcon::InitMenus {w title} {
 		-command ::tkcon::New
 	$m add command -label "New Tab"		-underline 4 -accel Ctrl-T \
 		-command ::tkcon::NewTab
+	$m add command -label "Delete Tab"	-underline 0 \
+		-command ::tkcon::DeleteTab -state disabled
 	$m add command -label "Close Console"	-underline 0 -accel Ctrl-w \
 		-command ::tkcon::Destroy
 	$m add command -label "Clear Console"	-underline 1 -accel Ctrl-l \
