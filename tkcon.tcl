@@ -193,7 +193,7 @@ proc ::tkcon::Init {args} {
 	    alias clear dir dump echo idebug lremove
 	    tkcon_puts tkcon_gets observe observe_var unalias which what
 	}
-	RCS		{RCS: @(#) $Id: tkcon.tcl,v 1.55 2002/06/04 17:35:40 hobbs Exp $}
+	RCS		{RCS: @(#) $Id: tkcon.tcl,v 1.56 2002/06/22 08:29:00 hobbs Exp $}
 	HEADURL		{http://cvs.sourceforge.net/cgi-bin/viewcvs.cgi/tkcon/tkcon/tkcon.tcl?rev=HEAD}
 	docs		"http://tkcon.sourceforge.net/"
 	email		{jeff@hobbs.org}
@@ -2013,6 +2013,9 @@ proc ::tkcon::MainInit {} {
 	set tmp [interp create Slave[GetSlaveNum]]
 	lappend PRIV(slaves) $tmp
 	load {} Tk $tmp
+	# If we have tbcload, then that should be autoloaded into slaves.
+	set idx [lsearch [info loaded] "* Tbcload"]
+	if {$idx != -1} { catch {load {} Tbcload $tmp} }
 	lappend PRIV(interps) [$tmp eval [list tk appname \
 		"[tk appname] $tmp"]]
 	if {[info exist argv0]} {$tmp eval [list set argv0 $argv0]}
@@ -2120,7 +2123,8 @@ proc ::tkcon::MainInit {} {
     proc ::tkcon::InterpEval {{slave {}} args} {
 	variable PRIV
 
-	if {[string match {} $slave]} {
+	if {[llength [info level 0]] == 1} {
+	    # no args given
 	    return $PRIV(slaves)
 	} elseif {[string match {[Mm]ain} $slave]} {
 	    set slave {}
@@ -2133,7 +2137,9 @@ proc ::tkcon::MainInit {} {
     }
 
     proc ::tkcon::Interps {{ls {}} {interp {}}} {
-	if {[string match {} $interp]} { lappend ls {} [tk appname] }
+	if {[string match {} $interp]} {
+	    lappend ls {} [tk appname]
+	}
 	foreach i [interp slaves $interp] {
 	    if {[string compare {} $interp]} { set i "$interp $i" }
 	    if {[string compare {} [interp eval $i package provide Tk]]} {
