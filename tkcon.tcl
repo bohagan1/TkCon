@@ -188,7 +188,7 @@ proc ::tkcon::Init {args} {
 	    alias clear dir dump echo idebug lremove
 	    tkcon_puts tkcon_gets observe observe_var unalias which what
 	}
-	RCS		{RCS: @(#) $Id: tkcon.tcl,v 1.82 2004/11/11 17:22:13 hobbs Exp $}
+	RCS		{RCS: @(#) $Id: tkcon.tcl,v 1.83 2004/11/12 18:06:54 hobbs Exp $}
 	HEADURL		{http://cvs.sourceforge.net/viewcvs.py/*checkout*/tkcon/tkcon/tkcon.tcl?rev=HEAD}
 
 	docs		"http://tkcon.sourceforge.net/"
@@ -5598,7 +5598,9 @@ proc ::tkcon::ExpandVariable str {
 	    set vars $ary\([ExpandBestMatch $match $str]
 	    foreach var $match {lappend vars $ary\($var\)}
 	    return $vars
-	} else {set match $ary\($match\)}
+	} elseif {[llength $match] == 1} {
+	    set match $ary\($match\)
+	}
 	## Space transformation avoided for array names.
     } else {
 	set match [EvalAttached [list info vars $str*]]

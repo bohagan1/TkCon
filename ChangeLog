@@ -1,3 +1,8 @@
+2004-11-17  Jeff Hobbs  <jeffh@ActiveState.com>
+
+	* tkcon.tcl (::tkcon::ExpandVariable): correct array keyname
+	expansion. [Bug 1004508] (bold)
+
 2004-11-12  Jeff Hobbs  <jeffh@ActiveState.com>
 
 	* tkcon.tcl (::tkcon::EvalSocket): pass sock arg. (allaert)
