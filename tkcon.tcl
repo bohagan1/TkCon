@@ -195,8 +195,8 @@ proc ::tkcon::Init {} {
 	    alias clear dir dump echo idebug lremove
 	    tkcon_puts tkcon_gets observe observe_var unalias which what
 	}
-	version		2.2
-	RCS		{RCS: @(#) $Id: tkcon.tcl,v 1.50 2002/01/23 03:32:48 hobbs Exp $}
+	version		2.3
+	RCS		{RCS: @(#) $Id: tkcon.tcl,v 1.51 2002/01/24 19:44:53 hobbs Exp $}
 	HEADURL		{http://cvs.sourceforge.net/cgi-bin/viewcvs.cgi/tkcon/tkcon/tkcon.tcl?rev=HEAD}
 	docs		"http://tkcon.sourceforge.net/"
 	email		{jeff@hobbs.org}
@@ -5206,7 +5206,7 @@ proc ::tkcon::Retrieve {} {
 		RCS $rcsVersion.  Shall I resource (not restart) this\
 		version now?"] == "yes"} {
 	    set PRIV(SCRIPT) $file
-	    set PRIV(version) $tkconVersion-$rcsVersion
+	    set PRIV(version) $tkconVersion.$rcsVersion
 	    ::tkcon::Resource
 	}
     }
