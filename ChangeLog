@@ -1,3 +1,13 @@
+2003-02-20  Jeff Hobbs  <jeffh@ActiveState.com>
+
+	* tkcon.tcl (EvalCmd): set $:: (aka ${}) var to last command result.
+	(EvalOther): use tk_messageBox instead of tk_dialog
+	(Init): allow 'edit' to be overridden using OPT(edit)
+
+2003-01-13  Jeff Hobbs  <jeffh@ActiveState.com>
+
+	* tkcon.tcl: add tk appname alias in WWW plugin case.
+
 2002-10-08  Jeff Hobbs  <jeffh@ActiveState.com>
 
 	* tkcon.tcl (tcl_unknown): allow ::namespace (:'s) to be

@@ -131,6 +131,7 @@ proc ::tkcon::Init {args} {
 	cols		80
 	debugPrompt	{(level \#$level) debug [history nextid] > }
 	dead		{}
+	edit		edit
 	expandorder	{Pathname Variable Procname}
 	font		{}
 	history		48
@@ -180,18 +181,22 @@ proc ::tkcon::Init {args} {
 	errorInfo	{}
 	protocol	exit
 	showOnStartup	1
-	slavealias	{ edit more less tkcon }
 	slaveprocs	{
 	    alias clear dir dump echo idebug lremove
 	    tkcon_puts tkcon_gets observe observe_var unalias which what
 	}
-	RCS		{RCS: @(#) $Id: tkcon.tcl,v 1.58 2002/10/08 18:51:00 hobbs Exp $}
+	RCS		{RCS: @(#) $Id: tkcon.tcl,v 1.59 2003/01/14 04:59:45 hobbs Exp $}
 	HEADURL		{http://cvs.sourceforge.net/cgi-bin/viewcvs.cgi/tkcon/tkcon/tkcon.tcl?rev=HEAD}
 	docs		"http://tkcon.sourceforge.net/"
 	email		{jeff@hobbs.org}
 	root		.
     } {
 	if {![info exists PRIV($key)]} { set PRIV($key) $default }
+    }
+    foreach {key default} {
+	slavealias	{ $OPT(edit) more less tkcon }
+    } {
+	if {![info exists PRIV($key)]} { set PRIV($key) [subst $default] }
     }
     set PRIV(version) $VERSION
 
@@ -642,11 +647,13 @@ proc ::tkcon::GarbageCollect {} {
     variable PRIV
 
     set w $PRIV(console)
-    ## Remove error tags that no longer span anything
-    ## Make sure the tag pattern matches the unique tag prefix
-    foreach tag [$w tag names] {
-	if {[string match _tag* $tag] && ![llength [$w tag ranges $tag]]} {
-	    $w tag delete $tag
+    if {[winfo exists $w]} {
+	## Remove error tags that no longer span anything
+	## Make sure the tag pattern matches the unique tag prefix
+	foreach tag [$w tag names] {
+	    if {[string match _tag* $tag] && ![llength [$w tag ranges $tag]]} {
+		$w tag delete $tag
+	    }
 	}
     }
     if {$OPT(gc-delay)} {
@@ -743,6 +750,7 @@ proc ::tkcon::EvalCmd {w cmd} {
 		}
 	    }
 	    AddSlaveHistory $cmd
+	    catch {EvalAttached [list set {} $res]}
 	    if {$code} {
 		if {$OPT(hoterrors)} {
 		    set tag [UniqueTag $w]
@@ -753,7 +761,7 @@ proc ::tkcon::EvalCmd {w cmd} {
 			    [list $w tag configure $tag -under 0]
 		    $w tag bind $tag <ButtonRelease-1> \
 			    "if {!\[info exists tkPriv(mouseMoved)\] || !\$tkPriv(mouseMoved)} \
-			    {[list edit -attach [Attach] -type error -- $PRIV(errorInfo)]}"
+			    {[list $OPT(edit) -attach [Attach] -type error -- $PRIV(errorInfo)]}"
 		} else {
 		    $w insert output $res\n stderr
 		}
@@ -827,9 +835,10 @@ proc ::tkcon::EvalSend cmd {
 	## Interpreter disappeared
 	if {[string compare leave $OPT(dead)] && \
 		([string match ignore $OPT(dead)] || \
-		[tk_dialog $PRIV(base).dead "Dead Attachment" \
-		"\"$PRIV(app)\" appears to have died.\
-		\nReturn to primary slave interpreter?" questhead 0 OK No])} {
+		     [tk_messageBox -title "Dead Attachment" -type yesno \
+			  -icon info -message \
+			  "\"$PRIV(app)\" appears to have died.\
+		\nReturn to primary slave interpreter?"]=="no")} {
 	    set PRIV(appname) "DEAD:$PRIV(appname)"
 	    set PRIV(deadapp) 1
 	} else {
@@ -2509,7 +2518,7 @@ proc ::tkcon::ErrorHighlight w {
 	    $w tag bind $tag <Enter> [list $w tag configure $tag -under 1]
 	    $w tag bind $tag <Leave> [list $w tag configure $tag -under 0]
 	    $w tag bind $tag <ButtonRelease-1> "if {!\$tkPriv(mouseMoved)} \
-		    {[list edit -attach $app -type proc -find $what -- $cmd]}"
+		    {[list $OPT(edit) -attach $app -type proc -find $what -- $cmd]}"
 	}
 	set info [string range $info $c1 end]
 	set start [$w index $start+${c1}c]
@@ -2538,7 +2547,7 @@ proc ::tkcon::ErrorHighlight w {
 	    $w tag bind $tag <Enter> [list $w tag configure $tag -under 1]
 	    $w tag bind $tag <Leave> [list $w tag configure $tag -under 0]
 	    $w tag bind $tag <ButtonRelease-1> "if {!\$tkPriv(mouseMoved)} \
-		    {[list edit -attach $app -type proc -- $cmd]}"
+		    {[list $OPT(edit) -attach $app -type proc -- $cmd]}"
 	}
     }
 }
@@ -2687,7 +2696,7 @@ proc tkcon {cmd args} {
 	    }
 	    if {[string match {} $info]} { set info "errorInfo empty" }
 	    ## If args is empty, the -attach switch just ignores it
-	    edit -attach $args -type error -- $info
+	    $OPT(edit) -attach $args -type error -- $info
 	}
 	fi* {
 	    ## 'find' string
@@ -2964,10 +2973,10 @@ proc edit {args} {
 	append w $i
 	toplevel $w
 	wm withdraw $w
-	if {[string length $word] > 12} {
-	    wm title $w "tkcon Edit: [string range $word 0 9]..."
+	if {[string length $word] > 20} {
+	    wm title $w "[string range $word 0 16]... - tkcon Edit"
 	} else {
-	    wm title $w "tkcon Edit: $word"
+	    wm title $w "$word - tkcon Edit"
 	}
 
 	text $w.text -wrap none \
@@ -4594,15 +4603,15 @@ proc ::tkcon::PopupMenu {X Y} {
     set app [Attach]
     if {[lsearch $type proc] != -1} {
 	$PRIV(context) add command -label "View Procedure" \
-		-command [list edit -attach $app -type proc -- $word]
+		-command [list $OPT(edit) -attach $app -type proc -- $word]
     }
     if {[lsearch $type var] != -1} {
 	$PRIV(context) add command -label "View Variable" \
-		-command [list edit -attach $app -type var -- $word]
+		-command [list $OPT(edit) -attach $app -type var -- $word]
     }
     if {[lsearch $type file] != -1} {
 	$PRIV(context) add command -label "View File" \
-		-command [list edit -attach $app -type file -- $word]
+		-command [list $OPT(edit) -attach $app -type file -- $word]
     }
     tk_popup $PRIV(context) $X $Y
 }
