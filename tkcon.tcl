@@ -93,7 +93,7 @@ proc tkConInit {} {
     slavealias	{ tkcon }
     slaveprocs	{ alias clear dir dump lremove puts echo tclindex idebug \
 	unknown tcl_unknown unalias which observe observe_var }
-    version	0.66
+    version	0.67
     release	{November 1996}
     root	.
   }
@@ -3382,18 +3382,15 @@ proc tkConSafeWindow {i w option args} {
   if {[string match conf* $option] && [llength $args] > 1} {
     set args [tkConSafeSubst $i $args]
   } elseif {[string match itemco* $option] && [llength $args] > 2} {
-    set args "[list [lindex $args 0]] [tkConSafeSubst $i [lrange $args 1 end]\
-]"
+    set args "[list [lindex $args 0]] [tkConSafeSubst $i [lrange $args 1 end]]"
   } elseif {[string match cr* $option]} {
     if {[llength $args]%2} {
-      set args "[list [lindex $args 0]] [tkConSafeSubst $i [lrange $args 1 en\
-d]]"
+      set args "[list [lindex $args 0]] [tkConSafeSubst $i [lrange $args 1 end]]"
     } else {
       set args [tkConSafeSubst $i $args]
     }
   } elseif {[string match bi* $option] && [llength $args] > 2} {
-    set args [list [lindex $args 0] [lindex $args 1] "[list $i] eval [list [l\
-index $args 2]]"]
+    set args [list [lindex $args 0] [lindex $args 1] "[list $i] eval [list [lindex $args 2]]"]
   }
   set code [catch ".${i}_dot$w $option $args" msg]
   if {$code} {
