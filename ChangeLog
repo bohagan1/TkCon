@@ -1,3 +1,8 @@
+2001-07-05  Jeff Hobbs  <jeffh@ActiveState.com>
+
+	* tkcon.tcl (RetrieveFilter, RetrieveAuthentication): added
+	support for retrieving latest tkcon via a proxy. (Thoyts)
+
 2001-07-04  Jeff Hobbs  <jeffh@ActiveState.com>
 
 	* tkcon.tcl (tkcon): made tkcon console return whatever result it

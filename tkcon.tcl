@@ -22,6 +22,25 @@ exec wish "$0" ${1+"$@"}
 ## source bourbon_ware.tcl
 ##
 
+# Proxy support for retrieving the current version of Tkcon.
+#
+# Mon Jun 25 12:19:56 2001 - Pat Thoyts <Pat.Thoyts@bigfoot.com>
+#
+# In your tkcon.cfg or .tkconrc file put your proxy details into the
+# `proxy' member of the `PRIV' array. e.g.:
+#
+#    set ::tkcon::PRIV(proxy) wwwproxy:8080
+#
+# If you want to be prompted for proxy authentication details (eg for
+# an NT proxy server) make the second element of this variable non-nil - eg:
+#
+#    set ::tkcon::PRIV(proxy) {wwwproxy:8080 1}
+#
+# Or you can set the above variable from within tkcon by calling 
+#
+#    tkcon master set ::tkcon:PRIV(proxy) wwwproxy:8080
+#
+
 if {$tcl_version < 8.0} {
     return -code error "tkcon requires at least Tcl/Tk8"
 } else {
@@ -165,7 +184,7 @@ proc ::tkcon::Init {} {
 	    tkcon_puts tkcon_gets observe observe_var unalias which what
 	}
 	version		2.2
-	RCS		{RCS: @(#) $Id: tkcon.tcl,v 1.37 2001/06/21 02:17:07 hobbs Exp $}
+	RCS		{RCS: @(#) $Id: tkcon.tcl,v 1.38 2001/07/05 00:31:53 uid38172 Exp $}
 	HEADURL		{http://cvs.sourceforge.net/cgi-bin/viewcvs.cgi/tkcon/tkcon/tkcon.tcl?rev=HEAD}
 	release		{June 2001}
 	docs		"http://tkcon.sourceforge.net/"
@@ -4958,6 +4977,58 @@ proc ::tkcon::SafeWindow {i w option args} {
 	}
     }
     return -code $code $msg
+}
+
+proc ::tkcon::RetrieveFilter {host} {
+    variable PRIV
+    set result {}
+    if {[info exists PRIV(proxy)]} {
+	if {![regexp "^(localhost|127\.0\.0\.1)" $host]} {
+	    set result [lrange [split [lindex $PRIV(proxy) 0] :] 0 1]
+	}
+    }
+    return $result
+}
+
+proc ::tkcon::RetrieveAuthentication {} {
+    package require Tk
+    if {[catch {package require base64}]} {
+        if {[catch {package require Trf}]} {
+            error "base64 support not available"
+        } else {
+            set local64 "base64 -mode enc"
+        }
+    } else {
+        set local64 "base64::encode"
+    }
+
+    set dlg [toplevel .auth]
+    wm title $dlg "Authenticating Proxy Configuration"
+    set f1 [frame ${dlg}.f1]
+    set f2 [frame ${dlg}.f2]
+    button $f2.b -text "OK" -command "destroy $dlg"
+    pack $f2.b -side right
+    label $f1.l2 -text "Username"
+    label $f1.l3 -text "Password"
+    entry $f1.e2 -textvariable "[namespace current]::conf_userid"
+    entry $f1.e3 -textvariable "[namespace current]::conf_passwd" -show *
+    grid $f1.l2 -column 0 -row 0 -sticky e
+    grid $f1.l3 -column 0 -row 1 -sticky e
+    grid $f1.e2 -column 1 -row 0 -sticky news
+    grid $f1.e3 -column 1 -row 1 -sticky news
+    grid columnconfigure $f1 1 -weight 1
+    pack $f2 -side bottom -fill x
+    pack $f1 -side top -anchor n -fill both -expand 1
+    tkwait window $dlg
+    set result {}
+    if {[info exists [namespace current]::conf_userid]} {
+	set data [subst $[namespace current]::conf_userid]
+	append data : [subst $[namespace current]::conf_passwd]
+	set data [$local64 $data]
+	set result [list "Proxy-Authorization" "Basic $data"]
+    }
+    unset [namespace current]::conf_passwd
+    return $result
 }
 
 proc ::tkcon::Retrieve {} {
