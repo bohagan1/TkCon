@@ -196,9 +196,8 @@ proc ::tkcon::Init {} {
 	    tkcon_puts tkcon_gets observe observe_var unalias which what
 	}
 	version		2.2
-	RCS		{RCS: @(#) $Id: tkcon.tcl,v 1.42 2001/08/24 21:32:34 hobbs Exp $}
+	RCS		{RCS: @(#) $Id: tkcon.tcl,v 1.43 2001/08/31 21:59:34 hobbs Exp $}
 	HEADURL		{http://cvs.sourceforge.net/cgi-bin/viewcvs.cgi/tkcon/tkcon/tkcon.tcl?rev=HEAD}
-	release		{June 2001}
 	docs		"http://tkcon.sourceforge.net/"
 	email		{jeff@hobbs.org}
 	root		.
@@ -269,7 +268,7 @@ proc ::tkcon::Init {} {
     }
 
     if {!$PRIV(WWW) && [file exists $PRIV(rcfile)]} {
-	set code [catch [list uplevel \#0 source $PRIV(rcfile)] err]
+	set code [catch {uplevel \#0 [list source $PRIV(rcfile)]} err]
     }
 
     if {[info exists env(TK_CON_LIBRARY)]} {
@@ -1062,7 +1061,7 @@ proc ::tkcon::About {} {
     if {[winfo exists $w]} {
 	wm deiconify $w
     } else {
-	global tk_patchLevel tcl_patchLevel
+	global tk_patchLevel tcl_patchLevel tcl_version
 	toplevel $w
 	wm title $w "About tkcon v$PRIV(version)"
 	button $w.b -text Dismiss -command [list wm withdraw $w]
@@ -1075,11 +1074,10 @@ proc ::tkcon::About {} {
 	$w.text tag config center -justify center
 	$w.text tag config title -justify center -font {Courier -18 bold}
 	# strip down the RCS info displayed in the about box
-	regexp {Id: (.*) Exp} $PRIV(RCS) -> RCS
+	regexp {,v ([0-9\./: ]*)} $PRIV(RCS) -> RCS
 	$w.text insert 1.0 "About tkcon v$PRIV(version)" title \
 		"\n\nCopyright 1995-2001 Jeffrey Hobbs, $PRIV(email)\
-		\nRelease Date: v$PRIV(version), $PRIV(release)\
-		\n$RCS\
+		\nRelease Info: v$PRIV(version), CVS v$RCS\
 		\nDocumentation available at:\n$PRIV(docs)\
 		\nUsing: Tcl v$tcl_patchLevel / Tk v$tk_patchLevel" center
 	$w.text config -state disabled
@@ -3071,15 +3069,18 @@ proc unalias {cmd} {
 
 ## dump - outputs variables/procedure/widget info in source'able form.
 ## Accepts glob style pattern matching for the names
+#
 # ARGS:	type	- type of thing to dump: must be variable, procedure, widget
+#
 # OPTS: -nocomplain
-#		don't complain if no vars match something
+#		don't complain if no items of the specified type are found
 #	-filter pattern
 #		specifies a glob filter pattern to be used by the variable
 #		method as an array filter pattern (it filters down for
 #		nested elements) and in the widget method as a config
 #		option filter pattern
 #	--	forcibly ends options recognition
+#
 # Returns:	the values of the requested items in a 'source'able form
 ## 
 proc dump {type args} {
@@ -3281,7 +3282,61 @@ proc dump {type args} {
 }
 
 ## idebug - interactive debugger
-# ARGS:	opt
+#
+# idebug body ?level?
+#
+#	Prints out the body of the command (if it is a procedure) at the
+#	specified level.  <i>level</i> defaults to the current level.
+#
+# idebug break
+#
+#	Creates a breakpoint within a procedure.  This will only trigger
+#	if idebug is on and the id matches the pattern.  If so, TkCon will
+#	pop to the front with the prompt changed to an idebug prompt.  You
+#	are given the basic ability to observe the call stack an query/set
+#	variables or execute Tcl commands at any level.  A separate history
+#	is maintained in debugging mode.
+#
+# idebug echo|{echo ?id?} ?args?
+#
+#	Behaves just like "echo", but only triggers when idebug is on.
+#	You can specify an optional id to further restrict triggering.
+#	If no id is specified, it defaults to the name of the command
+#	in which the call was made.
+#
+# idebug id ?id?
+#
+#	Query or set the idebug id.  This id is used by other idebug
+#	methods to determine if they should trigger or not.  The idebug
+#	id can be a glob pattern and defaults to *.
+#
+# idebug off
+#
+#	Turns idebug off.
+#
+# idebug on ?id?
+#
+#	Turns idebug on.  If 'id' is specified, it sets the id to it.
+#
+# idebug puts|{puts ?id?} args
+#
+#	Behaves just like "puts", but only triggers when idebug is on.
+#	You can specify an optional id to further restrict triggering.
+#	If no id is specified, it defaults to the name of the command
+#	in which the call was made.
+#
+# idebug show type ?level? ?VERBOSE?
+#
+#	'type' must be one of vars, locals or globals.  This method
+#	will output the variables/locals/globals present in a particular
+#	level.  If VERBOSE is added, then it actually 'dump's out the
+#	values as well.  'level' defaults to the level in which this
+#	method was called.
+#
+# idebug trace ?level?
+#
+#	Prints out the stack trace from the specified level up to the top
+#	level.  'level' defaults to the current level.
 #
 ##
 proc idebug {opt args} {
@@ -4652,13 +4707,8 @@ proc ::tkcon::ExpandPathname str {
     } else {
 	if {[llength $m] > 1} {
 	    global tcl_platform
-	    if {
-		[string match windows $tcl_platform(platform)] &&
-		!([string match *NT* $tcl_platform(os)] && \
-			[info tclversion]>8.0)
-	    } {
+	    if {[string match windows $tcl_platform(platform)]} {
 		## Windows is screwy because it's case insensitive
-		## NT for 8.1+ is case sensitive though...
 		set tmp [ExpandBestMatch [string tolower $m] \
 			[string tolower $dir]]
 		## Don't change case if we haven't changed the word

@@ -1,3 +1,16 @@
+2001-10-14  Jeff Hobbs  <jeffh@ActiveState.com>
+
+	* tkcon.tcl (Init): corrected loading of rcfile when it was in a
+	path including spaces. (siltberg)
+	(About): clarified CVS info in about box.
+
+	* docs/start.html: correct old refs to TKCON var.
+
+2001-09-28  Jeff Hobbs  <jeffh@ActiveState.com>
+
+	* tkcon.tcl (ExpandPathname): recognize NT as a case *in*sensitive
+	file system for pathname expansion.
+
 2001-08-31  Jeff Hobbs  <jeffh@ActiveState.com>
 
 	* tkcon.tcl (InitSlave): propagate auto_path from master to slave.
