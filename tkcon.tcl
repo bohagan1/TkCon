@@ -13,17 +13,17 @@ exec wish "$0" ${1+"$@"}
 ## Steven Wahl <steven@indra.com>, Jan Nijtmans <nijtmans@nici.kun.nl>
 ## Crimmins <markcrim@umich.edu>, Wart <wart@ugcs.caltech.edu>
 ##
-## Copyright 1995-2000 Jeffrey Hobbs
+## Copyright 1995-2001 Jeffrey Hobbs
 ## Initiated: Thu Aug 17 15:36:47 PDT 1995
 ##
-## jeff.hobbs@acm.org
+## jeff.hobbs@acm.org, jeff@hobbs.org
 ##
 ## source standard_disclaimer.tcl
 ## source bourbon_ware.tcl
 ##
 
 if {$tcl_version < 8.0} {
-    return -code error "TkCon requires at least Tcl/Tk8"
+    return -code error "tkcon requires at least Tcl/Tk8"
 } else {
     package require -exact Tk $tcl_version
 }
@@ -151,16 +151,16 @@ proc ::tkcon::Init {} {
 	    alias clear dir dump echo idebug lremove
 	    tkcon_puts observe observe_var unalias which what
 	}
-	version		2.1a
-	release		{September 2000}
+	version		2.1
+	release		{May 4 2001}
 	docs		"http://tkcon.sourceforge.net/"
-	email		{jeff.hobbs@acm.org}
+	email		{jeff@hobbs.org}
 	root		.
     }
     ## NOTES FOR STAYING IN PRIMARY INTERPRETER:
 
     ## If you set ::tkcon::OPT(exec) to {}, then instead of a multiple
-    ## interp model, you get TkCon operating in the main interp by default.
+    ## interp model, you get tkcon operating in the main interp by default.
     ## This can be useful when attaching to programs that like to operate
     ## in the main interpter (for example, based on special wish'es).
     ## You can set this from the command line with -exec ""
@@ -505,7 +505,7 @@ proc ::tkcon::InitUI {title} {
 	## otherwise make sure the font is monospace
 	set font [$con cget -font]
 	if {![font metrics $font -fixed]} {
-	    font create tkconfixed -family Courier -size 10
+	    font create tkconfixed -family Courier -size 12
 	    $con configure -font tkconfixed
 	}
     }
@@ -541,7 +541,7 @@ proc ::tkcon::InitUI {title} {
     $con tag configure find -background $COLOR(blink)
 
     if {!$PRIV(WWW)} {
-	wm title $root "TkCon $PRIV(version) $title"
+	wm title $root "tkcon $PRIV(version) $title"
 	bind $con <Configure> {
 	    scan [wm geometry [winfo toplevel %W]] "%%dx%%d" \
 		    ::tkcon::OPT(cols) ::tkcon::OPT(rows)
@@ -985,7 +985,7 @@ proc ::tkcon::About {} {
     } else {
 	global tk_patchLevel tcl_patchLevel tcl_platform
 	toplevel $w
-	wm title $w "About TkCon v$PRIV(version)"
+	wm title $w "About tkcon v$PRIV(version)"
 	button $w.b -text Dismiss -command [list wm withdraw $w]
 	text $w.text -height 9 -bd 1 -width 60 \
 		-foreground $COLOR(stdin) \
@@ -995,8 +995,8 @@ proc ::tkcon::About {} {
 	pack $w.text -fill both -side left -expand 1
 	$w.text tag config center -justify center
 	$w.text tag config title -justify center -font {Courier -18 bold}
-	$w.text insert 1.0 "About TkCon v$PRIV(version)" title \
-		"\n\nCopyright 1995-2000 Jeffrey Hobbs, $PRIV(email)\
+	$w.text insert 1.0 "About tkcon v$PRIV(version)" title \
+		"\n\nCopyright 1995-2001 Jeffrey Hobbs, $PRIV(email)\
 		\nRelease Date: v$PRIV(version), $PRIV(release)\
 		\nDocumentation available at:\n$PRIV(docs)\
 		\nUsing: Tcl v$tcl_patchLevel / Tk v$tk_patchLevel" center
@@ -1256,7 +1256,7 @@ proc ::tkcon::InterpMenu w {
     ## Init Interp
     ##
     $w add separator
-    $w add command -label "Send TkCon Commands" \
+    $w add command -label "Send tkcon Commands" \
 	    -command [list ::tkcon::InitInterp $app $type]
 }
 
@@ -1331,7 +1331,7 @@ proc ::tkcon::AttachMenu m {
     }
     $m add separator
 
-    $m add command -label "TkCon Interpreters" -state disabled
+    $m add command -label "tkcon Interpreters" -state disabled
     foreach i [lsort [array names interps]] {
 	if {[string match {} $interps($i)]} { set interps($i) "no Tk" }
 	if {[regexp {^Slave[0-9]+} $i]} {
@@ -1504,7 +1504,7 @@ proc ::tkcon::FindBox {w {str {}}} {
     if {![winfo exists $base]} {
 	toplevel $base
 	wm withdraw $base
-	wm title $base "TkCon Find"
+	wm title $base "tkcon Find"
 
 	pack [frame $base.f] -fill x -expand 1
 	label $base.f.l -text "Find:"
@@ -1584,7 +1584,7 @@ proc ::tkcon::Find {w str args} {
 # ARGS:	name	- application name to which tkcon sends commands
 #		  This is either a slave interperter name or tk appname.
 #	type	- (slave|interp) type of interpreter we're attaching to
-#		  slave means it's a TkCon interpreter
+#		  slave means it's a tkcon interpreter
 #		  interp means we'll need to 'send' to it.
 # Results:	::tkcon::EvalAttached is recreated to evaluate in the
 #		appropriate interpreter
@@ -1751,7 +1751,7 @@ proc ::tkcon::NewSocket {} {
     if {![winfo exists $t]} {
 	toplevel $t
 	wm withdraw $t
-	wm title $t "TkCon Create Socket"
+	wm title $t "tkcon Create Socket"
 	label $t.lhost -text "Host: "
 	entry $t.host -width 20
 	label $t.lport -text "Port: "
@@ -1942,7 +1942,7 @@ proc ::tkcon::MainInit {} {
 
     ## ::tkcon::Destroy - destroy console window
     ## This proc should only be called by the main interpreter.  If it is
-    ## called from there, it will ask before exiting TkCon.  All others
+    ## called from there, it will ask before exiting tkcon.  All others
     ## (slaves) will just have their slave interpreter deleted, closing them.
     ## 
     proc ::tkcon::Destroy {{slave {}}} {
@@ -1950,9 +1950,9 @@ proc ::tkcon::MainInit {} {
 
 	if {[string match {} $slave]} {
 	    ## Main interpreter close request
-	    if {[tk_dialog $PRIV(base).destroyme {Quit TkCon?} \
-		    {Closing the Main console will quit TkCon} \
-		    warning 0 "Don't Quit" "Quit TkCon"]} exit
+	    if {[tk_dialog $PRIV(base).destroyme {Quit tkcon?} \
+		    {Closing the Main console will quit tkcon} \
+		    warning 0 "Don't Quit" "Quit tkcon"]} exit
 	} else {
 	    ## Slave interpreter close request
 	    set name [InterpEval $slave]
@@ -2046,7 +2046,7 @@ proc ::tkcon::MainInit {} {
 	if {![winfo exists $t]} {
 	    toplevel $t
 	    wm withdraw $t
-	    wm title $t "TkCon Attach to Display"
+	    wm title $t "tkcon Attach to Display"
 	    label $t.gets -text "New Display: "
 	    entry $t.data -width 32
 	    button $t.ok -text "OK" -command {set ::tkcon::PRIV(grab) 1}
@@ -2185,7 +2185,7 @@ proc ::tkcon::MainInit {} {
 		    -command [list ::tkcon::StateCompare $app $type 1]
 	}
 	## Don't allow verbose mode unless 'dump' exists in $app
-	## We're assuming this is TkCon's dump command
+	## We're assuming this is tkcon's dump command
 	set hasdump [llength [EvalOther $app $type info commands dump]]
 	if {$hasdump} {
 	    $w.btn.expand config -state normal
@@ -2422,8 +2422,9 @@ proc tkcon {cmd args} {
 	    if {[llength $args]} {
 		if {[regexp {^[1-9][0-9]*$} $args]} {
 		    set ::tkcon::OPT(buffer) $args
-		    ::tkcon::ConstrainBuffer $::tkcon::PRIV(console) \
-			    $::tkcon::OPT(buffer)
+		    # catch in case the console doesn't exist yet
+		    catch {::tkcon::ConstrainBuffer $::tkcon::PRIV(console) \
+			    $::tkcon::OPT(buffer)}
 		} else {
 		    return -code error "buffer must be a valid integer"
 		}
@@ -2479,7 +2480,7 @@ proc tkcon {cmd args} {
 	    if {![winfo exists $t]} {
 		toplevel $t
 		wm withdraw $t
-		wm title $t "TkCon gets stdin request"
+		wm title $t "tkcon gets stdin request"
 		label $t.gets -text "\"gets stdin\" request:"
 		text $t.data -width 32 -height 5 -wrap none \
 			-xscrollcommand [list $t.sx set] \
@@ -2534,8 +2535,13 @@ proc tkcon {cmd args} {
 	fo* {
 	    ## 'font' ?fontname? - gets/sets the font of the console
 	    if {[llength $args]} {
-		$::tkcon::PRIV(console) config -font $args
-		set ::tkcon::OPT(font) [$::tkcon::PRIV(console) cget -font]
+		if {[info exists ::tkcon::PRIV(console)] && \
+			[winfo exists $::tkcon::PRIV(console)]} {
+		    $::tkcon::PRIV(console) config -font $args
+		    set ::tkcon::OPT(font) [$::tkcon::PRIV(console) cget -font]
+		} else {
+		    set ::tkcon::OPT(font) $args
+		}
 	    }
 	    return $::tkcon::OPT(font)
 	}
@@ -2583,6 +2589,8 @@ proc tkcon {cmd args} {
 				[uplevel \#0 [list set $var]]]]
 		    }
 		}
+	    } elseif {[llength $args] == 1} {
+		return [uplevel \#0 dump variable $args]
 	    }
 	    return [uplevel \#0 set $args]
 	}
@@ -2776,9 +2784,9 @@ proc edit {args} {
 	toplevel $w
 	wm withdraw $w
 	if {[string length $word] > 12} {
-	    wm title $w "TkCon Edit: [string range $word 0 9]..."
+	    wm title $w "tkcon Edit: [string range $word 0 9]..."
 	} else {
-	    wm title $w "TkCon Edit: $word"
+	    wm title $w "tkcon Edit: $word"
 	}
 
 	text $w.text -wrap none \
@@ -3590,7 +3598,7 @@ proc dir {args} {
 		}
 	    }
 	    set i [expr {$i+2+$s(full)}]
-	    ## This gets the number of cols in the TkCon console widget
+	    ## This gets the number of cols in the tkcon console widget
 	    set j [expr {[tkcon master set ::tkcon::OPT(cols)]/$i}]
 	    set k 0
 	    foreach f [lindex $o 1] {
