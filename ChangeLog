@@ -1,3 +1,15 @@
+2002-06-03  Jeff Hobbs  <jeffh@ActiveState.com>
+
+	* tkcon.tcl: fixed Retrieve to use the proxy info (Thoyts).
+	Added code so that tkcon.tcl can be sourced in and used like a
+	quasi-package.  Once sourced, you can do a 'package require tkcon'
+	(there is no pkgIndex.tcl for it), and the first 'tkcon show' will
+	initialize anything that is needed.
+	(observe): corrected variables tracing to not allow duplicates.
+	(dump): improved check for empty named arrays as well as locally
+	aliased vars in var dumps.
+	Use the 'fixed' font on unix by default.
+
 2002-02-22  Jeff Hobbs  <jeffh@ActiveState.com>
 
 	* tkcon.tcl (AddSlaveHistory): changed history to not add the
