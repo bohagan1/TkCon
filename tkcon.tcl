@@ -187,7 +187,7 @@ proc ::tkcon::Init {args} {
 	    alias clear dir dump echo idebug lremove
 	    tkcon_puts tkcon_gets observe observe_var unalias which what
 	}
-	RCS		{RCS: @(#) $Id: tkcon.tcl,v 1.63 2003/04/08 16:45:25 hobbs Exp $}
+	RCS		{RCS: @(#) $Id: tkcon.tcl,v 1.64 2003/04/08 18:07:36 hobbs Exp $}
 	HEADURL		{http://cvs.sourceforge.net/cgi-bin/viewcvs.cgi/tkcon/tkcon/tkcon.tcl?rev=HEAD}
 	docs		"http://tkcon.sourceforge.net/"
 	email		{jeff@hobbs.org}
@@ -3833,7 +3833,7 @@ proc dir {args} {
 	}
     }
     set sep [string trim [file join . .] .]
-    if {![llength $args]} { set args . }
+    if {![llength $args]} { set args [list [pwd]] }
     if {$::tcl_version >= 8.3} {
 	# Newer glob args allow safer dir processing.  The user may still
 	# want glob chars, but really only for file matching.
@@ -3869,7 +3869,7 @@ proc dir {args} {
     }
     if {$s(long)} {
 	set old [clock scan {1 year ago}]
-	set fmt "%s%9d %s %s\n"
+	set fmt "%s%9ld %s %s\n"
 	foreach o $out {
 	    set d [lindex $o 0]
 	    append res $d:\n
