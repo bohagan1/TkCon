@@ -109,8 +109,8 @@ into slave interpreters.
 a fixed width font, tkcon will override it.
 
 <DT> <CODE>-nontcl</CODE> <I>TCL_BOOLEAN</I>
-<DD> Sets <CODE>TKCON(nontcl)</CODE> to <I>TCL_BOOLEAN</I>.  Needed when
-attaching to non-Tcl interpreters.
+<DD> Sets <CODE>::tkcon::OPT(nontcl)</CODE> to <I>TCL_BOOLEAN</I>.  Needed
+when attaching to non-Tcl interpreters.
 
 <DT> <CODE>-package</CODE> <I>package_name</I> (also <CODE>-load</CODE>)
 <DD> Packages to automatically load into the slave interpreters (ie - "Tk").
@@ -304,7 +304,7 @@ No equivalent for tcl_prompt2 is available (it's unnecessary IMHO).
 <DD> A tcl script to execute in each slave interpreter right after it's
 created.  This allows the user to have user defined info always available
 in a slave.  Example:
-<PRE>	set TKCON(slaveeval) {
+<PRE>	set ::tkcon::OPT(slaveeval) {
 		proc foo args { puts $args }
 		lappend auto_path .
 	}</PRE>
