@@ -1,5 +1,13 @@
 2000-09-19  Jeff Hobbs  <hobbs@scriptics.com>
 
+	* tkcon.tcl (::tkcon::InitUI): corrected plugin handling, as 'wm
+	withdraw' worked, but 'wm deiconify' was disallowed.
+
+	* docs/plugin.html: updated link to plugin source
+	* docs/changes.txt: noted that changes.txt is no longer updated in
+	favor of this ChangeLog
+
+	* index.html: updated page with sourceforge links
 	* index.html: added toplevel html index doc
 
 	* tkcon.tcl: updated v2.0 to v2.1 alpha version

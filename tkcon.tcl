@@ -296,7 +296,7 @@ proc ::tkcon::Init {} {
 	# Source history file only for the main console, as all slave
 	# consoles will adopt from the main's history, but still
 	# keep separate histories
-	if {[file exists $PRIV(histfile)]} {
+	if {!$PRIV(WWW) && [file exists $PRIV(histfile)]} {
 	    puts -nonewline "loading history file ... "
 	    # The history file is built to be loaded in and
 	    # understood by tkcon
@@ -482,7 +482,9 @@ proc ::tkcon::InitUI {title} {
 
     set root $PRIV(root)
     if {[string match . $root]} { set w {} } else { set w [toplevel $root] }
-    catch {wm withdraw $root}
+    if {!$PRIV(WWW)} {
+	wm withdraw $root
+    }
     set PRIV(base) $w
 
     ## Text Console
@@ -538,13 +540,14 @@ proc ::tkcon::InitUI {title} {
     $con tag configure blink -background $COLOR(blink)
     $con tag configure find -background $COLOR(blink)
 
-    if {![catch {wm title $root "TkCon $PRIV(version) $title"}]} {
+    if {!$PRIV(WWW)} {
+	wm title $root "TkCon $PRIV(version) $title"
 	bind $con <Configure> {
 	    scan [wm geometry [winfo toplevel %W]] "%%dx%%d" \
 		    OPT(cols) OPT(rows)
 	}
+	wm deiconify $root
     }
-    catch {wm deiconify $root}
     focus -force $PRIV(console)
     if {$OPT(gc-delay)} {
 	after $OPT(gc-delay) ::tkcon::GarbageCollect
