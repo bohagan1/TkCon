@@ -188,7 +188,7 @@ proc ::tkcon::Init {args} {
 	    alias clear dir dump echo idebug lremove
 	    tkcon_puts tkcon_gets observe observe_var unalias which what
 	}
-	RCS		{RCS: @(#) $Id: tkcon.tcl,v 1.80 2004/06/24 22:17:58 hobbs Exp $}
+	RCS		{RCS: @(#) $Id: tkcon.tcl,v 1.81 2004/10/10 22:55:14 hobbs Exp $}
 	HEADURL		{http://cvs.sourceforge.net/viewcvs.py/*checkout*/tkcon/tkcon/tkcon.tcl?rev=HEAD}
 
 	docs		"http://tkcon.sourceforge.net/"
@@ -797,7 +797,8 @@ proc ::tkcon::NewTab {{con {}}} {
     GotoTab $con
 }
 
-proc ::tkcon::DeleteTab {{con {}} {slave {}}} {
+# The extra code arg is for the alias of exit to this function
+proc ::tkcon::DeleteTab {{con {}} {slave {}} {code 0}} {
     variable PRIV
 
     set numtabs [llength $PRIV(tabs)]
@@ -3214,10 +3215,12 @@ proc ::tkcon::Expect {cmd} {
 	    } "^\x1b\\\[KS" {
 		# (smkx,ks) start keyboard-transmit mode
 		# terminfo invokes these when going in/out of graphics mode
-		graphicsSet 1
+		# In graphics mode, we should have no scrollbars
+		#graphicsSet 1
 	    } "^\x1b\\\[KE" {
 		# (rmkx,ke) end keyboard-transmit mode
-		graphicsSet 0
+		# Out of graphics mode, we should have scrollbars
+		#graphicsSet 0
 	    }
 	}
 	}

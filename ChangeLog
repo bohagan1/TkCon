@@ -1,3 +1,9 @@
+2004-11-11  Jeff Hobbs  <jeffh@ActiveState.com>
+
+	* tkcon.tcl (::tkcon::DeleteTab): allow for exit code to be passed
+	when exit is aliased to DeleteTab. [Bug 1064462]
+	(::tkcon::Expect): graphicsSet isn't valid yet
+
 2004-10-10  Jeff Hobbs  <jeffh@ActiveState.com>
 
 	* tkcon.tcl (::tkcon::Highlight): use ctext for the 'edit' dialog
