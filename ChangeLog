@@ -1,6 +1,11 @@
 2000-09-19  Jeff Hobbs  <hobbs@scriptics.com>
 
-	* tkcon.tcl: updated v1.6 to v1.5 version, tagged tkcon-2-0
+	* tkcon.tcl: updated v2.0 to v2.1 alpha version
+	All tkcon procedures have been namespaced, except for the ones
+	that are visible to the user.  TkCon has added the ability to
+	attach to other displays or a socket.
+
+	* tkcon.tcl: updated v1.6 to v2.0 version, tagged tkcon-2-0
 	This is the first version to require 8.0+ to run, although it
 	will still connect to older interps.
 
