@@ -185,7 +185,7 @@ proc ::tkcon::Init {args} {
 	    alias clear dir dump echo idebug lremove
 	    tkcon_puts tkcon_gets observe observe_var unalias which what
 	}
-	RCS		{RCS: @(#) $Id: tkcon.tcl,v 1.59 2003/01/14 04:59:45 hobbs Exp $}
+	RCS		{RCS: @(#) $Id: tkcon.tcl,v 1.60 2003/02/21 00:45:30 hobbs Exp $}
 	HEADURL		{http://cvs.sourceforge.net/cgi-bin/viewcvs.cgi/tkcon/tkcon/tkcon.tcl?rev=HEAD}
 	docs		"http://tkcon.sourceforge.net/"
 	email		{jeff@hobbs.org}
@@ -2487,6 +2487,7 @@ proc ::tkcon::Event {int {str {}}} {
 ##
 proc ::tkcon::ErrorHighlight w {
     variable COLOR
+    variable OPT
 
     ## do voodoo here
     set app [Attach]
@@ -4546,6 +4547,7 @@ proc ::tkcon::Bindings {} {
 ##
 proc ::tkcon::PopupMenu {X Y} {
     variable PRIV
+    variable OPT
 
     set w $PRIV(console)
     if {[string compare $w [winfo containing $X $Y]]} {
