@@ -48,8 +48,8 @@ set tkCon(WWW) [info exists embed_args]
 # Outputs:	errors found in tkCon resource file
 ##
 proc tkConInit {} {
-  ## Give full access to globals
-  eval global [uplevel \#0 info vars]
+  global auto_path tcl_platform env tcl_pkgPath \
+      tkCon argc argv tcl_interactive
 
   set tcl_interactive 1
 
@@ -93,7 +93,7 @@ proc tkConInit {} {
     slavealias	{ tkcon }
     slaveprocs	{ alias clear dir dump lremove puts echo tclindex idebug \
 	unknown tcl_unknown unalias which observe observe_var }
-    version	0.67
+    version	0.68
     release	{November 1996}
     root	.
   }
@@ -3248,7 +3248,7 @@ proc tkConSafeSource {i f} {
   }
 }
 
-proc tkConSafeOpen {i f m} {
+proc tkConSafeOpen {i f {m r}} {
     set fd [open $f $m]
     interp transfer {} $fd $i
     return $fd
@@ -3267,6 +3267,9 @@ proc tkConSafeLoad {i f p} {
     foreach command {pack place grid destroy winfo} {
       $i alias $command tkConSafeManage $i $command
     }
+    if [string comp {} [info command event]] {
+      $i alias $command tkConSafeManage $i $command
+    }
     frame .${i}_dot -width 300 -height 300 -relief raised
     pack .${i}_dot -side left
     $i alias tk tk
@@ -3276,7 +3279,12 @@ proc tkConSafeLoad {i f p} {
     foreach var {tk_version tk_patchLevel tk_library} {
       $i eval set $var [set $var]
     }
-    $i eval package provide Tk $tk_version
+    $i eval {
+      package provide Tk $tk_version
+      if {[lsearch -exact $auto_path $tk_library] < 0} {
+	lappend auto_path $tk_library
+      }
+    }
     return ""
   }
 }
