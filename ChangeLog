@@ -1,3 +1,8 @@
+2000-09-20  Jeff Hobbs  <hobbs@scriptics.com>
+
+	* tkcon.tcl (InitMenus): restricted the Attach Socket
+	functionality to Tcl 8.3+ due to use of [file channels].
+
 2000-09-19  Jeff Hobbs  <hobbs@scriptics.com>
 
 	* tkcon.tcl (::tkcon::InitUI): corrected plugin handling, as 'wm

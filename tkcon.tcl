@@ -151,9 +151,9 @@ proc ::tkcon::Init {} {
 	    alias clear dir dump echo idebug lremove
 	    tkcon_puts observe observe_var unalias which what
 	}
-	version		2.1
-	release		{August 2000}
-	docs		"http://www.purl.org/net/hobbs/tcl/script/tkcon/\nhttp://www.hobbs.wservice.com/tcl/script/tkcon/"
+	version		2.1a
+	release		{September 2000}
+	docs		"http://tkcon.sourceforge.net/"
 	email		{jeff.hobbs@acm.org}
 	root		.
     }
@@ -995,7 +995,7 @@ proc ::tkcon::About {} {
 	$w.text tag config center -justify center
 	$w.text tag config title -justify center -font {Courier -18 bold}
 	$w.text insert 1.0 "About TkCon v$PRIV(version)" title \
-		"\n\nCopyright 1995-1999 Jeffrey Hobbs, $PRIV(email)\
+		"\n\nCopyright 1995-2000 Jeffrey Hobbs, $PRIV(email)\
 		\nRelease Date: v$PRIV(version), $PRIV(release)\
 		\nDocumentation available at:\n$PRIV(docs)\
 		\nUsing: Tcl v$tcl_patchLevel / Tk v$tk_patchLevel" center
@@ -1076,7 +1076,8 @@ proc ::tkcon::InitMenus {w title} {
 	set sub [menu $m.attach -disabledforeground $COLOR(disabled)]
 	$sub add cascade -label "Interpreter"   -und 0 -menu $sub.apps
 	$sub add cascade -label "Namespace" -und 1 -menu $sub.name
-	$sub add cascade -label "Socket" -und 1 -menu $sub.sock
+	$sub add cascade -label "Socket" -und 1 -menu $sub.sock \
+		-state [expr {([info tclversion] < 8.3)?"disabled":"normal"}]
 
 	## Attach Console Menu
 	##
@@ -1091,7 +1092,7 @@ proc ::tkcon::InitMenus {w title} {
 	## Attach Socket Menu
 	##
 	menu $sub.sock -disabledforeground $COLOR(disabled) -tearoff 0 \
-		-postcommand [list ::tkcon::Socket $sub.sock]
+		-postcommand [list ::tkcon::SocketMenu $sub.sock]
 
 	## Attach Display Menu
 	##
@@ -1404,10 +1405,12 @@ proc ::tkcon::NamespaceMenu m {
     } else {
 	foreach i $names {
 	    if {[string match :: $i]} {
-		$m add radio -label "Main" -variable ::tkcon::PRIV(namesp) -value $i \
+		$m add radio -label "Main" -value $i \
+			-variable ::tkcon::PRIV(namesp) \
 			-command "::tkcon::AttachNamespace [list $i]; $cmd"
 	    } else {
-		$m add radio -label $i -variable ::tkcon::PRIV(namesp) -value $i \
+		$m add radio -label $i -value $i \
+			-variable ::tkcon::PRIV(namesp) \
 			-command "::tkcon::AttachNamespace [list $i]; $cmd"
 	    }
 	}
