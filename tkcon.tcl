@@ -151,9 +151,10 @@ proc ::tkcon::Init {} {
 	    alias clear dir dump echo idebug lremove
 	    tkcon_puts observe observe_var unalias which what
 	}
-	version		2.1
-	release		{May 4 2001}
-	docs		"http://tkcon.sourceforge.net/"
+	version		2.1+
+	RCS		{RCS: @(#) $Id: runbench.tcl,v 1.10 2001/05/23 05:37:23 hobbs Exp $}
+	release		{May 2001}
+	docs		"http://tkcon.sf.net/"
 	email		{jeff@hobbs.org}
 	root		.
     }
@@ -995,9 +996,12 @@ proc ::tkcon::About {} {
 	pack $w.text -fill both -side left -expand 1
 	$w.text tag config center -justify center
 	$w.text tag config title -justify center -font {Courier -18 bold}
+	# strip down the RCS info displayed in the about box
+	regexp {Id: (.*) Exp} $PRIV(RCS) -> RCS
 	$w.text insert 1.0 "About tkcon v$PRIV(version)" title \
 		"\n\nCopyright 1995-2001 Jeffrey Hobbs, $PRIV(email)\
 		\nRelease Date: v$PRIV(version), $PRIV(release)\
+		\n$RCS\
 		\nDocumentation available at:\n$PRIV(docs)\
 		\nUsing: Tcl v$tcl_patchLevel / Tk v$tk_patchLevel" center
 	$w.text config -state disabled
@@ -1604,7 +1608,7 @@ proc ::tkcon::Attach {{name <NONE>} {type slave}} {
 
     set PRIV(displayWin) .
     if {[string match namespace $type]} {
-	return [uplevel ::tkcon::AttachNamespace $name]
+	return [uplevel 1 ::tkcon::AttachNamespace $name]
     } elseif {[string match dpy:* $type]} {
 	set PRIV(displayWin) [string range $type 4 end]
     } elseif {[string match sock* $type]} {
@@ -2452,6 +2456,10 @@ proc tkcon {cmd args} {
 	    set old [bind TkConsole <<TkCon_Eval>>]
 	    bind TkConsole <<TkCon_Eval>> { set ::tkcon::PRIV(wait) 0 }
 	    set w $::tkcon::PRIV(console)
+	    # Make sure to move the limit to get the right data
+	    $w mark set insert end
+	    $w mark set limit insert
+	    $w see end
 	    vwait ::tkcon::PRIV(wait)
 	    set line [::tkcon::CmdGet $w]
 	    $w insert end \n
@@ -2459,13 +2467,13 @@ proc tkcon {cmd args} {
 		vwait ::tkcon::PRIV(wait)
 		set line [::tkcon::CmdGet $w]
 		$w insert end \n
-		$w see insert
+		$w see end
 	    }
 	    bind TkConsole <<TkCon_Eval>> $old
 	    if {![llength $args]} {
 		return $line
 	    } else {
-		upvar [lindex $args 0] data
+		upvar 1 [lindex $args 0] data
 		set data $line
 		return [string length $line]
 	    }
@@ -2590,7 +2598,12 @@ proc tkcon {cmd args} {
 		    }
 		}
 	    } elseif {[llength $args] == 1} {
-		return [uplevel \#0 dump variable $args]
+		upvar \#0 [lindex $args 0] var
+		if {[array exists var]} {
+		    return [array get var]
+		} else {
+		    return $var
+		}
 	    }
 	    return [uplevel \#0 set $args]
 	}
@@ -3009,7 +3022,7 @@ proc dump {type args} {
 	    if {![info exists fltr]} { set fltr * }
 	    foreach arg $args {
 		if {![llength [set vars [uplevel 1 info vars [list $arg]]]]} {
-		    if {[uplevel info exists $arg]} {
+		    if {[uplevel 1 info exists $arg]} {
 			set vars $arg
 		    } elseif {$whine} {
 			append res "\#\# No known variable $arg\n"
@@ -3018,8 +3031,13 @@ proc dump {type args} {
 		    } else { continue }
 		}
 		foreach var [lsort $vars] {
-		    set var [uplevel [list namespace which -variable $var]]
-		    upvar $var v
+		    if {[uplevel 1 [list info locals $var]] == ""} {
+			# use the proper scope of the var, but
+			# namespace which won't id locals correctly
+			set var [uplevel 1 \
+				[list namespace which -variable $var]]
+		    }
+		    upvar 1 $var v
 		    if {[array exists v] || [catch {string length $v}]} {
 			set nst {}
 			append res "array set [list $var] \{\n"
@@ -3402,10 +3420,10 @@ proc observe {opt name args} {
 			\"$type\", must be: read, write or unset"
 	    }
 	    if {![llength $args]} { set args observe_var }
-	    uplevel [list trace $opt $name $type $args]
+	    uplevel 1 [list trace $opt $name $type $args]
 	}
 	vi* {
-	    uplevel [list trace vinfo $name]
+	    uplevel 1 [list trace vinfo $name]
 	}
 	default {
 	    return -code error "bad [lindex [info level 0] 0] option\
@@ -3429,7 +3447,7 @@ proc observe_var {name el op} {
 	    puts "unset \"$name\""
 	}
     } else {
-	upvar $name $name
+	upvar 1 $name $name
 	if {[info exists ${name}($el)]} {
 	    puts [dump v ${name}($el)]
 	} else {
@@ -3689,7 +3707,7 @@ proc unknown args {
     }
 
     foreach handler $unknown_handler_order {
-        set status [catch {uplevel $unknown_handlers($handler) $args} result]
+        set status [catch {uplevel 1 $unknown_handlers($handler) $args} result]
 
         if {$status == 1} {
             #
@@ -3742,7 +3760,7 @@ proc tcl_unknown args {
     set cmd [lindex $args 0]
     if {[regexp "^namespace\[ \t\n\]+inscope" $cmd] && [llength $cmd] == 4} {
         set arglist [lrange $args 1 end]
-	set ret [catch {uplevel $cmd $arglist} result]
+	set ret [catch {uplevel 1 $cmd $arglist} result]
         if {$ret == 0} {
             return $result
         } else {
@@ -3802,7 +3820,7 @@ proc tcl_unknown args {
 	    if {[string compare {} $new]} {
 		set errorCode $savedErrorCode
 		set errorInfo $savedErrorInfo
-		return [uplevel exec $new [lrange $args 1 end]]
+		return [uplevel 1 exec $new [lrange $args 1 end]]
 		#return [uplevel exec >&@stdout <@stdin $new [lrange $args 1 end]]
 	    }
 	}
@@ -3820,7 +3838,7 @@ proc tcl_unknown args {
 	}
 	set cmds [info commands $name*]
 	if {[llength $cmds] == 1} {
-	    return [uplevel [lreplace $args 0 0 $cmds]]
+	    return [uplevel 1 [lreplace $args 0 0 $cmds]]
 	}
 	if {[llength $cmds]} {
 	    if {$name == ""} {
@@ -3846,7 +3864,7 @@ proc tcl_unknown args {
 		    -message "This appears to be a Tk command, but Tk\
 		    has not yet been loaded.  Shall I retry the command\
 		    with loading Tk first?"] == "retry"} {
-		return [uplevel "load {} Tk; $args"]
+		return [uplevel 1 "load {} Tk; $args"]
 	    }
 	}
     }

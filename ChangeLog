@@ -1,3 +1,13 @@
+2001-05-28  Jeff Hobbs  <jeffh@ActiveState.com>
+
+	* tkcon.tcl (dump): corrected outputting local vars with dump.
+	Added RCS info to PRIV array and About box.
+	(tkcon congets) corrected congets to set the limit and insert
+	properly to return data without needing to call the prompt.
+	(tkcon set) corrected to return [array get] string for arrays,
+	and scalar value for vars.
+	Placed exact level value to all calls to uplevel and upvar.
+
 2001-05-17  Jeff Hobbs  <jeffh@ActiveState.com>
 
 	* tkcon.tcl: make check for actual tkcon root existence to allow
