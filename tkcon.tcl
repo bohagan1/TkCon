@@ -164,10 +164,10 @@ proc ::tkcon::Init {} {
 	    alias clear dir dump echo idebug lremove
 	    tkcon_puts tkcon_gets observe observe_var unalias which what
 	}
-	version		2.1+
-	RCS		{RCS: @(#) $Id: tkcon.tcl,v 1.35 2001/06/20 22:34:14 hobbs Exp $}
+	version		2.2
+	RCS		{RCS: @(#) $Id: tkcon.tcl,v 1.36 2001/06/20 23:40:48 hobbs Exp $}
 	HEADURL		{http://cvs.sourceforge.net/cgi-bin/viewcvs.cgi/tkcon/tkcon/tkcon.tcl?rev=HEAD}
-	release		{May 2001}
+	release		{June 2001}
 	docs		"http://tkcon.sourceforge.net/"
 	email		{jeff@hobbs.org}
 	root		.
