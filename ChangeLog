@@ -1,3 +1,8 @@
+2000-10-18  Jeff Hobbs  <hobbs@ajubasolutions.com>
+
+	* tkcon.tcl (::tkcon::NamespacesList): corrected to not use window
+	starting with an uppercase letter (error). (reins)
+
 2000-09-27  Jeff Hobbs  <hobbs@scriptics.com>
 
 	* tkcon.tcl (::tkcon::About): added 'variable COLOR' decl (Zaers).

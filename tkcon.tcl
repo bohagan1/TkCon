@@ -1431,7 +1431,7 @@ proc ::tkcon::NamespaceMenu m {
 proc ::tkcon::NamespacesList {names} {
     variable PRIV
 
-    set f $PRIV(base).Namespaces
+    set f $PRIV(base).namespaces
     catch {destroy $f}
     toplevel $f
     listbox $f.names -width 30 -height 15 -selectmode single \
