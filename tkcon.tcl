@@ -93,8 +93,7 @@ proc ::tkcon::Init {} {
     variable OPT
     variable COLOR
     variable PRIV
-    global auto_path tcl_platform env tcl_pkgPath \
-	    argc argv tcl_interactive errorInfo
+    global tcl_platform env argc argv tcl_interactive errorInfo
 
     if {![info exists argv]} {
 	set argv {}
@@ -197,7 +196,7 @@ proc ::tkcon::Init {} {
 	    tkcon_puts tkcon_gets observe observe_var unalias which what
 	}
 	version		2.2
-	RCS		{RCS: @(#) $Id: tkcon.tcl,v 1.41 2001/08/23 00:50:25 hobbs Exp $}
+	RCS		{RCS: @(#) $Id: tkcon.tcl,v 1.42 2001/08/24 21:32:34 hobbs Exp $}
 	HEADURL		{http://cvs.sourceforge.net/cgi-bin/viewcvs.cgi/tkcon/tkcon/tkcon.tcl?rev=HEAD}
 	release		{June 2001}
 	docs		"http://tkcon.sourceforge.net/"
@@ -274,12 +273,12 @@ proc ::tkcon::Init {} {
     }
 
     if {[info exists env(TK_CON_LIBRARY)]} {
-	uplevel \#0 lappend auto_path $env(TK_CON_LIBRARY)
+	lappend ::auto_path $env(TK_CON_LIBRARY)
     } else {
-	uplevel \#0 lappend auto_path $OPT(library)
+	lappend ::auto_path $OPT(library)
     }
 
-    if {![info exists tcl_pkgPath]} {
+    if {![info exists ::tcl_pkgPath]} {
 	set dir [file join [file dirname [info nameofexec]] lib]
 	if {[llength [info commands @scope]]} {
 	    set dir [file join $dir itcl]
@@ -421,7 +420,7 @@ proc ::tkcon::InitSlave {slave args} {
     variable OPT
     variable COLOR
     variable PRIV
-    global argv0 tcl_interactive tcl_library env
+    global argv0 tcl_interactive tcl_library env auto_path
 
     if {[string match {} $slave]} {
 	return -code error "Don't init the master interpreter, goofball"
@@ -432,7 +431,7 @@ proc ::tkcon::InitSlave {slave args} {
 	$slave alias load SafeLoad $slave
 	$slave alias open SafeOpen $slave
 	$slave alias file file
-	interp eval $slave [dump var -nocomplain tcl_library env]
+	interp eval $slave [dump var -nocomplain tcl_library auto_path env]
 	interp eval $slave { catch {source [file join $tcl_library init.tcl]} }
 	interp eval $slave { catch unknown }
     }
@@ -452,6 +451,7 @@ proc ::tkcon::InitSlave {slave args} {
     }
     if {[info exists argv0]} {interp eval $slave [list set argv0 $argv0]}
     interp eval $slave set tcl_interactive $tcl_interactive \; \
+	    set auto_path [list $auto_path] \; \
 	    set argc [llength $args] \; \
 	    set argv  [list $args] \; {
 	if {![llength [info command bgerror]]} {

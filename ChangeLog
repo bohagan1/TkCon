@@ -1,3 +1,7 @@
+2001-08-31  Jeff Hobbs  <jeffh@ActiveState.com>
+
+	* tkcon.tcl (InitSlave): propagate auto_path from master to slave.
+
 2001-08-24  Jeff Hobbs  <jeffh@ActiveState.com>
 
 	* tkcon.tcl (NewSocket, NewDisplay): when nothing is specified,
