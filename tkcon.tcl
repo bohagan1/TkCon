@@ -9,7 +9,7 @@ exec wish "$0" ${1+"$@"}
 ## Originally based off Brent Welch's Tcl Shell Widget
 ## (from "Practical Programming in Tcl and Tk")
 ##
-## Thanks especially to the following for bug reports & code ideas:
+## Thanks to the following (among many) for bug reports & code ideas:
 ## Steven Wahl <steven@indra.com>, Jan Nijtmans <nijtmans@nici.kun.nl>
 ## Crimmins <markcrim@umich.edu>, Wart <wart@ugcs.caltech.edu>
 ##
@@ -19,7 +19,7 @@ exec wish "$0" ${1+"$@"}
 ## jeff.hobbs@acm.org, http://www.cs.uoregon.edu/~jhobbs/
 ##
 ## source standard_disclaimer.tcl
-## source beer_ware.tcl
+## source bourbon_ware.tcl
 ##
 
 ## FIX NOTES - ideas on the block:
@@ -53,7 +53,7 @@ set TKCON(WWW) [info exists embed_args]
 ##
 ;proc tkConInit {} {
     global auto_path tcl_platform env tcl_pkgPath \
-	    TKCON argc argv tcl_interactive
+	    TKCON argc argv tcl_interactive errorInfo
 
     set tcl_interactive 1
 
@@ -118,8 +118,8 @@ set TKCON(WWW) [info exists embed_args]
 	    tkcon_gets tkcon_puts tclindex tcl_unknown
 	    observe observe_var unalias unknown which
 	}
-	version		1.03
-	release		{July 3 1997}
+	version		1.1
+	release		{8 October 1997}
 	docs		{http://www.cs.uoregon.edu/research/tcl/script/tkcon/}
 	email		{jeff.hobbs@acm.org}
 	root		.
@@ -236,6 +236,7 @@ set TKCON(WWW) [info exists embed_args]
 	if {[lsearch -exact $pkgs $pkg]>-1} {
 	    if {[catch {tkConEvalSlave package require [list $pkg]} pkgerr]} {
 		puts stderr "error:\n$pkgerr"
+		append TKCON(errorInfo) $errorInfo\n
 	    } else { puts "OK" }
 	} else {
 	    puts stderr "error: package does not exist"
@@ -246,6 +247,7 @@ set TKCON(WWW) [info exists embed_args]
     if {[string compare {} $TKCON(maineval)] && \
 	    [catch {uplevel \#0 $TKCON(maineval)} merr]} {
 	puts stderr "error in eval:\n$merr"
+	append TKCON(errorInfo) $errorInfo\n
     }
 
     ## Source extra command line argument files into slave executable
@@ -253,6 +255,7 @@ set TKCON(WWW) [info exists embed_args]
 	puts -nonewline "slave sourcing \"$fn\" ... "
 	if {[catch {tkConEvalSlave source [list $fn]} fnerr]} {
 	    puts stderr "error:\n$fnerr"
+	    append TKCON(errorInfo) $errorInfo\n
 	} else { puts "OK" }
     }
 
@@ -260,10 +263,12 @@ set TKCON(WWW) [info exists embed_args]
     if {[string compare {} $TKCON(slaveeval)] && \
 	    [catch {interp eval $TKCON(exec) $TKCON(slaveeval)} serr]} {
 	puts stderr "error in slave eval:\n$serr"
+	append TKCON(errorInfo) $errorInfo\n
     }
     ## Output any error/output that may have been returned from rcfile
     if {[info exists code] && $code && [string compare {} $err]} {
 	puts stderr "error in $TKCON(rcfile):\n$err"
+	append TKCON(errorInfo) $errorInfo
     }
     tkConStateCheckpoint [concat $TKCON(name) $TKCON(exec)] slave
     tkConStateCheckpoint $TKCON(name) slave
@@ -392,6 +397,13 @@ set TKCON(WWW) [info exists embed_args]
 	    -foreground $TKCON(color,stdin) \
 	    -width $TKCON(cols) -height $TKCON(rows)]]
     bindtags $con [list $con PreCon TkConsole PostCon $root all]
+    if {[info tclversion] >= 8.0} {
+	set font [$con cget -font]
+	if {![font metrics $font -fixed]} {
+	    catch {font create tkconfixed -family Courier -size 10}
+	    catch {$con configure -font tkconfixed}
+	}
+    }
     ## Scrollbar
     set TKCON(scrolly) [scrollbar $w.sy -takefocus 0 -bd 1 \
 	    -command [list $con yview]]
@@ -483,6 +495,11 @@ set TKCON(WWW) [info exists embed_args]
 	if {$code} {
 	    $w insert output $cmd\n stderr
 	} else {
+	    ## We are about to evaluate the command, so move the limit
+	    ## mark to ensure that further <Return>s don't cause double
+	    ## evaluation of this command - for cases like the command
+	    ## has a vwait or something in it
+	    $w mark set limit end
 	    if {$TKCON(nontcl) && [string match interp $TKCON(apptype)]} {
 		set code [catch "tkConEvalSend $cmd" res]
 		if {$code == 1} {
@@ -625,7 +642,7 @@ set TKCON(WWW) [info exists embed_args]
 # Returns:	text which compromises current command line
 ## 
 ;proc tkConCmdGet w {
-    if {[string match {} [set ix [$w tag nextrange prompt limit end]]]} {
+    if {[string match {} [$w tag nextrange prompt limit end]]} {
 	$w tag add stdin limit end-1c
 	return [$w get limit end-1c]
     }
@@ -734,9 +751,8 @@ set TKCON(WWW) [info exists embed_args]
 	} else {
 	    $w.text tag config title -justify center -font *Courier*Bold*18*
 	}
-	$w.text insert 1.0 "About TkCon v$TKCON(version)\n\n" title \
-		"Copyright 1995-1997 Jeffrey Hobbs, $TKCON(email)\
-		\nhttp://www.cs.uoregon.edu/~jhobbs/\
+	$w.text insert 1.0 "About TkCon v$TKCON(version)" title \
+		"\n\nCopyright 1995-1997 Jeffrey Hobbs, $TKCON(email)\
 		\nRelease Date: v$TKCON(version), $TKCON(release)\
 		\nDocumentation available at:\n$TKCON(docs)\
 		\nUsing: Tcl v$tcl_patchLevel / Tk v$tk_patchLevel" center
@@ -2511,7 +2527,7 @@ proc which cmd {
 	} elseif {[string compare {} [info procs $cmd]]} {
 	    set result "$cmd: procedure"
 	} else {
-	    set result "$cmd: command"
+	    set result "$cmd: internal command"
 	}
 	global auto_index
 	if {[info exists auto_index($cmd)]} {
@@ -3025,6 +3041,7 @@ proc tcl_unknown args {
     bind TkConsole <Triple-1> {+
 	catch {
 	    eval %W tag remove sel [%W tag nextrange prompt sel.first sel.last]
+	    eval %W tag remove sel sel.last-1c
 	    %W mark set insert sel.first
 	}
     }
