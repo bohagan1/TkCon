@@ -187,7 +187,7 @@ proc ::tkcon::Init {args} {
 	    alias clear dir dump echo idebug lremove
 	    tkcon_puts tkcon_gets observe observe_var unalias which what
 	}
-	RCS		{RCS: @(#) $Id: tkcon.tcl,v 1.64 2003/04/08 18:07:36 hobbs Exp $}
+	RCS		{RCS: @(#) $Id: tkcon.tcl,v 1.65 2003/10/06 19:12:43 hobbs Exp $}
 	HEADURL		{http://cvs.sourceforge.net/cgi-bin/viewcvs.cgi/tkcon/tkcon/tkcon.tcl?rev=HEAD}
 	docs		"http://tkcon.sourceforge.net/"
 	email		{jeff@hobbs.org}
@@ -942,9 +942,10 @@ proc ::tkcon::EvalSocketClosed {} {
     catch {close $PRIV(app)}
     if {[string compare leave $OPT(dead)] && \
 	    ([string match ignore $OPT(dead)] || \
-	    [tk_dialog $PRIV(base).dead "Dead Attachment" \
-	    "\"$PRIV(app)\" appears to have died.\
-	    \nReturn to primary slave interpreter?" questhead 0 OK No])} {
+		 [tk_messageBox -title "Dead Attachment" -type yesno \
+		      -icon question \
+		      -message "\"$PRIV(app)\" appears to have died.\
+	    \nReturn to primary slave interpreter?"] == "no")} {
 	set PRIV(appname) "DEAD:$PRIV(appname)"
 	set PRIV(deadapp) 1
     } else {

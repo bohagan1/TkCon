@@ -1,3 +1,8 @@
+2003-11-04  Jeff Hobbs  <jeffh@ActiveState.com>
+
+	* tkcon.tcl (::tkcon::EvalSocketClosed): use tk_messageBox instead
+	of tk_dialog
+
 2003-10-06  Jeff Hobbs  <jeffh@ActiveState.com>
 
 	* tkcon.tcl (dir): use %9ld instead of %9d to support large files
