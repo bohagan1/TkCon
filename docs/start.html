@@ -63,10 +63,27 @@ be argv/argc (with <CODE>--</CODE> prepended).  This carries over for any
 further consoles.  This is meant only for wrapping TkCon around programs
 that require their own arguments.
 
+<DT> <CODE>-color,*</CODE> <I>color</I>
+<DD> Sets the requested color type to the specified color for tkcon.
+See the <B>Variables</B> section for the various color,* types.
+
 <DT> <CODE>-eval</CODE> (also <CODE>-main</CODE> or <CODE>-e</CODE>)
 <DD> A tcl script to eval in each main interpreter.  This is evaluated
 after the resource file is loaded and the slave interpreter is created.
 Multiple <CODE>-eval</CODE> switches will be recognized (in order).
+
+<DT> <CODE>-exec</CODE> <I>slavename</I>
+<DD> Sets the named slave that tkcon operates in.  In general, this is only
+useful to set to "" (empty), indicating to tkcon to avoid the
+multi-interpreter model and operate in the main environment.  When this is
+empty, any further arguments will be only used in the first tkcon console
+and not passed onto further new consoles.  This is useful when using tkcon
+as a console for extended wish executables that don't load there commands
+into slave interpreters.
+
+<DT> <CODE>-font</CODE> <I>font</I>
+<DD> Sets the font that tkcon uses for its text windows.  If this isn't
+a fixed width font, tkcon will override it.
 
 <DT> <CODE>-nontcl</CODE> <I>TCL_BOOLEAN</I>
 <DD> Sets <CODE>TKCON(nontcl)</CODE> to <I>TCL_BOOLEAN</I>.  Needed when
@@ -76,18 +93,35 @@ attaching to non-Tcl interpreters.
 <DD> Packages to automatically load into the slave interpreters (ie - "Tk").
 
 <DT> <CODE>-rcfile</CODE> <I>filename</I>
-<DD> Specify an alternate TkCon resource file name.
+<DD> Specify an alternate tkcon resource file name.
 
 <DT> <CODE>-root</CODE> <I>widgetname</I>
 <DD> Makes the named widget the root name of all consoles (ie - .tkcon).
 
 <DT> <CODE>-slave</CODE> <I>tcl_script</I>
 <DD> A tcl script to eval in each slave interpreter.  This will append
-the one specified in the TkCon resource file, if any.
+the one specified in the tkcon resource file, if any.
 
 </DL>
 
- <P>
+Some examples of tkcon command line startup situations:
+<DL>
+
+<DT> <CODE>megawish tkcon.tcl -exec "" -root .tkcon mainfile.tcl</CODE>
+<DD> Use tkcon as a console for your megawish application.  You can avoid
+starting the line with <CODE>megawish</CODE> if that is the default wish
+that tkcon would use.  The <CODE>-root</CODE> ensures that tkcon will not
+conflict with the 
+
+<DT> <CODE>tkcon.tcl -font "Courier 12" -load Tk</CODE>
+<DD> Use the courier font for tkcon and always load Tk in slave
+interpreters at startup.
+
+<DT> <CODE>tkcon.tcl -rcfile ~/.wishrc -color,bg white</CODE>
+<DD> Use the <CODE>~/.wishrc</CODE> file as the resource file, and
+a white background for tkcon's text widgets.
+
+</DL>
 
 <H3>Variables:</H3>
 
@@ -100,17 +134,32 @@ state.  Here is an explanation of certain variables you might change or use:
 
 <DL>
 
+<DT> <CODE>color,bg</CODE>
+<DD> The background color for tkcon text widgets.
+Defaults to the operating system default (determined at startup).
+
 <DT> <CODE>color,blink</CODE>
 <DD> The background color of the electric brace highlighting, if on.
 Defaults to <font color=#FFFF00>yellow</font>.
+
+<DT> <CODE>color,cursor</CODE>
+<DD> The background color for the insertion cursor in tkcon.
+Defaults to <font color=#000000>black</font>.
+
+<DT> <CODE>color,disabled</CODE>
+<DD> The foreground color for disabled menu items.
+Defaults to <font color=#4D4D4D>dark grey</font>.
 
 <DT> <CODE>color,proc</CODE>
 <DD> The foreground color of a recognized proc, if command highlighting is on.
 Defaults to <font color=#008800>dark green</font>.
 
+<DT> <CODE>color,var</CODE>
+<DD> The background color of a recognized var, if command highlighting is on.
+Defaults to <font color=#FFC0D0>pink</font>.
+
 <DT> <CODE>color,prompt</CODE>
-<DD> The foreground color of the prompt as output in the console.  This is
-also used as the color of disabled menu labels in several menus.
+<DD> The foreground color of the prompt as output in the console.
 Defaults to <font color=#8F4433>brown</font>.
 
 <DT> <CODE>color,stdin</CODE>
@@ -130,10 +179,6 @@ Defaults to <font color=#FF0000>red</font>.
 <DD> Packages to automatically load into the slave interpreter (ie - 'Tk').
 This is a list.  Defaults to {} (none).
 
-<DT> <CODE>buffer</CODE>
-<DD> The size of the console scroll buffer (in lines).
-Defaults to 512.
-
 <DT> <CODE>blinktime</CODE>
 <DD> The amount of time (in millisecs) that braced sections should
 <I>blink</I> for.  Defaults to 500 (.5 secs), must be at least 100.
@@ -141,6 +186,10 @@ Defaults to 512.
 <DT> <CODE>blinkrange</CODE>
 <DD> Whether to blink the entire range for electric brace matching or to
 just blink the actual matching braces (respectively 1 or 0, defaults to 1).
+
+<DT> <CODE>buffer</CODE>
+<DD> The size of the console scroll buffer (in lines).
+Defaults to 512.
 
 <DT> <CODE>calcmode</CODE>
 <DD> Whether to allow <CODE>expr</CODE> commands to be run at the command
@@ -155,8 +204,12 @@ is <i>leave</i>, TkCon automatically exits the dead interpreter.  If
 <CODE>dead</CODE> is <i>ignore</i> then it remains attached waiting for
 the interpreter to reappear.  Otherwise TkCon will prompt you.
 
+<DT> <CODE>font</CODE>
+<DD> Font to use for tkcon text widgets (also specified with -font).
+Defaults to the system default, or a fixed width equivalent.
+
 <DT> <CODE>history</CODE>
-<DD> The size of the history list to keep.  Defaults to 32.
+<DD> The size of the history list to keep.  Defaults to 48.
 
 <DT> <CODE>hoterrors</CODE>
 <DD> Whether hot errors are enabled or not.  When enabled, errors that
@@ -198,7 +251,7 @@ this.  Defaults to <CODE>.tkconrc</CODE> on Unix and <CODE>tkcon.cfg</CODE>
 otherwise.
 
 <DT> <CODE>rows</CODE>
-<DD> Number of rows for the console to start out with.  Defaults to 24.
+<DD> Number of rows for the console to start out with.  Defaults to 20.
 
 <DT> <CODE>scollypos</CODE>
 <DD> Y scrollbar position.  Valid values are <CODE>left</CODE> or

@@ -74,11 +74,11 @@ proc or var, the <I>arg</I> may be a pattern.
 <DD> Interactive debugging command.
 See <a href="idebug.html">further <B>idebug</B> docs</a> for details.
 
-<DT> <B>lremove</B> <I>?-all? ?-pattern? list items</I>
+<DT> <B>lremove</B> <I>?-all? ?-regexp -glob? list items</I>
 <DD> Removes one or more items from a list and returns the new list.  If
-<I>-all</I> is specified, it removes all instances of each item in the list.
-If <I>-pattern</I> is specified, it interprets each item in the items list
-as a regexp pattern to match against.
+<I>-all</I> is specified, it removes all instances of each item in the
+list.  If <I>-regexp</I> or <I>-glob</I> is specified, it interprets each
+item in the items list as a regexp or glob pattern to match against.
 
 <DT> <B>less</B>
 <DD> Aliased to <B>edit</B>.
@@ -112,6 +112,13 @@ added when -package is true.
 
 <DT> <B>unalias</B> <I>cmd</I>
 <DD> unaliases command
+
+<DT> <B>what</B> <i>string</i>
+<DD> The <CODE>what</CODE> command will identify the word given in
+<i>string</i> in the Tcl environment and return a list of types that
+it was recognized as.  Possible types are: alias, procedure, command,
+variable, directory, file, widget, and executable.  Used by procedures
+<CODE>dump</CODE> and <CODE>which</CODE>.
 
 <DT> <B>which</B> <i>command</i>
 <DD> Like the 'which' command of Unix shells, this will tell you if a

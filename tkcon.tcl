@@ -69,10 +69,14 @@ set TKCON(WWW) [info exists embed_args]
 	set title Main
     }
 
+    # get bg color from the main toplevel
     array set TKCON {
+	color,bg	{}
 	color,blink	\#FFFF00
+	color,cursor	\#000000
+	color,disabled	\#4D4D4D
 	color,proc	\#008800
-	color,var	\#ffc0d0
+	color,var	\#FFC0D0
 	color,prompt	\#8F4433
 	color,stdin	\#000000
 	color,stdout	\#0000FF
@@ -81,18 +85,21 @@ set TKCON(WWW) [info exists embed_args]
 	autoload	{}
 	blinktime	500
 	blinkrange	1
+	buffer		512
 	calcmode	0
 	cols		80
 	debugPrompt	{(level \#$level) debug [history nextid] > }
 	dead		{}
 	expandorder	{Pathname Variable Procname}
+	font		{}
 	history		48
+	hoterrors	1
 	library		{}
 	lightbrace	1
 	lightcmd	1
 	maineval	{}
+	maxmenu		15
 	nontcl		0
-	rcfile		.tkconrc
 	rows		20
 	scrollypos	right
 	showmenu	1
@@ -100,9 +107,6 @@ set TKCON(WWW) [info exists embed_args]
 	slaveeval	{}
 	slaveexit	close
 	subhistory	1
-	maxmenu		15
-	buffer		512
-	hoterrors	1
 
 	exec		slave
 	app		{}
@@ -114,6 +118,7 @@ set TKCON(WWW) [info exists embed_args]
 	cmdsave		{}
 	event		1
 	deadapp		0
+	deadsock	0
 	debugging	0
 	gc-delay	60000
 	histid		0
@@ -124,10 +129,10 @@ set TKCON(WWW) [info exists embed_args]
 	slavealias	{ edit more less tkcon }
 	slaveprocs	{
 	    alias clear dir dump echo idebug lremove
-	    tkcon_puts tclindex observe observe_var unalias which
+	    tkcon_puts tclindex observe observe_var unalias which what
 	}
-	version		1.5
-	release		{March 1999}
+	version		1.6
+	release		{31 March 1999}
 	docs		"http://www.purl.org/net/hobbs/tcl/script/tkcon/\nhttp://www.hobbs.wservice.com/tcl/script/tkcon/"
 	email		{jeff.hobbs@acm.org}
 	root		.
@@ -136,7 +141,10 @@ set TKCON(WWW) [info exists embed_args]
     ## If you set TKCON(exec) to {}, then instead of a multiple interpreter
     ## model, you get TkCon operating in the main interp by default.
     ## This can be useful when attaching to programs that like to operate
-    ## in the main interpter (for example, based on special wish'es.
+    ## in the main interpter (for example, based on special wish'es).
+    ## You can set this from the command line with -exec ""
+    ## A side effect is that all tkcon command line args will be used
+    ## by the first console only.
     #set TKCON(exec) {}
 
     if {$TKCON(WWW)} {
@@ -149,23 +157,28 @@ set TKCON(WWW) [info exists embed_args]
 
     ## If there appear to be children of '.', then make sure we use
     ## a disassociated toplevel.
-    if {[string compare {} [winfo children .]]} {
+    if {[llength [winfo children .]]} {
 	set TKCON(root) .tkcon
     }
 
-    ## Use tkcon.cfg filename for resource filename on non-unix systems
-    if {[string compare unix $tcl_platform(platform)]} {
-	set TKCON(rcfile) tkcon.cfg
-    }
-
-    ## Determine what directory the resource file should be in
-    ## Windows could possibly use env(WINDIR)
+    ## Do platform specific configuration here
+    ### Use tkcon.cfg filename for resource filename on non-unix systems
+    ### Determine what directory the resource file should be in
+    ### Windows could possibly use env(WINDIR)
     switch $tcl_platform(platform) {
 	macintosh	{
 	    set envHome PREF_FOLDER
 	    cd [file dirname [info script]]
+	    set TKCON(rcfile) tkcon.cfg
 	}
-	windows	- unix	{ set envHome HOME }
+	windows		{
+	    set envHome HOME
+	    set TKCON(rcfile) tkcon.cfg
+	}
+	unix		{
+	    set envHome HOME
+	    set TKCON(rcfile) .tkconrc
+	}
     }
     if {[info exists env($envHome)]} {
 	set TKCON(rcfile) [file join $env($envHome) $TKCON(rcfile)]
@@ -189,7 +202,7 @@ set TKCON(WWW) [info exists embed_args]
 
     if {![info exists tcl_pkgPath]} {
 	set dir [file join [file dirname [info nameofexec]] lib]
-	if {[string compare {} [info commands @scope]]} {
+	if {[llength [info commands @scope]]} {
 	    set dir [file join $dir itcl]
 	}
 	catch {source [file join $dir pkgIndex.tcl]}
@@ -203,20 +216,23 @@ set TKCON(WWW) [info exists embed_args]
     set truth {^(1|yes|true|on)$}
     for {set i 0} {$i < $argc} {incr i} {
 	set arg [lindex $argv $i]
-	if {[regexp -- {-.+} $arg]} {
+	if {[string match {-*} $arg]} {
 	    set val [lindex $argv [incr i]]
 	    ## Handle arg based options
-	    switch -- $arg {
+	    switch -glob -- $arg {
 		-- - -argv	{
 		    set argv [concat -- [lrange $argv $i end]]
 		    set argc [llength $argv]
 		    break
 		}
+		-color,*	{ set TKCON([string range $arg 1 end]) $val }
+		-exec	{ set TKCON(exec) $val }
 		-main - -e - -eval	{ append TKCON(maineval) \n$val\n }
 		-package - -load	{ lappend TKCON(autoload) $val }
 		-slave	{ append TKCON(slaveeval) \n$val\n }
 		-nontcl	{ set TKCON(nontcl) [regexp -nocase $truth $val] }
 		-root	{ set TKCON(root) $val }
+		-font	{ set TKCON(font) $val }
 		-rcfile	{}
 		default	{ lappend slaveargs $arg; incr i -1 }
 	    }
@@ -229,8 +245,13 @@ set TKCON(WWW) [info exists embed_args]
 
     ## Create slave executable
     if {[string compare {} $TKCON(exec)]} {
-	eval tkConInitSlave $TKCON(exec) $slaveargs
+	uplevel \#0 tkConInitSlave $TKCON(exec) $slaveargs
+    } else {
+	set argc [llength $slaveargs]
+	set argv $slaveargs
+	uplevel \#0 $slaveargs
     }
+    history keep $TKCON(history)
 
     ## Attach to the slave, tkConEvalAttached will then be effective
     tkConAttach $TKCON(appname) $TKCON(apptype)
@@ -328,7 +349,7 @@ set TKCON(WWW) [info exists embed_args]
     interp eval $slave set tcl_interactive $tcl_interactive \; \
 	    set argc [llength $args] \; \
 	    set argv  [list $args] \; history keep $TKCON(history) \; {
-	if {[string match {} [info command bgerror]]} {
+	if {![llength [info command bgerror]]} {
 	    ;proc bgerror err {
 		global errorInfo
 		set body [info body bgerror]
@@ -414,19 +435,33 @@ set TKCON(WWW) [info exists embed_args]
     ## Text Console
     set TKCON(console) [set con $w.text]
     text $con -wrap char -yscrollcommand [list $w.sy set] \
-	    -foreground $TKCON(color,stdin)
+	    -foreground $TKCON(color,stdin) \
+	    -insertbackground $TKCON(color,cursor)
+    if {[string compare {} $TKCON(color,bg)]} {
+	$con configure -background $TKCON(color,bg)
+    }
+    set TKCON(color,bg) [$con cget -background]
+    if {[string compare {} $TKCON(font)]} {
+	## Set user-requested font, if any
+	$con configure -font $TKCON(font)
+    } elseif {[info tclversion] >= 8.0} {
+	## otherwise make sure the font is monospace
+	set font [$con cget -font]
+	if {![font metrics $font -fixed]} {
+	    font create tkconfixed -family Courier -size -12
+	    $con configure -font tkconfixed
+	}
+    } else {
+	$con configure -font {*Courier*12*}
+    }
+    set TKCON(font) [$con cget -font]
     if {!$TKCON(WWW)} {
 	$con configure -setgrid 1 -width $TKCON(cols) -height $TKCON(rows)
     }
     bindtags $con [list $con PreCon TkConsole PostCon $root all]
     if {[info tclversion] >= 8.0} {
-	set font [$con cget -font]
-	if {![font metrics $font -fixed]} {
-	    catch {font create tkconfixed -family Courier -size 10}
-	    catch {$con configure -font tkconfixed}
-	}
 	## Menus
-	## FIX check for use in plugin
+	## catch against use in plugin
 	if {[catch {menu $w.mbar} TKCON(menubar)]} {
 	    set TKCON(menubar) [frame $w.mbar -relief raised -bd 1]
 	}
@@ -480,8 +515,7 @@ set TKCON(WWW) [info exists embed_args]
     ## Remove error tags that no longer span anything
     ## Make sure the tag pattern matches the unique tag prefix
     foreach tag [$w tag names] {
-	if {[string match _tag* $tag] && \
-		[string match {} [$w tag ranges $tag]]} {
+	if {[string match _tag* $tag] && ![llength [$w tag ranges $tag]]} {
 	    $w tag delete $tag
 	}
     }
@@ -581,7 +615,8 @@ set TKCON(WWW) [info exists embed_args]
 		    $w tag bind $tag <Leave> \
 			    [list $w tag configure $tag -under 0]
 		    $w tag bind $tag <ButtonRelease-1> \
-			    [list edit -attach [tkConAttach] -type error $TKCON(errorInfo)]
+			    "if {!\$tkPriv(mouseMoved)} \
+			    {[list edit -attach [tkConAttach] -type error -- $TKCON(errorInfo)]}"
 		} else {
 		    $w insert output $res\n stderr
 		}
@@ -613,7 +648,7 @@ set TKCON(WWW) [info exists embed_args]
     if {[string compare slave $type]==0} {
 	return [tkConSlave $app $args]
     } else {
-	return [eval send [list $app] $args]
+	return [uplevel 1 send [list $app] $args]
     }
 }
 
@@ -635,7 +670,7 @@ set TKCON(WWW) [info exists embed_args]
 		    [tkConCmdGet $TKCON(console)]
 	}
     }
-    set code [catch {eval send [list $TKCON(app)] $args} result]
+    set code [catch {uplevel 1 send [list $TKCON(app)] $args} result]
     if {$code && [lsearch -exact [winfo interps] $TKCON(app)]<0} {
 	## Interpreter disappeared
 	if {[string compare leave $TKCON(dead)] && \
@@ -666,7 +701,7 @@ set TKCON(WWW) [info exists embed_args]
 ##
 ;proc tkConEvalNamespace { attached namespace args } {
     global TKCON
-    if {[string compare {} $args]} {
+    if {[llength $args]} {
 	if {$TKCON(A:itcl2)} {
 	    uplevel \#0 $attached namespace [list $namespace $args]
 	} else {
@@ -674,6 +709,7 @@ set TKCON(WWW) [info exists embed_args]
 	}
     }
 }
+
 
 ## tkConNamespaces - return all the namespaces descendent from $ns
 ##
@@ -708,7 +744,7 @@ set TKCON(WWW) [info exists embed_args]
 # Returns:	text which compromises current command line
 ## 
 ;proc tkConCmdGet w {
-    if {[string match {} [$w tag nextrange prompt limit end]]} {
+    if {![llength [$w tag nextrange prompt limit end]]} {
 	$w tag add stdin limit end-1c
 	return [$w get limit end-1c]
     }
@@ -832,7 +868,10 @@ set TKCON(WWW) [info exists embed_args]
 	toplevel $w
 	wm title $w "About TkCon v$TKCON(version)"
 	button $w.b -text Dismiss -command [list wm withdraw $w]
-	text $w.text -height 9 -bd 1 -width 60
+	text $w.text -height 9 -bd 1 -width 60 \
+		-foreground $TKCON(color,stdin) \
+		-background $TKCON(color,bg) \
+		-font $TKCON(font)
 	pack $w.b -fill x -side bottom
 	pack $w.text -fill both -side left -expand 1
 	$w.text tag config center -justify center
@@ -862,7 +901,7 @@ set TKCON(WWW) [info exists embed_args]
 	pack $w.label
 	return
     }
-    menu $w.context -tearoff 0 -disabledforeground $TKCON(color,prompt)
+    menu $w.context -tearoff 0 -disabledforeground $TKCON(color,disabled)
     set TKCON(context) $w.context
     set TKCON(popup) $w.pop
 
@@ -891,8 +930,8 @@ set TKCON(WWW) [info exists embed_args]
 
     ## File Menu
     ##
-    foreach m [list [menu $w.file$x -disabledforeground $TKCON(color,prompt)] \
-	    [menu $w.pop.file -disabledforeground $TKCON(color,prompt)]] {
+    foreach m [list [menu $w.file$x -disabledforeground $TKCON(color,disabled)] \
+	    [menu $w.pop.file -disabledforeground $TKCON(color,disabled)]] {
 	$m add command -label "Load File" -underline 0 -command tkConLoad
 	$m add cascade -label "Save ..."  -underline 0 -menu $m.save
 	$m add separator
@@ -901,7 +940,7 @@ set TKCON(WWW) [info exists embed_args]
 	## Save Menu
 	##
 	set s $m.save
-	menu $s -disabledforeground $TKCON(color,prompt) -tearoff 0
+	menu $s -disabledforeground $TKCON(color,disabled) -tearoff 0
 	$s add command -label "All"	-und 0 -command {tkConSave {} all}
 	$s add command -label "History"	-und 0 -command {tkConSave {} history}
 	$s add command -label "Stdin"	-und 3 -command {tkConSave {} stdin}
@@ -911,8 +950,8 @@ set TKCON(WWW) [info exists embed_args]
 
     ## Console Menu
     ##
-    foreach m [list [menu $w.console$x -disabledfore $TKCON(color,prompt)] \
-	    [menu $w.pop.console -disabledfore $TKCON(color,prompt)]] {
+    foreach m [list [menu $w.console$x -disabledfore $TKCON(color,disabled)] \
+	    [menu $w.pop.console -disabledfore $TKCON(color,disabled)]] {
 	$m add command -label "$title Console"	-state disabled
 	$m add command -label "New Console"	-und 0 -accel Ctrl-N \
 		-command tkConNew
@@ -930,25 +969,19 @@ set TKCON(WWW) [info exists embed_args]
 
 	## Attach Console Menu
 	##
-	set sub [menu $m.attach -disabledforeground $TKCON(color,prompt)]
+	set sub [menu $m.attach -disabledforeground $TKCON(color,disabled)]
 	$sub add cascade -label "Interpreter"   -und 0 -menu $sub.apps
 	$sub add cascade -label "Namespace" -und 1 -menu $sub.name
-	$sub add cascade -label "Socket" -und 1 -menu $sub.sock -state disabled
 
 	## Attach Console Menu
 	##
-	menu $sub.apps -disabledforeground $TKCON(color,prompt) \
+	menu $sub.apps -disabledforeground $TKCON(color,disabled) \
 		-postcommand [list tkConAttachMenu $sub.apps]
 
 	## Attach Namespace Menu
 	##
-	menu $sub.name -disabledforeground $TKCON(color,prompt) -tearoff 0 \
+	menu $sub.name -disabledforeground $TKCON(color,disabled) -tearoff 0 \
 		-postcommand [list tkConNamespaceMenu $sub.name]
-
-	## Attach Socket Menu
-	##
-	menu $sub.sock -disabledforeground $TKCON(color,prompt) -tearoff 0 \
-		-postcommand [list tkConSocketMenu $sub.sock]
     }
 
     ## Edit Menu
@@ -969,7 +1002,7 @@ set TKCON(WWW) [info exists embed_args]
     ## Interp Menu
     ##
     foreach m [list $w.interp$x $w.pop.interp] {
-	menu $m -disabledforeground $TKCON(color,prompt) \
+	menu $m -disabledforeground $TKCON(color,disabled) \
 		-postcommand [list tkConInterpMenu $m]
     }
 
@@ -1010,7 +1043,7 @@ set TKCON(WWW) [info exists embed_args]
     ## History Menu
     ##
     foreach m [list $w.history$x $w.pop.history] {
-	menu $m -disabledforeground $TKCON(color,prompt) \
+	menu $m -disabledforeground $TKCON(color,disabled) \
 		-postcommand [list tkConHistoryMenu $m]
     }
 
@@ -1045,23 +1078,6 @@ set TKCON(WWW) [info exists embed_args]
     }
 }
 
-## tkConSocketMenu - dynamically build the menu for attached interpreters
-##
-# ARGS:	m	- menu widget
-##
-;proc tkConSocketMenu m {
-    global TKCON
-
-    if {![winfo exists $m]} return
-    $m delete 0 end
-    for {set i 1} {$i <= 500} {incr i} {
-        if {![tkConEvalAttached "catch {fconfigure sock$i}"]} {
-	    $m add command -label "sock$i" \
-		    -command [list tkConAttach sock$i socket]
-        }
-    }
-}
-
 ## tkConInterpMenu - dynamically build the menu for attached interpreters
 ##
 # ARGS:	w	- menu widget
@@ -1093,7 +1109,7 @@ set TKCON(WWW) [info exists embed_args]
 	$w add cascade -label Packages -underline 0 -menu $w.pkg
 	set m $w.pkg
 	if {![winfo exists $m]} {
-	    menu $m -tearoff no -disabledforeground $TKCON(color,prompt) \
+	    menu $m -tearoff no -disabledforeground $TKCON(color,disabled) \
 		    -postcommand [list tkConPkgMenu $m $app $type]
 	}
     }
@@ -1344,7 +1360,7 @@ proc tkConXauthSecure {} {
 	bind $base.f.e <Return> [list $base.btn.fnd invoke]
 	bind $base.f.e <Escape> [list $base.btn.dis invoke]
     }
-    $base.btn.fnd config -command "tkConFind $w \$TKCON(find) \
+    $base.btn.fnd config -command "tkConFind [list $w] \$TKCON(find) \
 	    -case \$TKCON(find,case) -reg \$TKCON(find,reg)"
     $base.btn.clr config -command "
     [list $w] tag remove find 1.0 end
@@ -1419,8 +1435,6 @@ proc tkConXauthSecure {} {
 
     if {[string match namespace $type]} {
 	return [uplevel tkConAttachNamespace $name]
-    } elseif {[string match socket $type]} {
-	return [uplevel tkConAttachSocket $name]
     } elseif {[string compare {} $name]} {
 	array set interps [tkConInterps]
 	if {[string match {[Mm]ain} [lindex $name 0]]} {
@@ -1496,7 +1510,7 @@ proc tkConXauthSecure {} {
     if {[string match slave $type] || \
 	    (!$TKCON(nontcl) && [string match interp $type])} {
 	set TKCON(A:version)   [tkConEvalAttached {info tclversion}]
-	set TKCON(A:namespace) [string compare {} \
+	set TKCON(A:namespace) [llength \
 		[tkConEvalAttached {info commands namespace}]]
 	# Itcl3.0 for Tcl8.0 should have Tcl8 namespace semantics
 	# and not effect the patchlevel
@@ -1534,25 +1548,6 @@ proc tkConXauthSecure {} {
 		[interp alias {} tkConEvalAttached] [list $name]
     }
     set TKCON(namesp) $name
-}
-
-## tkConAttachSocket - called to attach tkCon to a socket
-# ARGS:	name	- socket name to which tkCon should send commands
-# Results:	tkConEvalAttached will be modified
-##
-;proc tkConAttachSocket { name } {
-    global TKCON
-    return
-    if {($TKCON(nontcl) && [string match interp $TKCON(apptype)]) \
-	    || $TKCON(deadapp)} {
-	return -code error "can't attach to socket in bad environment"
-    }
-    if {[tkConEvalAttached "catch {fconfigure $name}"]} {
-	return -code error "Unknown socket \"$name\""
-    }
-    interp alias {} tkConEvalAttached {} tkConEvalSocket \
-	    [interp alias {} tkConEvalAttached] [list $name]
-    set TKCON(sock) $name
 }
 
 ## tkConLoad - sources a file into the console
@@ -1788,7 +1783,11 @@ proc tkConXauthSecure {} {
 	    toplevel $w
 	    frame $w.btn
 	    scrollbar $w.sy -takefocus 0 -bd 1 -command [list $w.text yview]
-	    text $w.text -yscrollcommand [list $w.sy set] -height 12
+	    text $w.text -yscrollcommand [list $w.sy set] -height 12 \
+		    -foreground $TKCON(color,stdin) \
+		    -background $TKCON(color,bg) \
+		    -insertbackground $TKCON(color,cursor) \
+		    -font $TKCON(font)
 	    pack $w.btn -side bottom -fill x
 	    pack $w.sy -side right -fill y
 	    pack $w.text -fill both -expand 1
@@ -1818,8 +1817,7 @@ proc tkConXauthSecure {} {
 	}
 	## Don't allow verbose mode unless 'dump' exists in $app
 	## We're assuming this is TkCon's dump command
-	set hasdump [string compare {} \
-		[tkConEvalOther $app $type info commands dump]]
+	set hasdump [llength [tkConEvalOther $app $type info commands dump]]
 	if {$hasdump} {
 	    $w.btn.expand config -state normal
 	} else {
@@ -1870,7 +1868,7 @@ proc tkConXauthSecure {} {
     ##
     ;proc tkConStateCleanup {args} {
 	global TKCON
-	if {[string match {} $args]} {
+	if {![llength $args]} {
 	    foreach state [array names TKCON slave,*] {
 		if {![interp exists [string range $state 6 end]]} {
 		    unset TKCON($state)
@@ -1992,15 +1990,21 @@ proc tkConXauthSecure {} {
 	foreach {w0 w1} $what {c0 c1} $cmd {break}
 	set what [string range $info $w0 $w1]
 	set cmd  [string range $info $c0 $c1]
-	if {[string compare $cmd [uplevel 1 tkConEvalOther $app \
-		info procs [list $cmd]]]==0} {
+	if {$TKCON(A:namespace) && [string match *::* $cmd]} {
+	    set res [uplevel 1 tkConEvalOther $app namespace eval \
+		    [list [namespace qualifiers $cmd] \
+		    [list info procs [namespace tail $cmd]]]]
+	} else {
+	    set res [uplevel 1 tkConEvalOther $app info procs [list $cmd]]
+	}
+	if {[llength $res]==1} {
 	    set tag [tkConUniqueTag $w]
 	    $w tag add $tag $start+${c0}c $start+1c+${c1}c
 	    $w tag configure $tag -foreground $TKCON(color,stdout)
 	    $w tag bind $tag <Enter> [list $w tag configure $tag -under 1]
 	    $w tag bind $tag <Leave> [list $w tag configure $tag -under 0]
-	    $w tag bind $tag <ButtonRelease-1> \
-		    [list edit -type proc -find $what $cmd]
+	    $w tag bind $tag <ButtonRelease-1> "if {!\$tkPriv(mouseMoved)} \
+		    {[list edit -attach $app -type proc -find $what -- $cmd]}"
 	}
 	set info [string range $info $c1 end]
 	set start [$w index $start+${c1}c]
@@ -2015,14 +2019,21 @@ proc tkConXauthSecure {} {
 	set start [$w index $ix+${numc}c]
 	# +1c to avoid the first quote
 	set cmd [$w get $ix+1c $start]
-	if {[string compare $cmd [uplevel 1 tkConEvalOther $app \
-		info procs [list $cmd]]]==0} {
+	if {$TKCON(A:namespace) && [string match *::* $cmd]} {
+	    set res [uplevel 1 tkConEvalOther $app namespace eval \
+		    [list [namespace qualifiers $cmd] \
+		    [list info procs [namespace tail $cmd]]]]
+	} else {
+	    set res [uplevel 1 tkConEvalOther $app info procs [list $cmd]]
+	}
+	if {[llength $res]==1} {
 	    set tag [tkConUniqueTag $w]
 	    $w tag add $tag $ix+1c $start
 	    $w tag configure $tag -foreground $TKCON(color,proc)
 	    $w tag bind $tag <Enter> [list $w tag configure $tag -under 1]
 	    $w tag bind $tag <Leave> [list $w tag configure $tag -under 0]
-	    $w tag bind $tag <ButtonRelease-1> [list edit -type proc $cmd]
+	    $w tag bind $tag <ButtonRelease-1> "if {!\$tkPriv(mouseMoved)} \
+		    {[list edit -attach $app -type proc -- $cmd]}"
 	}
     }
 }
@@ -2075,7 +2086,7 @@ proc tkcon {cmd args} {
 		$w see insert
 	    }
 	    bind TkConsole <<TkCon_Eval>> $old
-	    if {[string match {} $args]} {
+	    if {![llength $args]} {
 		return $line
 	    } else {
 		upvar [lindex $args 0] data
@@ -2148,10 +2159,10 @@ proc tkcon {cmd args} {
 	fo* {
 	    ## 'font' ?fontname? - gets/sets the font of the console
 	    if {[llength $args]} {
-		return [$TKCON(console) config -font $args]
-	    } else {
-		return [$TKCON(console) config -font]
+		$TKCON(console) config -font $args
+		set TKCON(font) [$TKCON(console) cget -font]
 	    }
+	    return $TKCON(font)
 	}
 	hid* - with* {
 	    ## 'hide' 'withdraw' - hides the console.
@@ -2243,7 +2254,7 @@ proc tkcon {cmd args} {
 	    ## tries to determine if the command exists, otherwise throws error
 	    set new tkCon[string toupper \
 		    [string index $cmd 0]][string range $cmd 1 end]
-	    if {[string compare {} [info command $new]]} {
+	    if {[llength [info command $new]]} {
 		uplevel \#0 $new $args
 	    } else {
 		return -code error "bad option \"$cmd\": must be\
@@ -2350,7 +2361,7 @@ proc tkcon {cmd args} {
 	set args [lreplace $args 0 1]
     }
     # determine who we are dealing with
-    if {[string compare $opts(-attach) {}]} {
+    if {[llength $opts(-attach)]} {
 	foreach {app type} $opts(-attach) {break}
     } else {
 	foreach {app type} [tkcon attach] {break}
@@ -2358,9 +2369,9 @@ proc tkcon {cmd args} {
 
     set word [lindex $args 0]
     if {[string match {} $opts(-type)]} {
-	if {[string compare {} [tkConEvalOther $app $type info commands [list $word]]]} {
+	if {[llength [tkConEvalOther $app $type info commands [list $word]]]} {
 	    set opts(-type) "proc"
-	} elseif {[string compare {} [tkConEvalOther $app $type info vars [list $word]]]} {
+	} elseif {[llength [tkConEvalOther $app $type info vars [list $word]]]} {
 	    set opts(-type) "var"
 	} elseif {[tkConEvalOther $app $type file isfile [list $word]]} {
 	    set opts(-type) "file"
@@ -2382,10 +2393,11 @@ proc tkcon {cmd args} {
 
 	text $w.text -wrap none \
 		-xscrollcommand [list $w.sx set] \
-		-yscrollcommand [list $w.sy set]
-	if {![font metrics [$w.text cget -font] -fixed]} {
-	    catch {$w.text configure -font tkconfixed}
-	}
+		-yscrollcommand [list $w.sy set] \
+		-foreground $TKCON(color,stdin) \
+		-background $TKCON(color,bg) \
+		-insertbackground $TKCON(color,cursor) \
+		-font $TKCON(font)
 	scrollbar $w.sx -orient h -takefocus 0 -bd 1 \
 		-command [list $w.text xview]
 	scrollbar $w.sy -orient v -takefocus 0 -bd 1 \
@@ -2510,7 +2522,7 @@ proc alias {{newcmd {}} args} {
 	    lappend res [list $a -> [interp alias {} $a]]
 	}
 	return [join $res \n]
-    } elseif {[string match {} $args]} {
+    } elseif {![llength $args]} {
 	interp alias {} $newcmd
     } else {
 	eval interp alias [list {} $newcmd {}] $args
@@ -2540,10 +2552,10 @@ proc unalias {cmd} {
 proc dump {type args} {
     set whine 1
     set code  ok
-    if {[string match {} $args]} {
+    if {![llength $args]} {
 	## If no args, assume they gave us something to dump and
 	## we'll try anything
-	set args [list $type]
+	set args $type
 	set type any
     }
     while {[string match -* [lindex $args 0]]} {
@@ -2554,7 +2566,7 @@ proc dump {type args} {
 	    default {return -code error "unknown option \"[lindex $args 0]\""}
 	}
     }
-    if {$whine && [string match {} $args]} {
+    if {$whine && ![llength $args]} {
 	return -code error "wrong \# args: [lindex [info level 0] 0] type\
 		?-nocomplain? ?-filter pattern? ?--? pattern ?pattern ...?"
     }
@@ -2562,15 +2574,21 @@ proc dump {type args} {
     switch -glob -- $type {
 	c* {
 	    # command
-	    # outpus commands by figuring out, as well as possible, what it is
+	    # outputs commands by figuring out, as well as possible, what it is
 	    # this does not attempt to auto-load anything
 	    foreach arg $args {
-		if {[string compare {} [set cmds [info commands $arg]]]} {
+		if {[llength [set cmds [info commands $arg]]]} {
 		    foreach cmd [lsort $cmds] {
 			if {[lsearch -exact [interp aliases] $cmd] > -1} {
 			    append res "\#\# ALIAS:   $cmd =>\
 				    [interp alias {} $cmd]\n"
-			} elseif {[string compare {} [info procs $cmd]]} {
+			} elseif {
+			    [llength [info procs $cmd]] ||
+			    ([string match *::* $cmd] &&
+			    ([info tclversion] >= 8) &&
+			    [llength [namespace eval [namespace qual $cmd]
+				    info procs [namespace tail $cmd]]])
+			} {
 			    if {[catch {dump p -- $cmd} msg] && $whine} {
 				set code error
 			    }
@@ -2590,8 +2608,7 @@ proc dump {type args} {
 	    # outputs variables value(s), whether array or simple.
 	    if {![info exists fltr]} { set fltr * }
 	    foreach arg $args {
-		if {[string match {} \
-			[set vars [uplevel info vars [list $arg]]]]} {
+		if {![llength [set vars [uplevel 1 info vars [list $arg]]]]} {
 		    if {[uplevel info exists $arg]} {
 			set vars $arg
 		    } elseif {$whine} {
@@ -2601,7 +2618,7 @@ proc dump {type args} {
 		    } else { continue }
 		}
 		foreach var [lsort $vars] {
-		    if {[info tclversion] > 8} {
+		    if {[info tclversion] >= 8} {
 			set var [uplevel [list namespace which -variable $var]]
 		    }
 		    upvar $var v
@@ -2634,10 +2651,21 @@ proc dump {type args} {
 	p* {
 	    # procedure
 	    foreach arg $args {
-		if {[string compare {} [set ps [info proc $arg]]] || \
-			([auto_load $arg] && \
-			[string compare {} [set ps [info proc $arg]]])} {
-		    foreach p [lsort $ps] {
+		if {
+		    ![llength [set procs [info proc $arg]]] &&
+		    ([string match *::* $arg] && ([info tclversion] >= 8) &&
+		    [llength [set ps [namespace eval \
+			    [namespace qualifier $arg] \
+			    info procs [namespace tail $arg]]]])
+		} {
+		    set procs {}
+		    set namesp [namespace qualifier $arg]
+		    foreach p $ps {
+			lappend procs ${namesp}::$p
+		    }
+		}
+		if {[llength $procs]} {
+		    foreach p [lsort $procs] {
 			set as {}
 			foreach a [info args $p] {
 			    if {[info default $p $a tmp]} {
@@ -2657,12 +2685,12 @@ proc dump {type args} {
 	w* {
 	    # widget
 	    ## The user should have Tk loaded
-	    if {[string match {} [info command winfo]]} {
+	    if {![llength [info command winfo]]} {
 		return -code error "winfo not present, cannot dump widgets"
 	    }
 	    if {![info exists fltr]} { set fltr .* }
 	    foreach arg $args {
-		if {[string compare {} [set ws [info command $arg]]]} {
+		if {[llength [set ws [info command $arg]]]} {
 		    foreach w [lsort $ws] {
 			if {[winfo exists $w]} {
 			    if {[catch {$w configure} cfg]} {
@@ -2695,12 +2723,13 @@ proc dump {type args} {
 	    }
 	}
 	a* {
-	    ## any - try to dump as var, then command, then widget...
-	    if {
-		[catch {uplevel dump v -- $args} res] &&
-		[catch {uplevel dump c -- $args} res] &&
-		[catch {uplevel dump w -- $args} res]
-	    } {
+	    ## see if we recognize it, other complain
+	    if {[regexp {(var|com|proc|widget)} \
+		    [set types [uplevel 1 what $args]]]} {
+		foreach type $types {
+		    append res "[uplevel 1 dump $type $args]\n"
+		}
+	    } else {
 		set res "dump was unable to resolve type for \"$args\""
 		set code error
 	    }
@@ -2727,24 +2756,24 @@ proc idebug {opt args} {
     set level [expr {[info level]-1}]
     switch -glob -- $opt {
 	on	{
-	    if {[string compare {} $args]} { set IDEBUG(id) $args }
+	    if {[llength $args]} { set IDEBUG(id) $args }
 	    return [set IDEBUG(on) 1]
 	}
 	off	{ return [set IDEBUG(on) 0] }
 	id  {
-	    if {[string match {} $args]} {
+	    if {![llength $args]} {
 		return $IDEBUG(id)
 	    } else { return [set IDEBUG(id) $args] }
 	}
 	break {
 	    if {!$IDEBUG(on) || $IDEBUG(debugging) || \
-		    ([string compare {} $args] && \
+		    ([llength $args] && \
 		    ![string match $IDEBUG(id) $args]) || [info level]<1} {
 		return
 	    }
 	    set IDEBUG(debugging) 1
 	    puts stderr "idebug at level \#$level: [lindex [info level -1] 0]"
-	    set tkcon [string compare {} [info command tkcon]]
+	    set tkcon [llength [info command tkcon]]
 	    if {$tkcon} {
 		tkcon show
 		tkcon master eval set TKCON(prompt2) \$TKCON(prompt1)
@@ -2863,7 +2892,7 @@ proc idebug {opt args} {
 		}
 		set name [lindex $info 0]
 		if {[string compare VERBOSE $verbose] || \
-			[string match {} [info procs $name]]} {
+			![llength [info procs $name]]} {
 		    puts $info
 		} else {
 		    puts "proc $name {[info args $name]} { ... }"
@@ -2930,7 +2959,7 @@ proc observe {opt name args} {
 			infinite eval loop will occur"
 	    }
 	    set old ${name}@
-	    while {[string compare {} [info command $old]]} { append old @ }
+	    while {[llength [info command $old]]} { append old @ }
 	    rename $name $old
 	    set max 4
 	    regexp {^[0-9]+} $args max
@@ -2972,7 +3001,7 @@ proc observe {opt name args} {
 		return -code error "bad [lindex [info level 0] 0] $opt type\
 			\"$type\", must be: read, write or unset"
 	    }
-	    if {[string match {} $args]} { set args observe_var }
+	    if {![llength $args]} { set args observe_var }
 	    uplevel [list trace $opt $name $type $args]
 	}
 	vi* {
@@ -3014,29 +3043,75 @@ proc observe {opt name args} {
 # Returns:	where command is found (internal / external / unknown)
 ## 
 proc which cmd {
-    if {[string compare {} [info commands $cmd]] || \
-	    ([auto_load $cmd] && [string compare {} [info commands $cmd]])} {
-	if {[lsearch -exact [interp aliases] $cmd] > -1} {
-	    set result "$cmd: aliased to [alias $cmd]"
-	} elseif {[string compare {} [info procs $cmd]]} {
-	    set result "$cmd: procedure"
-	} else {
-	    set result "$cmd: internal command"
+    ## This tries to auto-load a command if not recognized
+    set types [what $cmd 1]
+    if {[llength $types]} {
+	set out {}
+	
+	foreach type $types {
+	    switch -- $type {
+		alias		{ set res "$cmd: aliased to [alias $cmd]" }
+		procedure	{ set res "$cmd: procedure" }
+		command		{ set res "$cmd: internal command" }
+		executable	{ lappend out [auto_execok $cmd] }
+		variable	{ lappend out "$cmd: variable" }
+	    }
+	    if {[info exists res]} {
+		global auto_index
+		if {[info exists auto_index($cmd)]} {
+		    ## This tells you where the command MIGHT have come from -
+		    ## not true if the command was redefined interactively or
+		    ## existed before it had to be auto_loaded.  This is just
+		    ## provided as a hint at where it MAY have come from
+		    append res " ($auto_index($cmd))"
+		}
+		lappend out $res
+		unset res
+	    }
 	}
-	global auto_index
-	if {[info exists auto_index($cmd)]} {
-	    ## This tells you where the command MIGHT have come from -
-	    ## not true if the command was redefined interactively or
-	    ## existed before it had to be auto_loaded.  This is just
-	    ## provided as a hint at where it MAY have come from
-	    append result " ($auto_index($cmd))"
-	}
-	return $result
-    } elseif {[string compare {} [auto_execok $cmd]]} {
-	return [auto_execok $cmd]
+	return [join $out \n]
     } else {
 	return -code error "$cmd: command not found"
     }
+}
+
+## what - tells you what a string is recognized as
+# ARGS:	str	- string to id
+# Returns:	id types of command as list
+## 
+proc what {str {autoload 0}} {
+    set types {}
+    if {[llength [info commands $str]] || ($autoload && \
+	    [auto_load $str] && [llength [info commands $str]])} {
+	if {[lsearch -exact [interp aliases] $str] > -1} {
+	    lappend types "alias"
+	} elseif {
+	    [llength [info procs $str]] ||
+	    ([string match *::* $str] && ([info tclversion] >= 8) &&
+	    [llength [namespace eval [namespace qualifier $str] \
+		    info procs [namespace tail $str]]])
+	} {
+	    lappend types "procedure"
+	} else {
+	    lappend types "command"
+	}
+    }
+    if {[llength [uplevel 1 info vars $str]]} {
+	lappend types "variable"
+    }
+    if {[file isdirectory $str]} {
+	lappend types "directory"
+    }
+    if {[file isfile $str]} {
+	lappend types "file"
+    }
+    if {[llength [info commands winfo]] && [winfo exists $str]} {
+	lappend types "widget"
+    }
+    if {[string compare {} [auto_execok $str]]} {
+	lappend types "executable"
+    }
+    return $types
 }
 
 ## dir - directory list
@@ -3064,7 +3139,7 @@ proc dir {args} {
 	}
     }
     set sep [string trim [file join . .] .]
-    if {[string match {} $args]} { set args . }
+    if {![llength $args]} { set args . }
     foreach arg $args {
 	if {[file isdir $arg]} {
 	    set arg [string trimr $arg $sep]$sep
@@ -3154,7 +3229,7 @@ interp alias {} ls {} dir -full
 ##
 proc tclindex args {
     set truth {^(1|yes|true|on)$}; set pkg 0; set idx 1;
-    while {[regexp -- {^-[^ ]+} $args opt] && [string compare {} $args]} {
+    while {[regexp -- {^-[^ ]+} $args opt] && [llength $args]} {
 	switch -glob -- $opt {
 	    --  { set args [lreplace $args 0 0]; break }
 	    -e* { set ext [lindex $args 1] }
@@ -3171,7 +3246,7 @@ proc tclindex args {
 	set ext {*.tcl}
 	if {$pkg} { lappend ext *[info sharedlibextension] }
     }
-    if {[string match {} $args]} {
+    if {![llength $args]} {
 	if {$idx} { eval auto_mkindex [list [pwd]] $ext }
 	if {$pkg} { eval pkg_mkIndex [list [pwd]] $ext }
     } else {
@@ -3187,16 +3262,18 @@ proc tclindex args {
 ## lremove - remove items from a list
 # OPTS:
 #   -all	remove all instances of each item
-#   -pattern	remove all instances matching regexp pattern
+#   -glob	remove all instances matching glob pattern
+#   -regexp	remove all instances matching regexp pattern
 # ARGS:	l	a list to remove items from
 #	args	items to remove (these are 'join'ed together)
 ##
 proc lremove {args} {
-    array set opts {-all 0 -pattern -exact}
+    array set opts {-all 0 pattern -exact}
     while {[string match -* [lindex $args 0]]} {
 	switch -glob -- [lindex $args 0] {
 	    -a*	{ set opts(-all) 1 }
-	    -p*	{ set opts(-pattern) -regexp }
+	    -g*	{ set opts(pattern) -glob }
+	    -r*	{ set opts(pattern) -regexp }
 	    --	{ set args [lreplace $args 0 0]; break }
 	    default {return -code error "unknown option \"[lindex $args 0]\""}
 	}
@@ -3204,10 +3281,10 @@ proc lremove {args} {
     }
     set l [lindex $args 0]
     foreach i [join [lreplace $args 0 0]] {
-	if {[set ix [lsearch $opts(-pattern) $l $i]] == -1} continue
+	if {[set ix [lsearch $opts(pattern) $l $i]] == -1} continue
 	set l [lreplace $l $ix $ix]
 	if {$opts(-all)} {
-	    while {[set ix [lsearch $opts(-pattern) $l $i]] != -1} {
+	    while {[set ix [lsearch $opts(pattern) $l $i]] != -1} {
 		set l [lreplace $l $ix $ix]
 	    }
 	}
@@ -3327,7 +3404,7 @@ proc tcl_unknown args {
 	    return -code error "self-referential recursion in \"unknown\" for command \"$name\""
 	}
 	set unknown_pending($name) pending
-	if {[info tclversion] < 8.0} {
+	if {[llength [info args auto_load]]==1} {
 	    set ret [catch {auto_load $name} msg]
 	} else {
 	    set ret [catch {auto_load $name [uplevel 1 {namespace current}]} msg]
@@ -3403,7 +3480,7 @@ proc tcl_unknown args {
 		    scale scrollbar selection send \
 		    text tk tkwait toplevel winfo wm
 	    if {[lsearch -exact $tkcmds $name] >= 0 && \
-		    [tkcon main tk_messageBox -icon question -parent . \
+		    [tkcon master tk_messageBox -icon question -parent . \
 		    -title "Load Tk?" -type retrycancel -default retry \
 		    -message "This appears to be a Tk command, but Tk\
 		    has not yet been loaded.  Shall I retry the command\
@@ -3469,6 +3546,8 @@ proc tcl_unknown args {
 	<<TkCon_Tab>>		<$TKCON(meta)-i>
 	<<TkCon_Newline>>	<Control-o>
 	<<TkCon_Newline>>	<$TKCON(meta)-o>
+	<<TkCon_Newline>>	<Control-Key-Return>
+	<<TkCon_Newline>>	<Control-Key-KP_Enter>
 	<<TkCon_Eval>>		<Return>
 	<<TkCon_Eval>>		<KP_Enter>
 	<<TkCon_Clear>>		<Control-l>
@@ -3624,7 +3703,7 @@ proc tcl_unknown args {
 	tkConEval %W
     }
     bind TkConsole <Delete> {
-	if {[string compare {} [%W tag nextrange sel 1.0 end]] \
+	if {[llength [%W tag nextrange sel 1.0 end]] \
 		&& [%W compare sel.first >= limit]} {
 	    %W delete sel.first sel.last
 	} elseif {[%W compare insert >= limit]} {
@@ -3633,7 +3712,7 @@ proc tcl_unknown args {
 	}
     }
     bind TkConsole <BackSpace> {
-	if {[string compare {} [%W tag nextrange sel 1.0 end]] \
+	if {[llength [%W tag nextrange sel 1.0 end]] \
 		&& [%W compare sel.first >= limit]} {
 	    %W delete sel.first sel.last
 	} elseif {[%W compare insert != 1.0] && [%W compare insert > limit]} {
@@ -3825,10 +3904,10 @@ proc tcl_unknown args {
 	    }
 	    regsub -all $exp2 [$w get $i $j] {\\\0} word
 	    set word [string trim $word {\"$[]{}',?#*}]
-	    if {[string compare {} [tkConEvalAttached info commands [list $word]]]} {
+	    if {[llength [tkConEvalAttached info commands [list $word]]]} {
 		lappend type "proc"
 	    }
-	    if {[string compare {} [tkConEvalAttached info vars [list $word]]]} {
+	    if {[llength [tkConEvalAttached info vars [list $word]]]} {
 		lappend type "var"
 	    }
 	    if {[tkConEvalAttached file isfile [list $word]]} {
@@ -3843,14 +3922,18 @@ proc tcl_unknown args {
     $TKCON(context) delete 0 end
     $TKCON(context) add command -label "$word" -state disabled
     $TKCON(context) add separator
+    set app [tkConAttach]
     if {[lsearch $type proc] != -1} {
-	$TKCON(context) add command -label "View Procedure"
+	$TKCON(context) add command -label "View Procedure" \
+		-command [list edit -attach $app -type proc -- $word]
     }
     if {[lsearch $type var] != -1} {
-	$TKCON(context) add command -label "View Variable"
+	$TKCON(context) add command -label "View Variable" \
+		-command [list edit -attach $app -type var -- $word]
     }
     if {[lsearch $type file] != -1} {
-	$TKCON(context) add command -label "View File"
+	$TKCON(context) add command -label "View File" \
+		-command [list edit -attach $app -type file -- $word]
     }
     tk_popup $TKCON(context) $X $Y
 }
@@ -3864,12 +3947,12 @@ proc tcl_unknown args {
     set i [$w search -backwards -regexp $exp insert-1c limit-1c]
     if {[string compare {} $i]} {append i +2c} else {set i limit}
     regsub -all "\[\[\\\\\\?\\*\]" [$w get $i "insert-1c wordend"] {\\\0} c
-    if {[string compare {} [tkConEvalAttached [list info commands $c]]]} {
+    if {[llength [tkConEvalAttached [list info commands $c]]]} {
 	$w tag add proc $i "insert-1c wordend"
     } else {
 	$w tag remove proc $i "insert-1c wordend"
     }
-    if {[string compare {} [tkConEvalAttached [list info vars $c]]]} {
+    if {[llength [tkConEvalAttached [list info vars $c]]]} {
 	$w tag add var $i "insert-1c wordend"
     } else {
 	$w tag remove var $i "insert-1c wordend"
@@ -3935,7 +4018,7 @@ proc tcl_unknown args {
 	if {!$j} {set i0 $i}
 	incr j
     }
-    if {[expr {$j&1}]} {
+    if {$j&1} {
 	global TKCON
 	if {$TKCON(blinkrange)} {
 	    tkConBlink $w $i0 [$w index insert]
@@ -3977,10 +4060,9 @@ proc tcl_unknown args {
     if {[$w comp insert < limit]} {
 	$w mark set insert end
     }
-    catch {
-	if {[$w comp sel.first <= insert] && [$w comp sel.last >= insert]} {
-	    $w delete sel.first sel.last
-	}
+    if {[llength [$w tag ranges sel]] && \
+	    [$w comp sel.first <= insert] && [$w comp sel.last >= insert]} {
+	$w delete sel.first sel.last
     }
     $w insert insert $s
     $w see insert
@@ -4269,7 +4351,7 @@ if {[string compare [info command toplevel] toplevel]} {
 	foreach command {pack place grid destroy winfo} {
 	    $i alias $command tkConSafeManage $i $command
 	}
-	if {[string compare {} [info command event]]} {
+	if {[llength [info command event]]} {
 	    $i alias event tkConSafeManage $i $command
 	}
 	frame .${i}_dot -width 300 -height 300 -relief raised

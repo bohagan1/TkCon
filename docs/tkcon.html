@@ -68,7 +68,7 @@ received in the TkCon console.
 is empty, it clears any previous highlighting.
 
 <DT> <CODE>tkcon font</CODE> ?<I>fontname</I>?
-<DD> Sets or returns the console font.
+<DD> Sets or returns the font used by tkcon text widgets.
 
 <DT> <CODE>tkcon gets</CODE> ?<I>varname</I>?
 <DD> Behaves like the traditional Tcl <code>gets</code>, but uses the
@@ -109,6 +109,12 @@ what portion of the text you want to save.
 
 <DT> <CODE>tkcon set</CODE> <I>var ?value?</I>
 <DD> Queries or sets a master interpreter variable.
+
+<DT> <CODE>tkcon append</CODE> <I>var ?value?</I>
+<DD> Like set, but uses <CODE>append</CODE> on the variable.
+
+<DT> <CODE>tkcon lappend</CODE> <I>var ?value?</I>
+<DD> Like set, but uses <CODE>lappend</CODE> on the variable.
 
 <DT> <CODE>tkcon show</CODE> or <CODE>tkcon deiconify</CODE>
 <DD> Redisplays TkCon on the screen.

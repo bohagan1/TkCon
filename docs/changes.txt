@@ -9,12 +9,41 @@ indicates an idea/bug report attribution fixed by myself.  Where
 no attribution is made, assume (Hobbs).
 -------------------------------------------------------------------------
 
+---- March 31 1999 v1.6 ----
+
+Changed tkConInsert to not use catch (avoids any error generation).
+
+Changed if check on auto_load in tcl_unknown to an llength on the
+args (from [info tclversion]) as 8.0p0 also used just one arg.
+
+Added -exec command line arg, so that users could do the -exec ""
+trick (causes tkcon to skip multi-interpreter model) and makes it
+easier to drop tkcon as a console on extended wish executables.
+
+Changed handling of fixed font for all tkcon text widgets, adding
+new -font option, TKCON(font) var, and redoing 'tkcon font'.
+
+Added color,(disabled|cursor|bg) variables as per Becker's
+recommendations, allowing for old defaults.
+
+Changed multiple instances of string comparisons with llength,
+where appropriate.
+
+Changed dump proc to not try and auto_load a proc arg and improved
+recognition of procs in namespaces.
+
+Added new 'what' proc to environment that tells you what a string
+is recognized as.  Now used in various other procs.
+
+Improved hot errors to not pop up edit dialog when the mouse moved.
+
 ---- March 5 1999 v1.5 ----
 
 Expanded tkConSave to support use in 'edit'.
 
 Added tkConGarbageCollect proc for periodic cleanup tasks
-(currently, cleaning up error tags in the console widget).
+(currently, cleaning up error tags in the console widget),
+with new gc-delay TKCON var.
 
 Revised error handling (errors are now hot in the console).
 

@@ -2,9 +2,10 @@ WHAT:   Enhanced Tk Console for all Tk platforms
 
 WHERE:  http://www.purl.org/net/hobbs/tcl/script/tkcon/
 	http://www.hobbs.wservice.com/tcl/script/tkcon/
+	http://www.neosoft.com/tcl/ (somewhere in the devel area)
 
 REQUIREMENTS: Tcl 7.6 / Tk 4.2 (as least the stable versions)
-	Tested through Tcl/Tk8.1.
+	Tested through Tcl/Tk8.1b1.
         TkCon is all Tcl/Tk code, no compiling required
 
 TkCon is a replacement for the standard console that comes with Tk (on
@@ -19,6 +20,7 @@ FEATURES:
     Path (Unix style) / Proc / Variable name expansion
     Multiple consoles, each with its own state (via multiple interpreters)
     Captures stdout and stderr to console window (puts overridden)
+    Hot errors (click on error result to see stack trace)
     Electric character matching (a la emacs)
     Electric proc highlighting
     Enhanced history searching
@@ -28,7 +30,7 @@ FEATURES:
         (including non-tcl ones)
     Works on all Tk platforms
 
-CONTACT: Jeffrey Hobbs, jeff.hobbs@acm.org
+CONTACT: Jeffrey Hobbs, jeff.hobbs at acm.org
 
 GETTING STARTED:
 
