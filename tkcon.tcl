@@ -187,7 +187,7 @@ proc ::tkcon::Init {args} {
 	    alias clear dir dump echo idebug lremove
 	    tkcon_puts tkcon_gets observe observe_var unalias which what
 	}
-	RCS		{RCS: @(#) $Id: tkcon.tcl,v 1.62 2003/03/31 20:44:43 hobbs Exp $}
+	RCS		{RCS: @(#) $Id: tkcon.tcl,v 1.63 2003/04/08 16:45:25 hobbs Exp $}
 	HEADURL		{http://cvs.sourceforge.net/cgi-bin/viewcvs.cgi/tkcon/tkcon/tkcon.tcl?rev=HEAD}
 	docs		"http://tkcon.sourceforge.net/"
 	email		{jeff@hobbs.org}
@@ -582,11 +582,15 @@ proc ::tkcon::InitUI {title} {
 	$con configure -font fixed
     }
     set OPT(font) [$con cget -font]
+    ## Scrollbar
+    set PRIV(scrolly) [scrollbar $w.sy -takefocus 0 -bd 1 \
+	    -command [list $con yview]]
     if {!$PRIV(WWW)} {
 	if {[string match "Windows CE" $::tcl_platform(os)]} {
-	    $con configure -bd 0
+	    $w.sy configure -width 10
 	    catch {font create tkconfixed}
-	    font configure tkconfixed -family Courier -size 8
+	    font configure tkconfixed -family Tahoma -size 8
+	    $con configure -font tkconfixed -bd 0 -padx 0 -pady 0
 	    set cw [font measure tkconfixed "0"]
 	    set ch [font metrics tkconfixed -linespace]
 	    set sw [winfo screenwidth $con]
@@ -610,9 +614,6 @@ proc ::tkcon::InitUI {title} {
     if {[catch {menu $w.mbar} PRIV(menubar)]} {
 	set PRIV(menubar) [frame $w.mbar -relief raised -bd 1]
     }
-    ## Scrollbar
-    set PRIV(scrolly) [scrollbar $w.sy -takefocus 0 -bd 1 \
-	    -command [list $con yview]]
 
     InitMenus $PRIV(menubar) $title
     Bindings
@@ -630,7 +631,8 @@ proc ::tkcon::InitUI {title} {
 	    -textvariable ::tkcon::PRIV(StatusMode)
     label $sbar.cursor -relief sunken -bd 1 -anchor w -width 6 \
 	    -textvariable ::tkcon::PRIV(StatusCursor)
-    grid $sbar.attach $sbar.mode $sbar.cursor -sticky news -padx 1
+    set padx [expr {![string match "Windows CE" $::tcl_platform(os)]}]
+    grid $sbar.attach $sbar.mode $sbar.cursor -sticky news -padx $padx
     grid columnconfigure $sbar 0 -weight 1
     grid columnconfigure $sbar 1 -weight 1
     grid columnconfigure $sbar 2 -weight 0
