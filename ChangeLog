@@ -1,5 +1,9 @@
 2002-01-22  Jeff Hobbs  <jeffh@ActiveState.com>
 
+	* tkcon.tcl (ExpandPathname): use a safer regsub to first unescape
+	the str, then to protect it in the glob.
+	(dir): Use -directory arg in 8.3+ for better results.
+
 	* docs/idebug.html: added note about ? help at debug prompt.
 
 	* tkcon.tcl (dir): prevented possible 'divide by zero' error.

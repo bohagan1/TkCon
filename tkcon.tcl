@@ -196,7 +196,7 @@ proc ::tkcon::Init {} {
 	    tkcon_puts tkcon_gets observe observe_var unalias which what
 	}
 	version		2.2
-	RCS		{RCS: @(#) $Id: tkcon.tcl,v 1.48 2002/01/23 01:58:21 hobbs Exp $}
+	RCS		{RCS: @(#) $Id: tkcon.tcl,v 1.49 2002/01/23 02:54:48 hobbs Exp $}
 	HEADURL		{http://cvs.sourceforge.net/cgi-bin/viewcvs.cgi/tkcon/tkcon/tkcon.tcl?rev=HEAD}
 	docs		"http://tkcon.sourceforge.net/"
 	email		{jeff@hobbs.org}
@@ -3736,17 +3736,37 @@ proc dir {args} {
     }
     set sep [string trim [file join . .] .]
     if {![llength $args]} { set args . }
-    foreach arg $args {
-	if {[file isdir $arg]} {
-	    set arg [string trimright $arg $sep]$sep
-	    if {$s(all)} {
-		lappend out [list $arg [lsort [glob -nocomplain -- $arg.* $arg*]]]
+    if {$::tcl_version >= 8.3} {
+	# Newer glob args allow safer dir processing.  The user may still
+	# want glob chars, but really only for file matching.
+	foreach arg $args {
+	    if {[file isdirectory $arg]} {
+		if {$s(all)} {
+		    lappend out [list $arg [lsort \
+			    [glob -nocomplain -directory $arg .* *]]]
+		} else {
+		    lappend out [list $arg [lsort \
+			    [glob -nocomplain -directory $arg *]]]
+		}
 	    } else {
-		lappend out [list $arg [lsort [glob -nocomplain -- $arg*]]]
+		set dir [file dirname $arg]
+		lappend out [list $dir$sep [lsort \
+			[glob -nocomplain -directory $dir [file tail $arg]]]]
 	    }
-	} else {
-	    lappend out [list [file dirname $arg]$sep \
-		    [lsort [glob -nocomplain -- $arg]]]
+	}
+    } else {
+	foreach arg $args {
+	    if {[file isdirectory $arg]} {
+		set arg [string trimright $arg $sep]$sep
+		if {$s(all)} {
+		    lappend out [list $arg [lsort [glob -nocomplain -- $arg.* $arg*]]]
+		} else {
+		    lappend out [list $arg [lsort [glob -nocomplain -- $arg*]]]
+		}
+	    } else {
+		lappend out [list [file dirname $arg]$sep \
+			[lsort [glob -nocomplain -- $arg]]]
+	    }
 	}
     }
     if {$s(long)} {
@@ -4700,7 +4720,7 @@ proc ::tkcon::Expand {w {type ""}} {
 proc ::tkcon::ExpandPathname str {
     set pwd [EvalAttached pwd]
     # Cause a string like {C:/Program\ Files/} to become "C:/Program Files/"
-    set str [subst $str]
+    regsub -all {\\([][ ])} $str {\1} str
     if {[catch {EvalAttached [list cd [file dirname $str]]} err]} {
 	return -code error $err
     }
@@ -4708,7 +4728,9 @@ proc ::tkcon::ExpandPathname str {
     ## Check to see if it was known to be a directory and keep the trailing
     ## slash if so (file tail cuts it off)
     if {[string match */ $str]} { append dir / }
-    if {[catch {lsort [EvalAttached [list glob $dir*]]} m]} {
+    # Create a safely glob-able name
+    regsub -all {([][])} $dir {\\\1} safedir
+    if {[catch {lsort [EvalAttached [list glob $safedir*]]} m]} {
 	set match {}
     } else {
 	if {[llength $m] > 1} {
@@ -4727,16 +4749,16 @@ proc ::tkcon::ExpandPathname str {
 	    if {[string match */* $str]} {
 		set tmp [string trimright [file dirname $str] /]/$tmp
 	    }
-	    regsub -all {([^\\]) } $tmp {\1\\ } tmp
+	    regsub -all {([^\\])([][ ])} $tmp {\1\\\2} tmp
 	    set match [linsert $m 0 $tmp]
 	} else {
 	    ## This may look goofy, but it handles spaces in path names
 	    eval append match $m
-	    if {[file isdir $match]} {append match /}
+	    if {[file isdirectory $match]} {append match /}
 	    if {[string match */* $str]} {
 		set match [string trimright [file dirname $str] /]/$match
 	    }
-	    regsub -all {([^\\]) } $match {\1\\ } match
+	    regsub -all {([^\\])([][ ])} $match {\1\\\2} match
 	    ## Why is this one needed and the ones below aren't!!
 	    set match [list $match]
 	}
