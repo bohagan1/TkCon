@@ -187,7 +187,7 @@ proc ::tkcon::Init {args} {
 	    alias clear dir dump echo idebug lremove
 	    tkcon_puts tkcon_gets observe observe_var unalias which what
 	}
-	RCS		{RCS: @(#) $Id: tkcon.tcl,v 1.65 2003/10/06 19:12:43 hobbs Exp $}
+	RCS		{RCS: @(#) $Id: tkcon.tcl,v 1.66 2003/11/05 02:54:55 hobbs Exp $}
 	HEADURL		{http://cvs.sourceforge.net/cgi-bin/viewcvs.cgi/tkcon/tkcon/tkcon.tcl?rev=HEAD}
 	docs		"http://tkcon.sourceforge.net/"
 	email		{jeff@hobbs.org}
@@ -285,7 +285,7 @@ proc ::tkcon::Init {args} {
 
     if {[info exists env(TK_CON_LIBRARY)]} {
 	lappend ::auto_path $env(TK_CON_LIBRARY)
-    } else {
+    } elseif {$OPT(library) != ""} {
 	lappend ::auto_path $OPT(library)
     }
 
@@ -431,7 +431,7 @@ proc ::tkcon::InitSlave {slave args} {
     variable OPT
     variable COLOR
     variable PRIV
-    global argv0 tcl_interactive tcl_library env auto_path
+    global argv0 tcl_interactive tcl_library env auto_path tk_library
 
     if {[string match {} $slave]} {
 	return -code error "Don't init the master interpreter, goofball"
@@ -442,7 +442,9 @@ proc ::tkcon::InitSlave {slave args} {
 	$slave alias load SafeLoad $slave
 	$slave alias open SafeOpen $slave
 	$slave alias file file
-	interp eval $slave [dump var -nocomplain tcl_library auto_path env]
+	interp eval $slave \
+	    [list set auto_path [lremove $auto_path $tk_library]]
+	interp eval $slave [dump var -nocomplain tcl_library env]
 	interp eval $slave { catch {source [file join $tcl_library init.tcl]} }
 	interp eval $slave { catch unknown }
     }
@@ -462,7 +464,7 @@ proc ::tkcon::InitSlave {slave args} {
     }
     if {[info exists argv0]} {interp eval $slave [list set argv0 $argv0]}
     interp eval $slave set tcl_interactive $tcl_interactive \; \
-	    set auto_path [list $auto_path] \; \
+	    set auto_path [list [lremove $auto_path $tk_library]] \; \
 	    set argc [llength $args] \; \
 	    set argv  [list $args] \; {
 	if {![llength [info command bgerror]]} {
