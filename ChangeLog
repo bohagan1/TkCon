@@ -8,6 +8,8 @@
 	tightened up Create Socket dialog, added <Escape> dismiss binding.
 	Moved source time initialization into ::tkcon::AtSource to guard
 	against leftover vars and just better encapsulate it.
+	(::tkcon::Retrieve): correct retrieve URL and add intelligence to
+	sense whether what we retrieved is correct before overwriting file.
 
 2003-11-18  Jeff Hobbs  <jeffh@ActiveState.com>
 

@@ -189,8 +189,9 @@ proc ::tkcon::Init {args} {
 	    alias clear dir dump echo idebug lremove
 	    tkcon_puts tkcon_gets observe observe_var unalias which what
 	}
-	RCS		{RCS: @(#) $Id: tkcon.tcl,v 1.67 2003/11/18 20:36:39 hobbs Exp $}
-	HEADURL		{http://cvs.sourceforge.net/cgi-bin/viewcvs.cgi/tkcon/tkcon/tkcon.tcl?rev=HEAD}
+	RCS		{RCS: @(#) $Id: tkcon.tcl,v 1.68 2004/01/28 21:06:15 hobbs Exp $}
+	HEADURL		{http://cvs.sourceforge.net/viewcvs.py/*checkout*/tkcon/tkcon/tkcon.tcl?rev=HEAD}
+
 	docs		"http://tkcon.sourceforge.net/"
 	email		{jeff(a)hobbs(.)org}
 	root		.
@@ -5353,19 +5354,39 @@ proc ::tkcon::Retrieve {} {
 	set token [::http::geturl $PRIV(HEADURL) -timeout 30000]
 	::http::wait $token
 	set code [catch {
-	    if {[::http::status $token] == "ok"} {
+	    set ncode [::http::ncode $token]
+	    if {$ncode != 200} {
+		return "expected http return code 200, received $ncode"
+	    }
+	    set status [::http::status $token]
+	    if {$status == "ok"} {
+		set data [::http::data $token]
+		regexp {Id: tkcon.tcl,v (\d+\.\d+)} $data -> rcsVersion
+		regexp {VERSION\s+"(\d+\.\d+[^\"]*)"} $data -> tkconVersion
+		if {(![info exists rcsVersion] || ![info exists tkconVersion])
+		    && [tk_messageBox -type yesno -icon warning \
+			    -parent $PRIV(root) \
+			    -title "Invalid tkcon source code" \
+			    -message "Source code retrieved does not appear\
+			to be correct.\nContinue with save to \"$file\"?"] \
+			== "no"} {
+		    return "invalid tkcon source code retrieved"
+		}
 		set fid [open $file w]
 		# We don't want newline mode to change
 		fconfigure $fid -translation binary
-		set data [::http::data $token]
 		puts -nonewline $fid $data
 		close $fid
-		regexp {Id: tkcon.tcl,v (\d+\.\d+)} $data -> rcsVersion
-		regexp {VERSION\s+"(\d+\.\d+[^\"]*)"} $data -> tkconVersion
+	    } else {
+		return "expected http status ok, received $status"
 	    }
 	} err]
 	::http::cleanup $token
-	if {$code} {
+	if {$code == 2} {
+	    tk_messageBox -type ok -icon info -parent $PRIV(root) \
+		    -title "Failed to retrieve source" \
+		    -message "Failed to retrieve latest tkcon source:\n$err"
+	} elseif {$code} {
 	    return -code error $err
 	} else {
 	    if {![info exists rcsVersion]}   { set rcsVersion   "UNKNOWN" }
