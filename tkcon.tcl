@@ -100,16 +100,6 @@ proc ::tkcon::Init {args} {
     set tcl_interactive 1
     set argc [llength $args]
 
-    if {[info exists PRIV(name)]} {
-	set title $PRIV(name)
-    } else {
-	MainInit
-	# some main initialization occurs later in this proc,
-	# to go after the UI init
-	set MainInit 1
-	set title Main
-    }
-
     ##
     ## When setting up all the default values, we always check for
     ## prior existence.  This allows users who embed tkcon to modify
@@ -162,6 +152,7 @@ proc ::tkcon::Init {args} {
 	subhistory	1
 	gc-delay	60000
 	gets		{congets}
+	overrideexit	1
 	usehistory	1
 
 	exec		slave
@@ -187,13 +178,14 @@ proc ::tkcon::Init {args} {
 	find,case	0
 	find,reg	0
 	errorInfo	{}
+	protocol	exit
 	showOnStartup	1
 	slavealias	{ edit more less tkcon }
 	slaveprocs	{
 	    alias clear dir dump echo idebug lremove
 	    tkcon_puts tkcon_gets observe observe_var unalias which what
 	}
-	RCS		{RCS: @(#) $Id: tkcon.tcl,v 1.56 2002/06/22 08:29:00 hobbs Exp $}
+	RCS		{RCS: @(#) $Id: tkcon.tcl,v 1.57 2002/10/01 21:40:09 hobbs Exp $}
 	HEADURL		{http://cvs.sourceforge.net/cgi-bin/viewcvs.cgi/tkcon/tkcon/tkcon.tcl?rev=HEAD}
 	docs		"http://tkcon.sourceforge.net/"
 	email		{jeff@hobbs.org}
@@ -202,6 +194,16 @@ proc ::tkcon::Init {args} {
 	if {![info exists PRIV($key)]} { set PRIV($key) $default }
     }
     set PRIV(version) $VERSION
+
+    if {[info exists PRIV(name)]} {
+	set title $PRIV(name)
+    } else {
+	MainInit
+	# some main initialization occurs later in this proc,
+	# to go after the UI init
+	set MainInit 1
+	set title Main
+    }
 
     ## NOTES FOR STAYING IN PRIMARY INTERPRETER:
     ##
@@ -544,7 +546,7 @@ proc ::tkcon::InitUI {title} {
     if {[string match . $root]} { set w {} } else { set w [toplevel $root] }
     if {!$PRIV(WWW)} {
 	wm withdraw $root
-	wm protocol $root WM_DELETE_WINDOW exit
+	wm protocol $root WM_DELETE_WINDOW $PRIV(protocol)
     }
     set PRIV(base) $w
 
@@ -1985,6 +1987,7 @@ proc ::tkcon::Save { {fn ""} {type ""} {opt ""} {mode w} } {
 ##
 proc ::tkcon::MainInit {} {
     variable PRIV
+    variable OPT
 
     if {![info exists PRIV(slaves)]} {
 	array set PRIV [list slave 0 slaves Main name {} \
@@ -2088,32 +2091,35 @@ proc ::tkcon::MainInit {} {
 	return
     }
 
-    ## We want to do a couple things before exiting...
-    if {[catch {rename ::exit ::tkcon::FinalExit} err]} {
-	puts stderr "tkcon might panic:\n$err"
-    }
-    proc ::exit args {
-	if {$::tkcon::OPT(usehistory)} {
-	    if {[catch {open $::tkcon::PRIV(histfile) w} fid]} {
-		puts stderr "unable to save history file:\n$fid"
-		# pause a moment, because we are about to die finally...
-		after 1000
-	    } else {
-		set max [::tkcon::EvalSlave history nextid]
-		set id [expr {$max - $::tkcon::OPT(history)}]
-		if {$id < 1} { set id 1 }
-		## FIX: This puts history in backwards!!
-		while {($id < $max) && \
-			![catch {::tkcon::EvalSlave history event $id} cmd]} {
-		    if {[string compare {} $cmd]} {
-			puts $fid "::tkcon::EvalSlave history add [list $cmd]"
-		    }
-		    incr id
-		}
-		close $fid
-	    }
+    if {$OPT(overrideexit)} {
+	## We want to do a couple things before exiting...
+	if {[catch {rename ::exit ::tkcon::FinalExit} err]} {
+	    puts stderr "tkcon might panic:\n$err"
 	}
-	uplevel 1 ::tkcon::FinalExit $args
+	proc ::exit args {
+	    if {$::tkcon::OPT(usehistory)} {
+		if {[catch {open $::tkcon::PRIV(histfile) w} fid]} {
+		    puts stderr "unable to save history file:\n$fid"
+		    # pause a moment, because we are about to die finally...
+		    after 1000
+		} else {
+		    set max [::tkcon::EvalSlave history nextid]
+		    set id [expr {$max - $::tkcon::OPT(history)}]
+		    if {$id < 1} { set id 1 }
+		    ## FIX: This puts history in backwards!!
+		    while {($id < $max) && ![catch \
+			    {::tkcon::EvalSlave history event $id} cmd]} {
+			if {[string compare {} $cmd]} {
+			    puts $fid "::tkcon::EvalSlave\
+				    history add [list $cmd]"
+			}
+			incr id
+		    }
+		    close $fid
+		}
+	    }
+	    uplevel 1 ::tkcon::FinalExit $args
+	}
     }
 
     ## ::tkcon::InterpEval - passes evaluation to another named interpreter
@@ -3210,7 +3216,8 @@ proc dump {type args} {
 			set nst {}
 			append res "array set [list $var] \{\n"
 			if {[array size v]} {
-			    foreach i [lsort [array names v $fltr]] {
+			    foreach i \
+				    [lsort -dictionary [array names v $fltr]] {
 				upvar 0 v\($i\) __a
 				if {[array exists __a]} {
 				    append nst "\#\# NESTED ARRAY ELEM: $i\n"
@@ -4019,7 +4026,8 @@ proc tcl_unknown args {
     # then concatenate its arguments onto the end and evaluate it.
 
     set cmd [lindex $args 0]
-    if {[regexp "^namespace\[ \t\n\]+inscope" $cmd] && [llength $cmd] == 4} {
+    if {[regexp "^:*namespace\[ \t\n\]+inscope" $cmd] \
+	    && [llength $cmd] == 4} {
         set arglist [lrange $args 1 end]
 	set ret [catch {uplevel 1 $cmd $arglist} result]
         if {$ret == 0} {
