@@ -186,7 +186,7 @@ proc ::tkcon::Init {args} {
 	    alias clear dir dump echo idebug lremove
 	    tkcon_puts tkcon_gets observe observe_var unalias which what
 	}
-	RCS		{RCS: @(#) $Id: tkcon.tcl,v 1.76 2004/03/20 23:54:36 hobbs Exp $}
+	RCS		{RCS: @(#) $Id: tkcon.tcl,v 1.77 2004/03/20 23:56:23 hobbs Exp $}
 	HEADURL		{http://cvs.sourceforge.net/viewcvs.py/*checkout*/tkcon/tkcon/tkcon.tcl?rev=HEAD}
 
 	docs		"http://tkcon.sourceforge.net/"
@@ -4230,8 +4230,11 @@ proc observe {opt name args} {
 	    rename $name $old
 	    set max 4
 	    regexp {^[0-9]+} $args max
+	    # handle the observe'ing of 'proc'
+	    set proccmd "proc"
+	    if {[string match "proc" $name]} { set proccmd $old }
 	    ## idebug trace could be used here
-	    proc $name args "
+	    $proccmd $name args "
 	    for {set i \[info level\]; set max \[expr \[info level\]-$max\]} {
 		\$i>=\$max && !\[catch {uplevel \#\$i info level 0} info\]
 	    } {incr i -1} {
