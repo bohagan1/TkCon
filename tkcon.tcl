@@ -32,9 +32,10 @@ if {$tcl_version>=8.0} {
 foreach pkg [info loaded {}] {
   set file [lindex $pkg 0]
   set name [lindex $pkg 1]
-  set version [package require $name]
-  if {[string match {} [package ifneeded $name $version]]} {
-    package ifneeded $name $version "load [list $file $name]"
+  if {![catch {set version [package require $name]}]} {
+    if {[string match {} [package ifneeded $name $version]]} {
+      package ifneeded $name $version "load [list $file $name]"
+    }
   }
 }
 catch {unset file name version}
@@ -87,14 +88,14 @@ proc tkConInit {} {
     subhistory		1
 
     exec slave app {} appname {} apptype slave cmd {} cmdbuf {} cmdsave {}
-    event 1 svnt 1 cols 80 rows 24 deadapp 0 debugging 0 histid 0
+    event 1 cols 80 rows 24 deadapp 0 debugging 0 histid 0
     find {} find,case 0 find,reg 0
     errorInfo	{}
     slavealias	{ tkcon }
     slaveprocs	{ alias clear dir dump lremove puts echo tclindex idebug \
 	unknown tcl_unknown unalias which observe observe_var auto_execok }
-    version	0.69
-    release	{November 1996}
+    version	0.71
+    release	{December 1996}
     root	.
   }
 
@@ -119,6 +120,17 @@ proc tkConInit {} {
 
   if [info exists env(HOME)] {
     set tkCon(rcfile) [file join $env(HOME) $tkCon(rcfile)]
+  }
+  if 0 {
+    ## This would get the resource file from the right place
+    switch $tcl_platform(platform) {
+      macintosh {
+	set pref_folder $env(PREF_FOLDER)
+	cd [file dirname [info script]]
+      }
+      windows {	set pref_folder $env(WINDIR) }
+      unix { set pref_folder $env(HOME) }
+    }
   }
 
   ## Handle command line arguments before sourcing resource file to
@@ -573,6 +585,7 @@ proc tkConPrompt {{pre {}} {post {}} {prompt {}}} {
   $w see end
 }
 
+## FIX - place these in state disabled text widgets.
 ## tkConAbout - gives about info for tkCon
 ## 
 proc tkConAbout {} {
@@ -1212,13 +1225,12 @@ proc tkConMainInit {} {
   ##
   proc tkConStateCheckpoint {app type} {
     global tkCon
-    upvar \#0 tkCon($type,$app) a
-    if {[array exists a] &&
+    if {[info exists tkCon($type,$app,cmd)] &&
 	[tk_dialog $tkCon(base).warning "Overwrite Previous State?" \
 	     "Are you sure you want to lose previously checkpointed\
 	     state of $type \"$app\"?" questhead 1 "Do It" "Cancel"]} return
-    set a(cmd) [tkConEvalOther $app $type info comm *]
-    set a(var) [tkConEvalOther $app $type info vars *]
+    set tkCon($type,$app,cmd) [tkConEvalOther $app $type info comm *]
+    set tkCon($type,$app,var) [tkConEvalOther $app $type info vars *]
     return
   }
 
@@ -1227,8 +1239,7 @@ proc tkConMainInit {} {
   ##
   proc tkConStateCompare {app type {verbose 0}} {
     global tkCon
-    upvar \#0 tkCon($type,$app) a
-    if ![array exists a] {
+    if ![info exists tkCon($type,$app,cmd)] {
       return -code error "No previously checkpointed state for $type \"$app\""
     }
     set w $tkCon(base).compare
@@ -1276,8 +1287,10 @@ proc tkConMainInit {} {
       $w.btn.expand config -state disabled
     }
 
-    set cmds [lremove [tkConEvalOther $app $type info comm *] $a(cmd)]
-    set vars [lremove [tkConEvalOther $app $type info vars *] $a(var)]
+    set cmds [lremove [tkConEvalOther $app $type info comm *] \
+	$tkCon($type,$app,cmd)]
+    set vars [lremove [tkConEvalOther $app $type info vars *] \
+	$tkCon($type,$app,var)]
 
     if {$hasdump && $verbose} {
       set cmds [tkConEvalOther $app $type eval dump c -nocomplain $cmds]
@@ -1295,17 +1308,18 @@ proc tkConMainInit {} {
   ##
   proc tkConStateRevert {app type} {
     global tkCon
-    upvar \#0 tkCon($type,$app) a
-    if ![array exists a] {
+    if ![info exists tkCon($type,$app,cmd)] {
       return -code error "No previously checkpointed state for $type \"$app\""
     }
     if {![tk_dialog $tkCon(base).warning "Revert State?" \
 	      "Are you sure you want to revert the state in $type \"$app\"?" \
 	      questhead 1 "Do It" "Cancel"]} {
-      foreach i [lremove [tkConEvalOther $app $type info comm *] $a(cmd)] {
+      foreach i [lremove [tkConEvalOther $app $type info comm *] \
+	  $tkCon($type,$app,cmd)] {
 	catch {tkConEvalOther $app $type rename $i {}}
       }
-      foreach i [lremove [tkConEvalOther $app $type info vars *] $a(var)] {
+      foreach i [lremove [tkConEvalOther $app $type info vars *] \
+	  $tkCon($type,$app,var)] {
 	catch {tkConEvalOther $app $type unset $i}
       }
     }
@@ -1544,9 +1558,9 @@ if ![catch {rename puts tcl_puts}] {
       if [catch "tcl_puts $args" msg] {
 	regsub tcl_puts $msg puts msg
 	regsub -all tcl_puts $errorInfo puts errorInfo
+	error $msg
       }
-      return -errorcode $errorCode $msg
-      #eval tcl_puts $args
+      return $msg
     }
     if $len update
   }
@@ -2300,29 +2314,21 @@ interp alias {} ls {} dir
 #	-pkg	- whether to create a pkgIndex.tcl file
 #	-idx	- whether to create a tclIndex file
 # ARGS:	args	- directories to auto index (defaults to pwd)
-# Outputs:	tclIndex file to each directory
+# Outputs:	tclIndex/pkgIndex.tcl file to each directory
 ##
 proc tclindex args {
   set truth {^(1|yes|true|on)$}; set pkg 0; set idx 1;
   while {[regexp -- {^-[^ ]+} $args opt] && [string comp {} $args]} {
     switch -glob -- $opt {
       --  { set args [lreplace $args 0 0]; break }
-      -e* {
-	set ext [lindex $args 1]
-	set args [lreplace $args 0 1]
-      }
-      -p* {
-	set pkg [regexp -nocase $truth [lindex $args 1]]
-	set args [lreplace $args 0 1]
-      }
-      -i* {
-	set idx [regexp -nocase $truth [lindex $args 1]]
-	set args [lreplace $args 0 1]
-      }
+      -e* { set ext [lindex $args 1] }
+      -p* { set pkg [regexp -nocase $truth [lindex $args 1]] }
+      -i* { set idx [regexp -nocase $truth [lindex $args 1]] }
       default {
 	return -code error "bad option \"$opt\": must be one of\
 	    [join [lsort [list -- -extension -package -index]] {, }]"
       }
+      set args [lreplace $args 0 1]
     }
   }
   if ![info exists ext] {
@@ -2460,21 +2466,21 @@ proc tcl_unknown args {
     #
     if [info exists unknown_pending($name)] {
       unset unknown_pending($name)
-      if {[array size unknown_pending] == 0} {
-	unset unknown_pending
-      }
-      return -code error "self-referential recursion in \"unknown\" for command \"$name\"";
+      if ![array size unknown_pending] { unset unknown_pending }
+      return -code error \
+	  "self-referential recursion in \"unknown\" for command \"$name\""
     }
-    set unknown_pending($name) pending;
+    ## FIX delete line
+    set unknown_pending(dummy) dummy
+    set unknown_pending($name) pending
     set ret [catch {auto_load $name} msg]
-    unset unknown_pending($name);
+    ## FIX no catch
+    catch { unset unknown_pending($name) }
     if $ret {
       return -code $ret -errorcode $errorCode \
 	  "error while autoloading \"$name\": $msg"
     }
-    if ![array size unknown_pending] {
-      unset unknown_pending
-    }
+    if ![array size unknown_pending] { unset unknown_pending }
     if $msg {
       set errorCode $savedErrorCode
       set errorInfo $savedErrorInfo
@@ -2638,7 +2644,8 @@ proc tkConBindings {} {
   ## Get all Text bindings into Console except Unix cut/copy/paste
   ## and newline insertion
   foreach ev [lremove [bind Text] {<Control-Key-y> <Control-Key-w> \
-      <Meta-Key-w> <Control-Key-o> <<Cut>> <<Copy>> <<Paste>>}] {
+      <Meta-Key-w> <Control-Key-o> <Control-Key-v> <Control-Key-c> \
+      <Control-Key-x>}] {
     bind Console $ev [bind Text $ev]
   }
 
