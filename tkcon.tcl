@@ -196,7 +196,7 @@ proc ::tkcon::Init {} {
 	    tkcon_puts tkcon_gets observe observe_var unalias which what
 	}
 	version		2.2
-	RCS		{RCS: @(#) $Id: tkcon.tcl,v 1.46 2001/12/13 00:53:29 hobbs Exp $}
+	RCS		{RCS: @(#) $Id: tkcon.tcl,v 1.47 2001/12/15 00:13:14 hobbs Exp $}
 	HEADURL		{http://cvs.sourceforge.net/cgi-bin/viewcvs.cgi/tkcon/tkcon/tkcon.tcl?rev=HEAD}
 	docs		"http://tkcon.sourceforge.net/"
 	email		{jeff@hobbs.org}
@@ -3810,7 +3810,9 @@ proc dir {args} {
 		    }
 		}
 		append res [format "%-${i}s" $f]
-		if {[incr k]%$j == 0} {set res [string trimright $res]\n}
+		if {$j == 0 || [incr k]%$j == 0} {
+		    set res [string trimright $res]\n
+		}
 	    }
 	    append res \n\n
 	}
