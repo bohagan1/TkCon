@@ -1,3 +1,10 @@
+2004-03-01  Jeff Hobbs  <jeffh@ActiveState.com>
+
+	* tkcon.tcl: correct 'exit' in extra tabs.
+	make tkconfixed font Courier -12 (was Courier 10), use it on unix.
+	Add extra space for OS X/Aqua in statusbar (for resize handle).
+	Only use -overrelief in 8.4
+
 2004-02-12  Jeff Hobbs  <jeffh@ActiveState.com>
 
 	* tkcon.tcl (::tkcon::InitUI): check existence of tcl_platform(os)

@@ -184,7 +184,7 @@ proc ::tkcon::Init {args} {
 	    alias clear dir dump echo idebug lremove
 	    tkcon_puts tkcon_gets observe observe_var unalias which what
 	}
-	RCS		{RCS: @(#) $Id: tkcon.tcl,v 1.73 2004/02/12 20:35:22 hobbs Exp $}
+	RCS		{RCS: @(#) $Id: tkcon.tcl,v 1.74 2004/02/13 00:03:24 hobbs Exp $}
 	HEADURL		{http://cvs.sourceforge.net/viewcvs.py/*checkout*/tkcon/tkcon/tkcon.tcl?rev=HEAD}
 
 	docs		"http://tkcon.sourceforge.net/"
@@ -562,7 +562,7 @@ proc ::tkcon::InitUI {title} {
     }
     set PRIV(base) $w
 
-    catch {font create tkconfixed -family Courier -size 10}
+    catch {font create tkconfixed -family Courier -size -12}
 
     set PRIV(statusbar) [set sbar [frame $w.fstatus]]
     set PRIV(tabframe)  [frame $sbar.tabs]
@@ -573,6 +573,10 @@ proc ::tkcon::InitUI {title} {
     grid $sbar.tabs $sbar.cursor -sticky ew -padx $padx
     grid configure $sbar.tabs -sticky nsw
     grid columnconfigure $sbar 0 -weight 1
+    if {$::tcl_version >= 8.4 && [tk windowingsystem] == "aqua"} {
+	# give space for the corner resize handle
+	grid columnconfigure $sbar 2 -minsize 20
+    }
 
     ## Create console tab
     set con [InitTab $w]
@@ -648,7 +652,7 @@ proc ::tkcon::InitTab {w} {
 	    $con configure -font tkconfixed
 	}
     } else {
-	$con configure -font fixed
+	$con configure -font tkconfixed
     }
     set OPT(font) [$con cget -font]
     bindtags $con [list $con TkConsole TkConsolePost $PRIV(root) all]
@@ -711,7 +715,7 @@ proc ::tkcon::GotoTab {con} {
     variable ATTACH
 
     set numtabs [llength $PRIV(tabs)]
-    if {$numtabs == 1} { return }
+    #if {$numtabs == 1} { return }
 
     if {[regexp {^[0-9]+$} $con]} {
 	set curtab [lsearch -exact $PRIV(tabs) $PRIV(console)]
@@ -1579,8 +1583,11 @@ proc ::tkcon::InterpPkgs {app type} {
 	    -yscrollcommand [list $t.lrsy set]
 	scrollbar $t.llsy -bd 1 -command [list $t.loadable yview]
 	scrollbar $t.lrsy -bd 1 -command [list $t.loaded yview]
-	button $t.load -bd 1 -text ">>" -relief flat -overrelief raised \
+	button $t.load -bd 1 -text ">>" \
 	    -command [list ::tkcon::InterpPkgLoad $app $type $t.loadable]
+	if {$::tcl_version >= 8.4} {
+	    $t.load configure -relief flat -overrelief raised
+	}
 
 	set f [frame $t.btns]
 	button $f.refresh -width 8 -text "Refresh" -command [info level 0]
