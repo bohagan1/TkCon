@@ -188,7 +188,7 @@ proc ::tkcon::Init {args} {
 	    alias clear dir dump echo idebug lremove
 	    tkcon_puts tkcon_gets observe observe_var unalias which what
 	}
-	RCS		{RCS: @(#) $Id: tkcon.tcl,v 1.81 2004/10/10 22:55:14 hobbs Exp $}
+	RCS		{RCS: @(#) $Id: tkcon.tcl,v 1.82 2004/11/11 17:22:13 hobbs Exp $}
 	HEADURL		{http://cvs.sourceforge.net/viewcvs.py/*checkout*/tkcon/tkcon/tkcon.tcl?rev=HEAD}
 
 	docs		"http://tkcon.sourceforge.net/"
@@ -1089,7 +1089,7 @@ proc ::tkcon::EvalSocket cmd {
     if {$code && [eof $PRIV(app)]} {
 	## Interpreter died or disappeared
 	puts "$code eof [eof $PRIV(app)]"
-	EvalSocketClosed
+	EvalSocketClosed $PRIV(app)
     }
     return -code $code $result
 }

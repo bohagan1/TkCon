@@ -1,3 +1,7 @@
+2004-11-12  Jeff Hobbs  <jeffh@ActiveState.com>
+
+	* tkcon.tcl (::tkcon::EvalSocket): pass sock arg. (allaert)
+
 2004-11-11  Jeff Hobbs  <jeffh@ActiveState.com>
 
 	* tkcon.tcl (::tkcon::DeleteTab): allow for exit code to be passed
