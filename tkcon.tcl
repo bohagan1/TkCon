@@ -196,7 +196,7 @@ proc ::tkcon::Init {} {
 	    tkcon_puts tkcon_gets observe observe_var unalias which what
 	}
 	version		2.2
-	RCS		{RCS: @(#) $Id: tkcon.tcl,v 1.45 2001/11/14 22:18:12 hobbs Exp $}
+	RCS		{RCS: @(#) $Id: tkcon.tcl,v 1.46 2001/12/13 00:53:29 hobbs Exp $}
 	HEADURL		{http://cvs.sourceforge.net/cgi-bin/viewcvs.cgi/tkcon/tkcon/tkcon.tcl?rev=HEAD}
 	docs		"http://tkcon.sourceforge.net/"
 	email		{jeff@hobbs.org}
@@ -2736,6 +2736,7 @@ proc tkcon {cmd args} {
 	    ## 'show|deiconify' - deiconifies the console.
 	    wm deiconify $::tkcon::PRIV(root)
 	    raise $::tkcon::PRIV(root)
+	    focus -force $::tkcon::PRIV(console)
 	}
 	ti* {
 	    ## 'title' ?title? - gets/sets the console's title
@@ -3369,7 +3370,6 @@ proc idebug {opt args} {
 	    puts stderr "idebug at level \#$level: [lindex [info level -1] 0]"
 	    set tkcon [llength [info command tkcon]]
 	    if {$tkcon} {
-		tkcon show
 		tkcon master eval set ::tkcon::OPT(prompt2) \$::tkcon::OPT(prompt1)
 		tkcon master eval set ::tkcon::OPT(prompt1) \$::tkcon::OPT(debugPrompt)
 		set slave [tkcon set ::tkcon::OPT(exec)]
