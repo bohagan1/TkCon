@@ -193,7 +193,7 @@ proc ::tkcon::Init {args} {
 	    alias clear dir dump echo idebug lremove
 	    tkcon_puts tkcon_gets observe observe_var unalias which what
 	}
-	RCS		{RCS: @(#) $Id: tkcon.tcl,v 1.54 2002/06/04 02:25:59 hobbs Exp $}
+	RCS		{RCS: @(#) $Id: tkcon.tcl,v 1.55 2002/06/04 17:35:40 hobbs Exp $}
 	HEADURL		{http://cvs.sourceforge.net/cgi-bin/viewcvs.cgi/tkcon/tkcon/tkcon.tcl?rev=HEAD}
 	docs		"http://tkcon.sourceforge.net/"
 	email		{jeff@hobbs.org}
@@ -5306,7 +5306,7 @@ proc ::tkcon::Resource {} {
 if {(![info exists ::tkcon::PRIV(root)] \
 	|| ![winfo exists $::tkcon::PRIV(root)]) \
 	&& (![info exists argv0] || [info script] == $argv0)} {
-    ::tkcon::Init $argv
+    eval ::tkcon::Init $argv
 }
 
 package provide tkcon $::tkcon::VERSION
