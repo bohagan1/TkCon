@@ -4902,4 +4902,6 @@ proc ::tkcon::Resource {} {
 
 ## Initialize only if we haven't yet
 ##
-if {[catch {winfo exists $::tkcon::PRIV(root)}]} { ::tkcon::Init }
+if {[catch {winfo exists $::tkcon::PRIV(root)} exists] || !$exists} {
+    ::tkcon::Init
+}

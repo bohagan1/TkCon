@@ -1,3 +1,9 @@
+2001-05-17  Jeff Hobbs  <jeffh@ActiveState.com>
+
+	* tkcon.tcl: make check for actual tkcon root existence to allow
+	for setting the var ($::tkcon::PRIV(root)) in controlling apps to
+	better control the root window.
+
 2001-05-04  Jeff Hobbs  <jeffh@ActiveState.com>
 
 	* docs/style.css: new file for html files to use.
