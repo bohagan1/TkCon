@@ -38,11 +38,6 @@ exec wish "$0" ${1+"$@"}
 #    tkcon master set ::tkcon:PRIV(proxy) wwwproxy:8080
 #
 
-if {[string match windows $tcl_platform(platform)]} {
-    # used for a send alternative
-    #package require dde
-}
-
 if {$tcl_version < 8.0} {
     return -code error "tkcon requires at least Tcl/Tk8"
 } else {
@@ -189,7 +184,7 @@ proc ::tkcon::Init {args} {
 	    alias clear dir dump echo idebug lremove
 	    tkcon_puts tkcon_gets observe observe_var unalias which what
 	}
-	RCS		{RCS: @(#) $Id: tkcon.tcl,v 1.69 2004/01/28 21:39:40 hobbs Exp $}
+	RCS		{RCS: @(#) $Id: tkcon.tcl,v 1.70 2004/01/30 02:31:17 hobbs Exp $}
 	HEADURL		{http://cvs.sourceforge.net/viewcvs.py/*checkout*/tkcon/tkcon/tkcon.tcl?rev=HEAD}
 
 	docs		"http://tkcon.sourceforge.net/"
@@ -720,7 +715,7 @@ proc ::tkcon::GotoTab {con} {
     set numtabs [llength $PRIV(tabs)]
     if {$numtabs == 1} { return }
 
-    if {[string is integer -strict $con]} {
+    if {[regexp {^[0-9]+$} $con]} {
 	set curtab [lsearch -exact $PRIV(tabs) $PRIV(console)]
 	set nexttab [expr {$curtab + $con}]
 	if {$nexttab >= $numtabs} {
@@ -729,7 +724,7 @@ proc ::tkcon::GotoTab {con} {
 	    set nexttab "end"
 	}
 	set con [lindex $PRIV(tabs) $nexttab]
-    } elseif {$con eq $PRIV(console)} {
+    } elseif {$con == $PRIV(console)} {
 	return
     }
 
@@ -791,7 +786,7 @@ proc ::tkcon::DeleteTab {{con {}} {slave {}}} {
 
     GotoTab [lindex $PRIV(tabs) $nexttab]
 
-    if {$slave ne ""} {
+    if {$slave != ""} {
 	interp delete $slave
     }
     destroy $PRIV(tabframe).cb[winfo name $con]
@@ -804,13 +799,15 @@ proc ::tkcon::GarbageCollect {} {
     variable OPT
     variable PRIV
 
-    set w $PRIV(console)
-    if {[winfo exists $w]} {
-	## Remove error tags that no longer span anything
-	## Make sure the tag pattern matches the unique tag prefix
-	foreach tag [$w tag names] {
-	    if {[string match _tag* $tag] && ![llength [$w tag ranges $tag]]} {
-		$w tag delete $tag
+    foreach w $PRIV(tabs) {
+	if {[winfo exists $w]} {
+	    ## Remove error tags that no longer span anything
+	    ## Make sure the tag pattern matches the unique tag prefix
+	    foreach tag [$w tag names] {
+		if {[string match _tag* $tag]
+		    && ![llength [$w tag ranges $tag]]} {
+		    $w tag delete $tag
+		}
 	    }
 	}
     }
@@ -914,7 +911,7 @@ proc ::tkcon::EvalCmd {w cmd} {
 		return
 	    }
 	    AddSlaveHistory $cmd
-	    catch {EvalAttached [list set {} $res]}
+	    catch {EvalAttached [list set _ $res]}
 	    if {$code} {
 		if {$OPT(hoterrors)} {
 		    set tag [UniqueTag $w]
@@ -3901,7 +3898,7 @@ proc observe {opt name args} {
 	    if {![llength $args]} { set args observe_var }
 	    foreach c [uplevel 1 [list trace vinfo $name]] {
 		# don't double up on the traces
-		if {[string equal [list $type $args] $c]} { return }
+		if {[list $type $args] == $c} { return }
 	    }
 	    uplevel 1 [list trace $opt $name $type $args]
 	}
@@ -5595,8 +5592,8 @@ proc ::send::send {args} {
 	      && [lsearch -exact [dde services TclEval {}] \
 		      [list TclEval $app]] > -1} {
 	eval [list ::dde eval $app] $args
-    } elseif {[package provide comm] != {} && $::tcl_version >= 8.2
-	      && [string is integer -strict [lindex $app 0]]} {
+    } elseif {[package provide comm] != {}
+	      && [regexp {^[0-9]+$} [lindex $app 0]]} {
 	#if {$opts(displayof) != {} && [llength $app] == 1} {
 	#    lappend app $opts(displayof)
 	#}
