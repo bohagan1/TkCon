@@ -184,7 +184,7 @@ proc ::tkcon::Init {args} {
 	    alias clear dir dump echo idebug lremove
 	    tkcon_puts tkcon_gets observe observe_var unalias which what
 	}
-	RCS		{RCS: @(#) $Id: tkcon.tcl,v 1.70 2004/01/30 02:31:17 hobbs Exp $}
+	RCS		{RCS: @(#) $Id: tkcon.tcl,v 1.71 2004/02/05 20:30:15 hobbs Exp $}
 	HEADURL		{http://cvs.sourceforge.net/viewcvs.py/*checkout*/tkcon/tkcon/tkcon.tcl?rev=HEAD}
 
 	docs		"http://tkcon.sourceforge.net/"
@@ -571,7 +571,8 @@ proc ::tkcon::InitUI {title} {
 	    -textvariable ::tkcon::PRIV(StatusAttach)
     label $sbar.cursor -relief sunken -bd 1 -anchor w -width 6 \
 	    -textvariable ::tkcon::PRIV(StatusCursor)
-    set padx [expr {![string match "Windows CE" $::tcl_platform(os)]}]
+    set padx [expr {![info exists ::tcl_platform(os)]
+		    || ![string match "Windows CE" $::tcl_platform(os)]}]
     grid $sbar.tabs $sbar.attach $sbar.cursor -sticky news -padx $padx
     grid configure $sbar.tabs -sticky nsw
     grid columnconfigure $sbar 0 -weight 1
