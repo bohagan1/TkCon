@@ -122,8 +122,8 @@ set TKCON(WWW) [info exists embed_args]
 	    alias auto_execok clear dir dump echo idebug lremove
 	    tkcon_puts tclindex observe observe_var unalias which
 	}
-	version		1.2
-	release		{26 May 1998}
+	version		1.3
+	release		{27 May 1998}
 	docs		{http://www.cs.uoregon.edu/research/tcl/script/tkcon/}
 	email		{jeff.hobbs@acm.org}
 	root		.
@@ -306,7 +306,7 @@ set TKCON(WWW) [info exists embed_args]
     $slave alias exit exit
     interp eval $slave {
 	catch {rename puts tkcon_tcl_puts}
-	catch {rename gets tkcon_tcl_gets}
+	#catch {rename gets tkcon_tcl_gets}
     }
     foreach cmd $TKCON(slaveprocs) { $slave eval [dump proc $cmd] }
     foreach cmd $TKCON(slavealias) { $slave alias $cmd $cmd }
@@ -352,7 +352,7 @@ set TKCON(WWW) [info exists embed_args]
 	tkConAttach $name $type
 	tkConEvalAttached {
 	    catch {rename puts tkcon_tcl_puts}
-	    catch {rename gets tkcon_tcl_gets}
+	    #catch {rename gets tkcon_tcl_gets}
 	}
 	foreach cmd $TKCON(slaveprocs) { tkConEvalAttached [dump proc $cmd] }
 	switch -exact $type {
@@ -2665,7 +2665,7 @@ proc dir {args} {
     } else {
 	foreach o $out {
 	    set d [lindex $o 0]
-	    append res $d:\n
+	    append res "$d:\n"
 	    set i 0
 	    foreach f [lindex $o 1] {
 		if {[string len [file tail $f]] > $i} {
@@ -3498,10 +3498,11 @@ if {[info tclversion] > 8.0} {;
     } else {
 	if {[llength $m] > 1} {
 	    global tcl_platform
-	    if {[string match windows $tcl_platform(platform)]} {
+	    if {[string match windows $tcl_platform(platform)] \
+		&& [string compare "Windows NT" $tcl_platform(os)]} {
 		## Windows is screwy because it's case insensitive
 		set tmp [tkConExpandBestMatch [string tolower $m] \
-			[string tolow [file tail $str]]]
+			[string tolower [file tail $str]]]
 	    } else {
 		set tmp [tkConExpandBestMatch $m [file tail $str]]
 	    }
@@ -3789,7 +3790,7 @@ if {[string compare [info command toplevel] toplevel]} {
 		"[list $i] eval [list [lindex $args 1]]"]
     }
     set code [catch "bind $w $args" msg]
-    if {[llength $args] <2 && code == 0} {
+    if {[llength $args] <2 && $code == 0} {
 	set msg [lindex $msg 3]
     }
     return -code $code $msg
