@@ -1,3 +1,8 @@
+2001-06-20  Jeff Hobbs  <jeffh@ActiveState.com>
+
+	* tkcon.tcl (InitUI): moved wm protocol inside check to not run
+	under plugin.
+
 2001-06-19  Jeff Hobbs  <jeffh@ActiveState.com>
 
 	* tkcon.tcl (dir): added fallback in generic dir command to not

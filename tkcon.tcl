@@ -165,7 +165,7 @@ proc ::tkcon::Init {} {
 	    tkcon_puts tkcon_gets observe observe_var unalias which what
 	}
 	version		2.1+
-	RCS		{RCS: @(#) $Id: tkcon.tcl,v 1.33 2001/06/19 02:51:09 hobbs Exp $}
+	RCS		{RCS: @(#) $Id: tkcon.tcl,v 1.34 2001/06/20 03:17:09 hobbs Exp $}
 	release		{May 2001}
 	docs		"http://tkcon.sf.net/"
 	email		{jeff@hobbs.org}
@@ -509,8 +509,8 @@ proc ::tkcon::InitUI {title} {
     if {[string match . $root]} { set w {} } else { set w [toplevel $root] }
     if {!$PRIV(WWW)} {
 	wm withdraw $root
+	wm protocol $root WM_DELETE_WINDOW exit
     }
-    wm protocol $root WM_DELETE_WINDOW exit
     set PRIV(base) $w
 
     ## Text Console
