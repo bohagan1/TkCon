@@ -2,7 +2,9 @@
 
 	* tkcon.tcl (::tkcon::InitUI): check existence of tcl_platform(os)
 	as it doesn't exist in the Tcl plugin.
-
+	Show Attach info in tab text, maintain namespace attachment
+	between console switches.
+	
 2004-02-05  Jeff Hobbs  <jeffh@ActiveState.com>
 
 	* tkcon.tcl: brought code back to 8.0 compatability.

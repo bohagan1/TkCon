@@ -139,7 +139,7 @@ proc ::tkcon::Init {args} {
 	lightbrace	1
 	lightcmd	1
 	maineval	{}
-	maxmenu		15
+	maxmenu		18
 	nontcl		0
 	prompt1		{ignore this, it's set below}
 	rows		20
@@ -184,7 +184,7 @@ proc ::tkcon::Init {args} {
 	    alias clear dir dump echo idebug lremove
 	    tkcon_puts tkcon_gets observe observe_var unalias which what
 	}
-	RCS		{RCS: @(#) $Id: tkcon.tcl,v 1.71 2004/02/05 20:30:15 hobbs Exp $}
+	RCS		{RCS: @(#) $Id: tkcon.tcl,v 1.72 2004/02/12 17:34:09 hobbs Exp $}
 	HEADURL		{http://cvs.sourceforge.net/viewcvs.py/*checkout*/tkcon/tkcon/tkcon.tcl?rev=HEAD}
 
 	docs		"http://tkcon.sourceforge.net/"
@@ -553,7 +553,6 @@ proc ::tkcon::InitUI {title} {
     variable OPT
     variable PRIV
     variable COLOR
-    variable ATTACH
 
     set root $PRIV(root)
     if {[string match . $root]} { set w {} } else { set w [toplevel $root] }
@@ -567,17 +566,13 @@ proc ::tkcon::InitUI {title} {
 
     set PRIV(statusbar) [set sbar [frame $w.fstatus]]
     set PRIV(tabframe)  [frame $sbar.tabs]
-    label $sbar.attach -relief sunken -bd 1 -anchor w \
-	    -textvariable ::tkcon::PRIV(StatusAttach)
-    label $sbar.cursor -relief sunken -bd 1 -anchor w -width 6 \
+    label $sbar.cursor -relief sunken -bd 1 -anchor e -width 6 \
 	    -textvariable ::tkcon::PRIV(StatusCursor)
     set padx [expr {![info exists ::tcl_platform(os)]
 		    || ![string match "Windows CE" $::tcl_platform(os)]}]
-    grid $sbar.tabs $sbar.attach $sbar.cursor -sticky news -padx $padx
+    grid $sbar.tabs $sbar.cursor -sticky ew -padx $padx
     grid configure $sbar.tabs -sticky nsw
     grid columnconfigure $sbar 0 -weight 1
-    grid columnconfigure $sbar 1 -weight 0
-    grid columnconfigure $sbar 2 -weight 0
 
     ## Create console tab
     set con [InitTab $w]
@@ -631,6 +626,7 @@ proc ::tkcon::InitTab {w} {
     variable OPT
     variable PRIV
     variable COLOR
+    variable ATTACH
 
     # text console
     set con $w.tab[incr PRIV(uid)]
@@ -693,8 +689,9 @@ proc ::tkcon::InitTab {w} {
     $con tag configure blink -background $COLOR(blink)
     $con tag configure find -background $COLOR(blink)
 
+    set ATTACH($con) [Attach]
     set rb [radiobutton $PRIV(tabframe).cb[winfo name $con] \
-		-text [string totitle [winfo name $con]] \
+		-textvariable ::tkcon::ATTACH($con) \
 		-selectcolor white -relief sunken \
 		-indicatoron 0 -padx 0 -pady 0 -bd 1 \
 		-variable ::tkcon::PRIV(curtab) -value $con \
@@ -779,13 +776,17 @@ proc ::tkcon::DeleteTab {{con {}} {slave {}}} {
     if {$con == ""} {
 	set con $PRIV(console)
     }
+    catch {unset ATTACH($con)}
     set curtab  [lsearch -exact $PRIV(tabs) $con]
     set nexttab [expr {$curtab + 1}]
     if {$nexttab >= $numtabs} {
 	set nexttab 0
     }
+    set nexttab [lindex $PRIV(tabs) $nexttab]
+    # splice out current tab
+    set PRIV(tabs) [lreplace $PRIV(tabs) $curtab $curtab]
 
-    GotoTab [lindex $PRIV(tabs) $nexttab]
+    GotoTab $nexttab
 
     if {$slave != ""} {
 	interp delete $slave
@@ -1947,17 +1948,14 @@ proc ::tkcon::Find {w str args} {
 # Results:	::tkcon::EvalAttached is recreated to evaluate in the
 #		appropriate interpreter
 ##
-proc ::tkcon::Attach {{name <NONE>} {type slave}} {
+proc ::tkcon::Attach {{name <NONE>} {type slave} {ns {}}} {
     variable PRIV
     variable OPT
+    variable ATTACH
 
     if {[llength [info level 0]] == 1} {
 	# no args were specified, return the attach info instead
-	if {[string match {} $PRIV(appname)]} {
-	    return [list [concat $PRIV(name) $OPT(exec)] $PRIV(apptype)]
-	} else {
-	    return [list $PRIV(appname) $PRIV(apptype)]
-	}
+	return [AttachId]
     }
     set path [concat $PRIV(name) $OPT(exec)]
 
@@ -2023,6 +2021,8 @@ proc ::tkcon::Attach {{name <NONE>} {type slave}} {
     ## ensure evaluation occurs in the right interp.
     # ARGS:	args	- the command and args to evaluate
     ##
+    set PRIV(namesp) ::
+    set namespOK 0
     switch -glob -- $type {
 	slave {
 	    if {[string match {} $name]} {
@@ -2036,6 +2036,7 @@ proc ::tkcon::Attach {{name <NONE>} {type slave}} {
 		interp alias {} ::tkcon::EvalAttached {} \
 			::tkcon::Slave $::tkcon::PRIV(app)
 	    }
+	    set namespOK 1
 	}
 	sock* {
 	    interp alias {} ::tkcon::EvalAttached {} \
@@ -2049,9 +2050,9 @@ proc ::tkcon::Attach {{name <NONE>} {type slave}} {
 	interp {
 	    if {$OPT(nontcl)} {
 		interp alias {} ::tkcon::EvalAttached {} ::tkcon::EvalSlave
-		set PRIV(namesp) ::
 	    } else {
 		interp alias {} ::tkcon::EvalAttached {} ::tkcon::EvalSend
+		set namespOK 1
 	    }
 	}
 	default {
@@ -2059,12 +2060,31 @@ proc ::tkcon::Attach {{name <NONE>} {type slave}} {
 		    a valid type: must be slave or interp"
 	}
     }
-    if {[string match slave $type] || \
-	    (!$OPT(nontcl) && [regexp {^(interp|dpy)} $type])} {
-	set PRIV(namesp) ::
+    if {![string match {} $ns] && $namespOK} {
+	AttachNamespace $ns
     }
-    set PRIV(StatusAttach) "$PRIV(app) ($PRIV(apptype))"
-    return
+    return [AttachId]
+}
+
+proc ::tkcon::AttachId {} {
+    # return Attach info in a form that Attach accepts again
+    variable PRIV
+
+    if {[string match {} $PRIV(appname)]} {
+	variable OPT
+	set appname [concat $PRIV(name) $OPT(exec)]
+    } else {
+	set appname $PRIV(appname)
+    }
+    set id [list $appname $PRIV(apptype)]
+    # only display ns info if it isn't "::" as that is what is also
+    # used to indicate no eval in namespace
+    if {![string match :: $PRIV(namesp)]} { lappend id $PRIV(namesp) }
+    if {[info exists PRIV(console)]} {
+	variable ATTACH
+	set ATTACH($PRIV(console)) $id
+    }
+    return $id
 }
 
 ## ::tkcon::AttachNamespace - called to attach tkcon to a namespace
@@ -2098,7 +2118,7 @@ proc ::tkcon::AttachNamespace { name } {
 		[interp alias {} ::tkcon::EvalAttached] [list $name]
     }
     set PRIV(namesp) $name
-    set PRIV(StatusAttach) "$PRIV(app) $PRIV(namesp) ($PRIV(apptype))"
+    return [AttachId]
 }
 
 ## ::tkcon::NewSocket - called to create a socket to connect to
@@ -2114,10 +2134,11 @@ proc ::tkcon::NewSocket {} {
 	wm withdraw $t
 	wm title $t "tkcon Create Socket"
 	label $t.lhost -text "Host: "
-	entry $t.host -width 16
+	entry $t.host -width 16 -takefocus 1
 	label $t.lport -text "Port: "
-	entry $t.port -width 4
-	button $t.ok -text "OK" -command {set ::tkcon::PRIV(grab) 1} -width 4
+	entry $t.port -width 4 -takefocus 1
+	button $t.ok -text "OK" -command {set ::tkcon::PRIV(grab) 1} -width 4 \
+	    -takefocus 1
 	bind $t.host <Return> [list focus $t.port]
 	bind $t.port <Return> [list focus $t.ok]
 	bind $t.ok   <Return> [list $t.ok invoke]
