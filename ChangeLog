@@ -6,6 +6,8 @@
 	be displayed when input is expected.
 	(GetSelection) new command to handle getting selection, this
 	supports the new UTF8_STRING type.
+	(InitMenus) added version check around Attach to Socket menu, as
+	8.3 is need for the file channels call.
 
 2001-05-28  Jeff Hobbs  <jeffh@ActiveState.com>
 

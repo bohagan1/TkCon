@@ -153,7 +153,7 @@ proc ::tkcon::Init {} {
 	    tkcon_puts tkcon_gets observe observe_var unalias which what
 	}
 	version		2.1+
-	RCS		{RCS: @(#) $Id: tkcon.tcl,v 1.31 2001/05/28 08:47:12 hobbs Exp $}
+	RCS		{RCS: @(#) $Id: tkcon.tcl,v 1.32 2001/06/18 17:24:46 hobbs Exp $}
 	release		{May 2001}
 	docs		"http://tkcon.sf.net/"
 	email		{jeff@hobbs.org}
@@ -1106,10 +1106,15 @@ proc ::tkcon::InitMenus {w title} {
 	menu $sub.name -disabledforeground $COLOR(disabled) -tearoff 0 \
 		-postcommand [list ::tkcon::NamespaceMenu $sub.name]
 
-	## Attach Socket Menu
-	##
-	menu $sub.sock -disabledforeground $COLOR(disabled) -tearoff 0 \
-		-postcommand [list ::tkcon::SocketMenu $sub.sock]
+	if {$::tcl_version >= 8.3} {
+	    # This uses [file channels] to create the menu, so we only
+	    # want it for newer versions of Tcl.
+
+	    ## Attach Socket Menu
+	    ##
+	    menu $sub.sock -disabledforeground $COLOR(disabled) -tearoff 0 \
+		    -postcommand [list ::tkcon::SocketMenu $sub.sock]
+	}
 
 	## Attach Display Menu
 	##
