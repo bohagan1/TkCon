@@ -82,6 +82,8 @@ namespace eval ::tkcon {
     # PRIV is used for internal data that only tkcon should fiddle with.
     variable PRIV
     set PRIV(WWW) [info exists embed_args]
+
+    variable EXPECT 1
 }
 
 ## ::tkcon::Init - inits tkcon
@@ -184,7 +186,7 @@ proc ::tkcon::Init {args} {
 	    alias clear dir dump echo idebug lremove
 	    tkcon_puts tkcon_gets observe observe_var unalias which what
 	}
-	RCS		{RCS: @(#) $Id: tkcon.tcl,v 1.74 2004/02/13 00:03:24 hobbs Exp $}
+	RCS		{RCS: @(#) $Id: tkcon.tcl,v 1.75 2004/03/01 21:56:12 hobbs Exp $}
 	HEADURL		{http://cvs.sourceforge.net/viewcvs.py/*checkout*/tkcon/tkcon/tkcon.tcl?rev=HEAD}
 
 	docs		"http://tkcon.sourceforge.net/"
@@ -675,13 +677,16 @@ proc ::tkcon::InitTab {w} {
 		set OPT(rows) [expr {($sh / $ch) - 3}]
 	    }
 	    # Place it so that the titlebar underlaps the CE titlebar
-	    wm geometry $root +0+0
+	    wm geometry $PRIV(root) +0+0
 	}
 	$con configure -setgrid 1 -width $OPT(cols) -height $OPT(rows)
 	# XXX: should this only be applied to one console?
 	bind $con <Configure> {
 	    scan [wm geometry [winfo toplevel %W]] "%%dx%%d" \
 		    ::tkcon::OPT(cols) ::tkcon::OPT(rows)
+	    if {[info exists ::tkcon::EXP(spawn_id)]} {
+		catch {stty rows $::tkcon::OPT(rows) columns $::tkcon::OPT(cols) < $::tkcon::EXP(slave,name)}
+	    }
 	}
     }
 
@@ -1062,12 +1067,12 @@ proc ::tkcon::EvalSocket cmd {
 # ARGS:	args	- the args to send across
 # Returns:	the result of the command
 ##
-proc ::tkcon::EvalSocketEvent {} {
+proc ::tkcon::EvalSocketEvent {sock} {
     variable PRIV
 
-    if {[gets $PRIV(app) line] == -1} {
-	if {[eof $PRIV(app)]} {
-	    EvalSocketClosed
+    if {[gets $sock line] == -1} {
+	if {[eof $sock]} {
+	    EvalSocketClosed $sock
 	}
 	return
     }
@@ -1079,11 +1084,16 @@ proc ::tkcon::EvalSocketEvent {} {
 # ARGS:	args	- the args to send across
 # Returns:	the result of the command
 ##
-proc ::tkcon::EvalSocketClosed {} {
+proc ::tkcon::EvalSocketClosed {sock} {
     variable OPT
     variable PRIV
 
-    catch {close $PRIV(app)}
+    catch {close $sock}
+    if {![string match $sock $PRIV(app)]} {
+	# If we are not still attached to that socket, just return.
+	# Might be nice to tell the user the socket closed ...
+	return
+    }
     if {[string compare leave $OPT(dead)] && \
 	    ([string match ignore $OPT(dead)] || \
 		 [tk_messageBox -title "Dead Attachment" -type yesno \
@@ -2048,7 +2058,7 @@ proc ::tkcon::Attach {{name <NONE>} {type slave} {ns {}}} {
 	    # The file event will just puts whatever data is found
 	    # into the interpreter
 	    fconfigure $name -buffering line -blocking 0
-	    fileevent $name readable ::tkcon::EvalSocketEvent
+	    fileevent $name readable [list ::tkcon::EvalSocketEvent $name]
 	}
 	dpy:* -
 	interp {
@@ -2821,6 +2831,330 @@ proc ::tkcon::ErrorHighlight w {
     }
 }
 
+proc ::tkcon::ExpectInit {{termcap 1} {terminfo 1}} {
+    global env
+
+    if {$termcap} {
+	set env(TERM) "tt"
+	set env(TERMCAP) {tt:
+ :ks=\E[KS:
+ :ke=\E[KE:
+ :cm=\E[%d;%dH:
+ :up=\E[A:
+ :nd=\E[C:
+ :cl=\E[H\E[J:
+ :do=^J:
+ :so=\E[7m:
+ :se=\E[m:
+ :k1=\EOP:
+ :k2=\EOQ:
+ :k3=\EOR:
+ :k4=\EOS:
+ :k5=\EOT:
+ :k6=\EOU:
+ :k7=\EOV:
+ :k8=\EOW:
+ :k9=\EOX:
+    }
+    }
+
+    if {$terminfo} {
+	set env(TERM) "tkterm"
+	if {![info exists env(TEMP)]} { set env(TEMP) /tmp }
+	set env(TERMINFO) $env(TEMP)
+
+	set ttsrc [file join $env(TEMP) tt.src]
+	set file [open $ttsrc w]
+	puts $file {tkterm|Don Libes' tk text widget terminal emulator,
+ smkx=\E[KS,
+ rmkx=\E[KE,
+ cup=\E[%p1%d;%p2%dH,
+ cuu1=\E[A,
+ cuf1=\E[C,
+ clear=\E[H\E[J,
+ ind=\n,
+ cr=\r,
+ smso=\E[7m,
+ rmso=\E[m,
+ kf1=\EOP,
+ kf2=\EOQ,
+ kf3=\EOR,
+ kf4=\EOS,
+ kf5=\EOT,
+ kf6=\EOU,
+ kf7=\EOV,
+ kf8=\EOW,
+ kf9=\EOX,
+    }
+	close $file
+
+	if {[catch {exec tic $ttsrc} msg]} {
+	    return -code error \
+		"tic failed, you may not have terminfo support:\n$msg"
+	}
+
+	file delete $ttsrc
+    }
+}
+
+# term_exit is called if the spawned process exits
+proc ::tkcon::term_exit {w} {
+    variable EXP
+    catch {exp_close -i $EXP(spawn_id)}
+    set EXP(forever) 1
+    unset EXP
+}
+
+# term_chars_changed is called after every change to the displayed chars
+# You can use if you want matches to occur in the background (a la bind)
+# If you want to test synchronously, then just do so - you don't need to
+# redefine this procedure.
+proc ::tkcon::term_chars_changed {w args} {
+}
+
+# term_cursor_changed is called after the cursor is moved
+proc ::tkcon::term_cursor_changed {w args} {
+}
+
+proc ::tkcon::term_update_cursor {w args} {
+    variable OPT
+    variable EXP
+
+    $w mark set insert $EXP(row).$EXP(col)
+    $w see insert
+    term_cursor_changed $w
+}
+
+proc ::tkcon::term_clear {w args} {
+    $w delete 1.0 end
+    term_init $w
+}
+
+proc ::tkcon::term_init {w args} {
+    variable OPT
+    variable EXP
+
+    # initialize it with blanks to make insertions later more easily
+    set blankline [string repeat " " $OPT(cols)]\n
+    for {set i 1} {$i <= $OPT(rows)} {incr i} {
+	$w insert $i.0 $blankline
+    }
+
+    set EXP(row) 1
+    set EXP(col) 0
+
+    $w mark set insert $EXP(row).$EXP(col)
+}
+
+proc ::tkcon::term_down {w args} {
+    variable OPT
+    variable EXP
+
+    if {$EXP(row) < $OPT(rows)} {
+	incr EXP(row)
+    } else {
+	# already at last line of term, so scroll screen up
+	$w delete 1.0 2.0
+
+	# recreate line at end
+	$w insert end [string repeat " " $OPT(cols)]\n
+    }
+}
+
+proc ::tkcon::term_insert {w s} {
+    variable OPT
+    variable EXP
+
+    set chars_rem_to_write [string length $s]
+    set space_rem_on_line  [expr {$OPT(cols) - $EXP(col)}]
+
+    set tag_action [expr {$EXP(standout) ? "add" : "remove"}]
+
+    ##################
+    # write first line
+    ##################
+
+    if {$chars_rem_to_write > $space_rem_on_line} {
+	set chars_to_write $space_rem_on_line
+	set newline 1
+    } else {
+	set chars_to_write $chars_rem_to_write
+	set newline 0
+    }
+
+    $w delete $EXP(row).$EXP(col) \
+	$EXP(row).[expr {$EXP(col) + $chars_to_write}]
+    $w insert $EXP(row).$EXP(col) \
+	[string range $s 0 [expr {$space_rem_on_line-1}]]
+
+    $w tag $tag_action standout $EXP(row).$EXP(col) \
+	$EXP(row).[expr {$EXP(col) + $chars_to_write}]
+
+    # discard first line already written
+    incr chars_rem_to_write -$chars_to_write
+    set s [string range $s $chars_to_write end]
+
+    # update EXP(col)
+    incr EXP(col) $chars_to_write
+    # update EXP(row)
+    if {$newline} { term_down $w }
+
+    ##################
+    # write full lines
+    ##################
+    while {$chars_rem_to_write >= $OPT(cols)} {
+	$w delete $EXP(row).0 $EXP(row).end
+	$w insert $EXP(row).0 [string range $s 0 [expr {$OPT(cols)-1}]]
+	$w tag $tag_action standout $EXP(row).0 $EXP(row).end
+
+	# discard line from buffer
+	set s [string range $s $OPT(cols) end]
+	incr chars_rem_to_write -$OPT(cols)
+
+	set EXP(col) 0
+	term_down $w
+    }
+
+    #################
+    # write last line
+    #################
+
+    if {$chars_rem_to_write} {
+	$w delete $EXP(row).0 $EXP(row).$chars_rem_to_write
+	$w insert $EXP(row).0 $s
+	$w tag $tag_action standout $EXP(row).0 $EXP(row).$chars_rem_to_write
+	set EXP(col) $chars_rem_to_write
+    }
+
+    term_chars_changed $w
+}
+
+proc ::tkcon::Expect {cmd} {
+    variable OPT
+    variable PRIV
+    variable EXP
+
+    set EXP(standout) 0
+    set EXP(row) 0
+    set EXP(col) 0
+
+    set env(LINES)   $OPT(rows)
+    set env(COLUMNS) $OPT(cols)
+
+    ExpectInit
+    log_user 0
+    set ::stty_init "-tabs"
+    uplevel \#0 [linsert $cmd 0 spawn]
+    set EXP(spawn_id) $::spawn_id
+    if {[info exists ::spawn_out(slave,name)]} {
+	set EXP(slave,name) $::spawn_out(slave,name)
+	catch {stty rows $OPT(rows) columns $OPT(cols) < $::spawn_out(slave,name)}
+    }
+    if {[string index $cmd end] == "&"} {
+	set cmd expect_background
+    } else {
+	set cmd expect
+    }
+    bind $PRIV(console) <Meta-KeyPress> {
+	if {"%A" != ""} {
+	    exp_send -i $::tkcon::EXP(spawn_id) "\033%A"
+	    break
+	}
+    }
+    bind $PRIV(console) <KeyPress> {
+	exp_send -i $::tkcon::EXP(spawn_id) -- %A
+	break
+    }
+    bind $PRIV(console) <Control-space>	{exp_send -null}
+    set code [catch {
+	term_init $PRIV(console)
+	while {[info exists EXP(spawn_id)]} {
+	$cmd {
+	    -i $::tkcon::EXP(spawn_id)
+	    -re "^\[^\x01-\x1f\]+" {
+		# Text
+		::tkcon::term_insert $::tkcon::PRIV(console) \
+		    $expect_out(0,string)
+		::tkcon::term_update_cursor $::tkcon::PRIV(console)
+	    } "^\r" {
+		# (cr,) Go to beginning of line
+		update idle
+		set ::tkcon::EXP(col) 0
+		::tkcon::term_update_cursor $::tkcon::PRIV(console)
+	    } "^\n" {
+		# (ind,do) Move cursor down one line
+		if {$::tcl_platform(platform) eq "windows"} {
+		    # Windows seems to get the LF without the CR
+		    update idle
+		    set ::tkcon::EXP(col) 0
+		}
+		::tkcon::term_down $::tkcon::PRIV(console)
+		::tkcon::term_update_cursor $::tkcon::PRIV(console)
+	    } "^\b" {
+		# Backspace nondestructively
+		incr ::tkcon::EXP(col) -1
+		::tkcon::term_update_cursor $::tkcon::PRIV(console)
+	    } "^\a" {
+		bell
+	    } "^\t" {
+		# Tab, shouldn't happen
+		send_error "got a tab!?"
+	    } eof {
+		::tkcon::term_exit $::tkcon::PRIV(console)
+	    } "^\x1b\\\[A" {
+		# Cursor Up (cuu1,up)
+		incr ::tkcon::EXP(row) -1
+		::tkcon::term_update_cursor $::tkcon::PRIV(console)
+	    } "^\x1b\\\[B" {
+		# Cursor Down
+		incr ::tkcon::EXP(row)
+		::tkcon::term_update_cursor $::tkcon::PRIV(console)
+	    } "^\x1b\\\[C" {
+		# Cursor Right (cuf1,nd)
+		incr ::tkcon::EXP(col)
+		::tkcon::term_update_cursor $::tkcon::PRIV(console)
+	    } "^\x1b\\\[D" {
+		# Cursor Left
+		incr ::tkcon::EXP(col)
+		::tkcon::term_update_cursor $::tkcon::PRIV(console)
+	    } "^\x1b\\\[H" {
+		# Cursor Home
+	    } -re "^\x1b\\\[(\[0-9\]*);(\[0-9\]*)H" {
+		# (cup,cm) Move to row y col x
+		set ::tkcon::EXP(row) [expr {$expect_out(1,string)+1}]
+		set ::tkcon::EXP(col) $expect_out(2,string)
+		::tkcon::term_update_cursor $::tkcon::PRIV(console)
+	    } "^\x1b\\\[H\x1b\\\[J" {
+		# (clear,cl) Clear screen
+		::tkcon::term_clear $::tkcon::PRIV(console)
+		::tkcon::term_update_cursor $::tkcon::PRIV(console)
+	    } "^\x1b\\\[7m" {
+		# (smso,so) Begin standout mode
+		set ::tkcon::EXP(standout) 1
+	    } "^\x1b\\\[m" {
+		# (rmso,se) End standout mode
+		set ::tkcon::EXP(standout) 0
+	    } "^\x1b\\\[KS" {
+		# (smkx,ks) start keyboard-transmit mode
+		# terminfo invokes these when going in/out of graphics mode
+		graphicsSet 1
+	    } "^\x1b\\\[KE" {
+		# (rmkx,ke) end keyboard-transmit mode
+		graphicsSet 0
+	    }
+	}
+	}
+	#vwait ::tkcon::EXP(forever)
+    } err]
+    bind $PRIV(console) <Meta-KeyPress> {}
+    bind $PRIV(console) <KeyPress>      {}
+    bind $PRIV(console) <Control-space>	{}
+    catch {unset EXP}
+    if {$code} {
+	return -code $code -errorinfo $::errorInfo $err
+    }
+}
+
 ## tkcon - command that allows control over the console
 ## This always exists in the main interpreter, and is aliased into
 ## other connected interpreters
@@ -2882,6 +3216,9 @@ proc tkcon {cmd args} {
 	    $w insert end \n
 	    bind TkConsole <<TkCon_Eval>> $old
 	    return $line
+	}
+	exp* {
+	    ::tkcon::Expect [lindex $args 0]
 	}
 	getc* {
 	    ## 'getcommand' a replacement for [gets stdin]
@@ -4367,7 +4704,11 @@ proc tcl_unknown args {
 	    if {[string compare {} $new]} {
 		set errorCode $savedErrorCode
 		set errorInfo $savedErrorInfo
-		return [uplevel 1 exec $new [lrange $args 1 end]]
+		if {[info exists ::tkcon::EXPECT] && $::tkcon::EXPECT && [package provide Expect] != ""} {
+		    return [tkcon expect [concat $new [lrange $args 1 end]]]
+		} else {
+		    return [uplevel 1 exec $new [lrange $args 1 end]]
+		}
 		#return [uplevel exec >&@stdout <@stdin $new [lrange $args 1 end]]
 	    }
 	}
@@ -5008,6 +5349,11 @@ proc ::tkcon::Blink {w args} {
 ## 
 proc ::tkcon::Insert {w s} {
     if {[string match {} $s] || [string match disabled [$w cget -state]]} {
+	return
+    }
+    variable EXP
+    if {[info exists EXP(spawn_id)]} {
+	exp_send -i $EXP(spawn_id) -- $s
 	return
     }
     if {[$w comp insert < limit]} {

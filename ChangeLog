@@ -1,3 +1,8 @@
+2004-03-20  Jeff Hobbs  <jeffh@ActiveState.com>
+
+	* tkcon.tcl (::tkcon::EvalSocketEvent): correctly handle socket
+	events after attachment changes
+
 2004-03-01  Jeff Hobbs  <jeffh@ActiveState.com>
 
 	* tkcon.tcl: correct 'exit' in extra tabs.
