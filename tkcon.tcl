@@ -74,6 +74,8 @@ foreach cmd {SetCursor UpDownLine Transpose ScrollPages} {
 # Initialize the ::tkcon namespace
 #
 namespace eval ::tkcon {
+    # when modifying this line, make sure that the auto-upgrade check
+    # for version still works.
     variable VERSION "2.4"
     # The OPT variable is an array containing most of the optional
     # info to configure.  COLOR has the color data.
@@ -185,7 +187,7 @@ proc ::tkcon::Init {args} {
 	    alias clear dir dump echo idebug lremove
 	    tkcon_puts tkcon_gets observe observe_var unalias which what
 	}
-	RCS		{RCS: @(#) $Id: tkcon.tcl,v 1.60 2003/02/21 00:45:30 hobbs Exp $}
+	RCS		{RCS: @(#) $Id: tkcon.tcl,v 1.61 2003/02/21 00:48:52 hobbs Exp $}
 	HEADURL		{http://cvs.sourceforge.net/cgi-bin/viewcvs.cgi/tkcon/tkcon/tkcon.tcl?rev=HEAD}
 	docs		"http://tkcon.sourceforge.net/"
 	email		{jeff@hobbs.org}
@@ -5275,20 +5277,24 @@ proc ::tkcon::Retrieve {} {
 		puts -nonewline $fid $data
 		close $fid
 		regexp {Id: tkcon.tcl,v (\d+\.\d+)} $data -> rcsVersion
-		regexp {version\s+(\d+\.\d[^\n]*)} $data -> tkconVersion
+		regexp {VERSION\s+"(\d+\.\d+[^\"]*)"} $data -> tkconVersion
 	    }
 	} err]
 	::http::cleanup $token
 	if {$code} {
 	    return -code error $err
-	} elseif {[tk_messageBox -type yesno -icon info -parent $PRIV(root) \
-		-title "Retrieved tkcon v$tkconVersion, RCS $rcsVersion" \
-		-message "Successfully retrieved tkcon v$tkconVersion,\
-		RCS $rcsVersion.  Shall I resource (not restart) this\
-		version now?"] == "yes"} {
-	    set PRIV(SCRIPT) $file
-	    set PRIV(version) $tkconVersion.$rcsVersion
-	    ::tkcon::Resource
+	} else {
+	    if {![info exists rcsVersion]}   { set rcsVersion   "UNKNOWN" }
+	    if {![info exists tkconVersion]} { set tkconVersion "UNKNOWN" }
+	    if {[tk_messageBox -type yesno -icon info -parent $PRIV(root) \
+		    -title "Retrieved tkcon v$tkconVersion, RCS $rcsVersion" \
+		    -message "Successfully retrieved tkcon v$tkconVersion,\
+		    RCS $rcsVersion.  Shall I resource (not restart) this\
+		    version now?"] == "yes"} {
+		set PRIV(SCRIPT) $file
+		set PRIV(version) $tkconVersion.$rcsVersion
+		::tkcon::Resource
+	    }
 	}
     }
 }

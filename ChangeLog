@@ -1,3 +1,8 @@
+2003-03-31  Jeff Hobbs  <jeffh@ActiveState.com>
+
+	* tkcon.tcl (tkcon::Retrieve): correct the check for tkcon version
+	when retrieving from http.
+
 2003-02-20  Jeff Hobbs  <jeffh@ActiveState.com>
 
 	* tkcon.tcl (EvalCmd): set $:: (aka ${}) var to last command result.
