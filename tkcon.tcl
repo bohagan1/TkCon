@@ -151,7 +151,7 @@ proc ::tkcon::Init {args} {
 	scrollypos	right
 	showmenu	1
 	showmultiple	1
-	showstatusbar	0
+	showstatusbar	1
 	slaveeval	{}
 	slaveexit	close
 	subhistory	1
@@ -189,12 +189,14 @@ proc ::tkcon::Init {args} {
 	    alias clear dir dump echo idebug lremove
 	    tkcon_puts tkcon_gets observe observe_var unalias which what
 	}
-	RCS		{RCS: @(#) $Id: tkcon.tcl,v 1.68 2004/01/28 21:06:15 hobbs Exp $}
+	RCS		{RCS: @(#) $Id: tkcon.tcl,v 1.69 2004/01/28 21:39:40 hobbs Exp $}
 	HEADURL		{http://cvs.sourceforge.net/viewcvs.py/*checkout*/tkcon/tkcon/tkcon.tcl?rev=HEAD}
 
 	docs		"http://tkcon.sourceforge.net/"
 	email		{jeff(a)hobbs(.)org}
 	root		.
+	uid		0
+	tabs		{}
     } {
 	if {![info exists PRIV($key)]} { set PRIV($key) $default }
     }
@@ -206,6 +208,7 @@ proc ::tkcon::Init {args} {
     set PRIV(version) $VERSION
 
     option add *Menu.tearOff 0
+    option add *takeFocus 0
 
     if {[info exists PRIV(name)]} {
 	set title $PRIV(name)
@@ -555,6 +558,7 @@ proc ::tkcon::InitUI {title} {
     variable OPT
     variable PRIV
     variable COLOR
+    variable ATTACH
 
     set root $PRIV(root)
     if {[string match . $root]} { set w {} } else { set w [toplevel $root] }
@@ -564,11 +568,78 @@ proc ::tkcon::InitUI {title} {
     }
     set PRIV(base) $w
 
-    ## Text Console
-    set PRIV(console) [set con $w.text]
-    text $con -wrap char -yscrollcommand [list $w.sy set] \
-	    -foreground $COLOR(stdin) \
-	    -insertbackground $COLOR(cursor)
+    catch {font create tkconfixed -family Courier -size 10}
+
+    set PRIV(statusbar) [set sbar [frame $w.fstatus]]
+    set PRIV(tabframe)  [frame $sbar.tabs]
+    label $sbar.attach -relief sunken -bd 1 -anchor w \
+	    -textvariable ::tkcon::PRIV(StatusAttach)
+    label $sbar.cursor -relief sunken -bd 1 -anchor w -width 6 \
+	    -textvariable ::tkcon::PRIV(StatusCursor)
+    set padx [expr {![string match "Windows CE" $::tcl_platform(os)]}]
+    grid $sbar.tabs $sbar.attach $sbar.cursor -sticky news -padx $padx
+    grid configure $sbar.tabs -sticky nsw
+    grid columnconfigure $sbar 0 -weight 1
+    grid columnconfigure $sbar 1 -weight 0
+    grid columnconfigure $sbar 2 -weight 0
+
+    ## Create console tab
+    set con [InitTab $w]
+    set PRIV(curtab) $con
+
+    # scrollbar
+    set sy [scrollbar $w.sy -takefocus 0 -bd 1 -command [list $con yview]]
+    if {!$PRIV(WWW) && [string match "Windows CE" $::tcl_platform(os)]} {
+	$w.sy configure -width 10
+    }
+
+    $con configure -yscrollcommand [list $sy set]
+    set PRIV(console) $con
+    set PRIV(scrolly) $sy
+
+    ## Menus
+    ## catch against use in plugin
+    if {[catch {menu $w.mbar} PRIV(menubar)]} {
+	set PRIV(menubar) [frame $w.mbar -relief raised -bd 1]
+    }
+
+    InitMenus $PRIV(menubar) $title
+    Bindings
+
+    if {$OPT(showmenu)} {
+	$root configure -menu $PRIV(menubar)
+    }
+
+    grid $con  -row 1 -column 1 -sticky news
+    grid $sy   -row 1 -column [expr {$OPT(scrollypos)=="left"?0:2}] -sticky ns
+    grid $sbar -row 2 -column 0 -columnspan 3 -sticky ew
+
+    grid columnconfigure $root 1 -weight 1
+    grid rowconfigure    $root 1 -weight 1
+
+    if {!$OPT(showstatusbar)} {
+	grid remove $sbar
+    }
+
+    if {!$PRIV(WWW)} {
+	wm title $root "tkcon $PRIV(version) $title"
+	if {$PRIV(showOnStartup)} { wm deiconify $root }
+    }
+    if {$PRIV(showOnStartup)} { focus -force $PRIV(console) }
+    if {$OPT(gc-delay)} {
+	after $OPT(gc-delay) ::tkcon::GarbageCollect
+    }
+}
+
+proc ::tkcon::InitTab {w} {
+    variable OPT
+    variable PRIV
+    variable COLOR
+
+    # text console
+    set con $w.tab[incr PRIV(uid)]
+    text $con -wrap char -foreground $COLOR(stdin) \
+	-insertbackground $COLOR(cursor)
     $con mark set output 1.0
     $con mark set limit 1.0
     if {[string compare {} $COLOR(bg)]} {
@@ -582,20 +653,17 @@ proc ::tkcon::InitUI {title} {
 	## otherwise make sure the font is monospace
 	set font [$con cget -font]
 	if {![font metrics $font -fixed]} {
-	    font create tkconfixed -family Courier -size 12
 	    $con configure -font tkconfixed
 	}
     } else {
 	$con configure -font fixed
     }
     set OPT(font) [$con cget -font]
-    ## Scrollbar
-    set PRIV(scrolly) [scrollbar $w.sy -takefocus 0 -bd 1 \
-	    -command [list $con yview]]
+    bindtags $con [list $con TkConsole TkConsolePost $PRIV(root) all]
+
+    # scrollbar
     if {!$PRIV(WWW)} {
 	if {[string match "Windows CE" $::tcl_platform(os)]} {
-	    $w.sy configure -width 10
-	    catch {font create tkconfixed}
 	    font configure tkconfixed -family Tahoma -size 8
 	    $con configure -font tkconfixed -bd 0 -padx 0 -pady 0
 	    set cw [font measure tkconfixed "0"]
@@ -614,38 +682,11 @@ proc ::tkcon::InitUI {title} {
 	    wm geometry $root +0+0
 	}
 	$con configure -setgrid 1 -width $OPT(cols) -height $OPT(rows)
-    }
-    bindtags $con [list $con TkConsole TkConsolePost $root all]
-    ## Menus
-    ## catch against use in plugin
-    if {[catch {menu $w.mbar} PRIV(menubar)]} {
-	set PRIV(menubar) [frame $w.mbar -relief raised -bd 1]
-    }
-
-    InitMenus $PRIV(menubar) $title
-    Bindings
-
-    if {$OPT(showmenu)} {
-	$root configure -menu $PRIV(menubar)
-    }
-    pack $w.sy -side $OPT(scrollypos) -fill y
-    pack $con -fill both -expand 1
-
-    set PRIV(statusbar) [set sbar [frame $w.sbar]]
-    label $sbar.attach -relief sunken -bd 1 -anchor w \
-	    -textvariable ::tkcon::PRIV(StatusAttach)
-    label $sbar.mode -relief sunken -bd 1 -anchor w  \
-	    -textvariable ::tkcon::PRIV(StatusMode)
-    label $sbar.cursor -relief sunken -bd 1 -anchor w -width 6 \
-	    -textvariable ::tkcon::PRIV(StatusCursor)
-    set padx [expr {![string match "Windows CE" $::tcl_platform(os)]}]
-    grid $sbar.attach $sbar.mode $sbar.cursor -sticky news -padx $padx
-    grid columnconfigure $sbar 0 -weight 1
-    grid columnconfigure $sbar 1 -weight 1
-    grid columnconfigure $sbar 2 -weight 0
-
-    if {$OPT(showstatusbar)} {
-	pack $sbar -side bottom -fill x -before $::tkcon::PRIV(scrolly)
+	# XXX: should this only be applied to one console?
+	bind $con <Configure> {
+	    scan [wm geometry [winfo toplevel %W]] "%%dx%%d" \
+		    ::tkcon::OPT(cols) ::tkcon::OPT(rows)
+	}
     }
 
     foreach col {prompt stdout stderr stdin proc} {
@@ -656,18 +697,105 @@ proc ::tkcon::InitUI {title} {
     $con tag configure blink -background $COLOR(blink)
     $con tag configure find -background $COLOR(blink)
 
-    if {!$PRIV(WWW)} {
-	wm title $root "tkcon $PRIV(version) $title"
-	bind $con <Configure> {
-	    scan [wm geometry [winfo toplevel %W]] "%%dx%%d" \
-		    ::tkcon::OPT(cols) ::tkcon::OPT(rows)
+    set rb [radiobutton $PRIV(tabframe).cb[winfo name $con] \
+		-text [string totitle [winfo name $con]] \
+		-selectcolor white -relief sunken \
+		-indicatoron 0 -padx 0 -pady 0 -bd 1 \
+		-variable ::tkcon::PRIV(curtab) -value $con \
+		-command [list ::tkcon::GotoTab $con]]
+    if {$::tcl_version >= 8.4} {
+	$rb configure -offrelief flat -overrelief raised
+    }
+    grid $rb -row 0 -column [lindex [grid size $PRIV(tabframe)] 0]
+    grid $con -row 1 -column 1 -sticky news
+
+    lappend PRIV(tabs) $con
+    return $con
+}
+
+proc ::tkcon::GotoTab {con} {
+    variable PRIV
+    variable ATTACH
+
+    set numtabs [llength $PRIV(tabs)]
+    if {$numtabs == 1} { return }
+
+    if {[string is integer -strict $con]} {
+	set curtab [lsearch -exact $PRIV(tabs) $PRIV(console)]
+	set nexttab [expr {$curtab + $con}]
+	if {$nexttab >= $numtabs} {
+	    set nexttab 0
+	} elseif {$nexttab < 0} {
+	    set nexttab "end"
 	}
-	if {$PRIV(showOnStartup)} { wm deiconify $root }
+	set con [lindex $PRIV(tabs) $nexttab]
+    } elseif {$con eq $PRIV(console)} {
+	return
     }
-    if {$PRIV(showOnStartup)} { focus -force $PRIV(console) }
-    if {$OPT(gc-delay)} {
-	after $OPT(gc-delay) ::tkcon::GarbageCollect
+
+    # adjust console
+    if {[winfo exists $PRIV(console)]} {
+	$PRIV(console) configure -yscrollcommand {}
+	grid remove $PRIV(console)
+	set ATTACH($PRIV(console)) [Attach]
     }
+    set PRIV(console) $con
+    $con configure -yscrollcommand [list $PRIV(scrolly) set]
+    $PRIV(scrolly) configure -command [list $con yview]
+
+    # adjust attach
+    eval [linsert $ATTACH($con) 0 Attach]
+
+    # must match placement in InitUI
+    grid $con -row 1 -column 1 -sticky news
+    raise $con
+
+    if {[$con compare 1.0 == end-1c]} {
+	Prompt
+    }
+
+    # set StatusCursor
+    set PRIV(StatusCursor) [$con index insert]
+
+    focus -force $con
+
+    set PRIV(curtab) $con
+}
+
+proc ::tkcon::NewTab {{con {}}} {
+    variable PRIV
+    variable ATTACH
+
+    set con [InitTab $PRIV(base)]
+    set tmp [interp create Slave[GetSlaveNum]]
+    InitSlave $tmp
+    $tmp alias exit ::tkcon::DeleteTab $con $tmp
+    set ATTACH($con) [list $tmp slave]
+    GotoTab $con
+}
+
+proc ::tkcon::DeleteTab {{con {}} {slave {}}} {
+    variable PRIV
+
+    set numtabs [llength $PRIV(tabs)]
+    if {$numtabs == 1} { return }
+
+    if {$con == ""} {
+	set con $PRIV(console)
+    }
+    set curtab  [lsearch -exact $PRIV(tabs) $con]
+    set nexttab [expr {$curtab + 1}]
+    if {$nexttab >= $numtabs} {
+	set nexttab 0
+    }
+
+    GotoTab [lindex $PRIV(tabs) $nexttab]
+
+    if {$slave ne ""} {
+	interp delete $slave
+    }
+    destroy $PRIV(tabframe).cb[winfo name $con]
+    destroy $con
 }
 
 ## ::tkcon::GarbageCollect - do various cleanup ops periodically to our setup
@@ -709,7 +837,9 @@ proc ::tkcon::Eval {w} {
     } elseif {!$incomplete} {
 	EvalCmd $w $last
     }
-    $w see insert
+    if {[winfo exists $w]} {
+	$w see insert
+    }
 }
 
 ## ::tkcon::EvalCmd - evaluates a single command, adding it to history
@@ -778,6 +908,10 @@ proc ::tkcon::EvalCmd {w cmd} {
 			set PRIV(errorInfo) $err
 		    }
 		}
+	    }
+	    if {![winfo exists $w]} {
+		# early abort - must be a deleted tab
+		return
 	    }
 	    AddSlaveHistory $cmd
 	    catch {EvalAttached [list set {} $res]}
@@ -1113,6 +1247,15 @@ proc ::tkcon::Prompt {{pre {}} {post {}} {prompt {}}} {
     set ::tkcon::PRIV(StatusCursor) [$w index insert]
     $w see end
 }
+proc ::tkcon::RePrompt {{pre {}} {post {}} {prompt {}}} {
+    # same as prompt, but does nothing for those actions where we
+    # only wanted to refresh the prompt on attach change when the
+    # statusbar is showing (which carries that info instead)
+    variable OPT
+    if {!$OPT(showstatusbar)} {
+	Prompt $pre $post $prompt
+    }
+}
 
 ## ::tkcon::About - gives about info for tkcon
 ## 
@@ -1122,11 +1265,12 @@ proc ::tkcon::About {} {
     variable COLOR
 
     set w $PRIV(base).about
-    if {[winfo exists $w]} {
-	wm deiconify $w
-    } else {
+    if {![winfo exists $w]} {
 	global tk_patchLevel tcl_patchLevel tcl_version
 	toplevel $w
+	wm withdraw $w
+	wm transient $w $PRIV(root)
+	wm group $w $PRIV(root)
 	wm title $w "About tkcon v$PRIV(version)"
 	button $w.b -text Dismiss -command [list wm withdraw $w]
 	text $w.text -height 9 -bd 1 -width 60 \
@@ -1145,7 +1289,9 @@ proc ::tkcon::About {} {
 		\nDocumentation available at:\n$PRIV(docs)\
 		\nUsing: Tcl v$tcl_patchLevel / Tk v$tk_patchLevel" center
 	$w.text config -state disabled
+	bind $w <Escape> [list destroy $w]
     }
+    wm deiconify $w
 }
 
 ## ::tkcon::InitMenus - inits the menubar and popup for the console
@@ -1159,7 +1305,7 @@ proc ::tkcon::InitMenus {w title} {
 
     if {[catch {menu $w.pop -tearoff 0}]} {
 	label $w.label -text "Menus not available in plugin mode"
-	pack $w.label
+	grid $w.label -sticky ew
 	return
     }
     menu $w.context -tearoff 0 -disabledforeground $COLOR(disabled)
@@ -1209,6 +1355,8 @@ proc ::tkcon::InitMenus {w title} {
 	$m add command -label "$title Console"	-state disabled
 	$m add command -label "New Console"	-underline 0 -accel Ctrl-N \
 		-command ::tkcon::New
+	$m add command -label "New Tab"		-underline 4 -accel Ctrl-T \
+		-command ::tkcon::NewTab
 	$m add command -label "Close Console"	-underline 0 -accel Ctrl-w \
 		-command ::tkcon::Destroy
 	$m add command -label "Clear Console"	-underline 1 -accel Ctrl-l \
@@ -1291,7 +1439,7 @@ proc ::tkcon::InitMenus {w title} {
 	$m add check -label "History Substitution" \
 		-underline 0 -variable ::tkcon::OPT(subhistory)
 	$m add check -label "Hot Errors" \
-		-underline 0 -variable ::tkcon::OPT(hoterrors)
+		-underline 4 -variable ::tkcon::OPT(hoterrors)
 	$m add check -label "Non-Tcl Attachments" \
 		-underline 0 -variable ::tkcon::OPT(nontcl)
 	$m add check -label "Calculator Mode" \
@@ -1303,13 +1451,12 @@ proc ::tkcon::InitMenus {w title} {
 		-command {$::tkcon::PRIV(root) configure -menu [expr \
 		{$::tkcon::OPT(showmenu) ? $::tkcon::PRIV(menubar) : {}}]}
 	$m add check -label "Show Statusbar" \
-		-underline 5 -variable ::tkcon::OPT(showstatusbar) \
-		-command {
-	    if {$::tkcon::OPT(showstatusbar)} {
-		pack $::tkcon::PRIV(statusbar) -side bottom -fill x \
-			-before $::tkcon::PRIV(scrolly)
-	    } else { pack forget $::tkcon::PRIV(statusbar) }
-	}
+	    -underline 5 -variable ::tkcon::OPT(showstatusbar) \
+	    -command {
+		if {$::tkcon::OPT(showstatusbar)} {
+		    grid $::tkcon::PRIV(statusbar)
+		} else { grid remove $::tkcon::PRIV(statusbar) }
+	    }
 	$m add cascade -label "Scrollbar" -underline 2 -menu $m.scroll
 
 	## Scrollbar Menu
@@ -1317,10 +1464,10 @@ proc ::tkcon::InitMenus {w title} {
 	set m [menu $m.scroll -tearoff 0]
 	$m add radio -label "Left" -value left \
 		-variable ::tkcon::OPT(scrollypos) \
-		-command { pack config $::tkcon::PRIV(scrolly) -side left }
+		-command { grid configure $::tkcon::PRIV(scrolly) -column 0 }
 	$m add radio -label "Right" -value right \
 		-variable ::tkcon::OPT(scrollypos) \
-		-command { pack config $::tkcon::PRIV(scrolly) -side right }
+		-command { grid configure $::tkcon::PRIV(scrolly) -column 2 }
     }
 
     ## History Menu
@@ -1531,7 +1678,7 @@ proc ::tkcon::AttachMenu m {
     foreach {i j} $tmp { set tknames($j) {} }
 
     $m delete 0 end
-    set cmd {::tkcon::Prompt \n [::tkcon::CmdGet $::tkcon::PRIV(console)]}
+    set cmd {::tkcon::RePrompt \n [::tkcon::CmdGet $::tkcon::PRIV(console)]}
     $m add radio -label {None (use local slave) } -accel Ctrl-1 \
 	    -variable ::tkcon::PRIV(app) \
 	    -value [concat $::tkcon::PRIV(name) $::tkcon::OPT(exec)] \
@@ -1574,7 +1721,7 @@ proc ::tkcon::AttachMenu m {
 ##
 proc ::tkcon::DisplayMenu m {
     $m delete 0 end
-    set cmd {::tkcon::Prompt \n [::tkcon::CmdGet $::tkcon::PRIV(console)]}
+    set cmd {::tkcon::RePrompt \n [::tkcon::CmdGet $::tkcon::PRIV(console)]}
 
     $m add command -label "New Display" -command ::tkcon::NewDisplay
     foreach disp [Display] {
@@ -1593,7 +1740,7 @@ proc ::tkcon::DisplayMenu m {
 ##
 proc ::tkcon::SocketMenu m {
     $m delete 0 end
-    set cmd {::tkcon::Prompt \n [::tkcon::CmdGet $::tkcon::PRIV(console)]}
+    set cmd {::tkcon::RePrompt \n [::tkcon::CmdGet $::tkcon::PRIV(console)]}
 
     $m add command -label "Create Connection" \
 	    -command "::tkcon::NewSocket; $cmd"
@@ -1617,7 +1764,7 @@ proc ::tkcon::NamespaceMenu m {
     }
 
     ## Same command as for ::tkcon::AttachMenu items
-    set cmd {::tkcon::Prompt \n [::tkcon::CmdGet $::tkcon::PRIV(console)]}
+    set cmd {::tkcon::RePrompt \n [::tkcon::CmdGet $::tkcon::PRIV(console)]}
 
     set names [lsort [Namespaces ::]]
     if {[llength $names] > $OPT(maxmenu)} {
@@ -1674,7 +1821,7 @@ proc ::tkcon::NamespacesList {names} {
     bind $f.names <Double-1> {
 	## Catch in case the namespace disappeared on us
 	catch { ::tkcon::AttachNamespace [%W get [%W nearest %y]] }
-	::tkcon::Prompt "\n" [::tkcon::CmdGet $::tkcon::PRIV(console)]
+	::tkcon::RePrompt "\n" [::tkcon::CmdGet $::tkcon::PRIV(console)]
 	destroy [winfo toplevel %W]
     }
 }
@@ -2126,6 +2273,7 @@ proc ::tkcon::MainInit {} {
 	$tmp alias exit				::tkcon::Exit $tmp
 	$tmp alias ::tkcon::Destroy		::tkcon::Destroy $tmp
 	$tmp alias ::tkcon::New			::tkcon::New
+	$tmp alias ::tkcon::GetSlaveNum		::tkcon::GetSlaveNum
 	$tmp alias ::tkcon::Main		::tkcon::InterpEval Main
 	$tmp alias ::tkcon::Slave		::tkcon::InterpEval
 	$tmp alias ::tkcon::Interps		::tkcon::Interps
@@ -4269,7 +4417,7 @@ proc ::tkcon::Bindings {} {
     }
 
     ## Get all Text bindings into TkConsole
-    foreach ev [bind Text] { bind TkConsole $ev [bind Text $ev] }	
+    foreach ev [bind Text] { bind TkConsole $ev [bind Text $ev] }
     ## We really didn't want the newline insertion
     bind TkConsole <Control-Key-o> {}
 
@@ -4277,6 +4425,9 @@ proc ::tkcon::Bindings {} {
     foreach {ev key} [subst -nocommand -noback {
 	<<TkCon_Exit>>		<Control-q>
 	<<TkCon_New>>		<Control-N>
+	<<TkCon_NewTab>>	<Control-T>
+	<<TkCon_NextTab>>	<Control-Key-Tab>
+	<<TkCon_PrevTab>>	<Control-Shift-Key-Tab>
 	<<TkCon_Close>>		<Control-w>
 	<<TkCon_About>>		<Control-A>
 	<<TkCon_Help>>		<Control-H>
@@ -4316,13 +4467,16 @@ proc ::tkcon::Bindings {} {
     ## Make the ROOT bindings
     bind $PRIV(root) <<TkCon_Exit>>	exit
     bind $PRIV(root) <<TkCon_New>>	{ ::tkcon::New }
+    bind $PRIV(root) <<TkCon_NewTab>>	{ ::tkcon::NewTab }
+    bind $PRIV(root) <<TkCon_NextTab>>	{ ::tkcon::GotoTab 1 }
+    bind $PRIV(root) <<TkCon_PrevTab>>	{ ::tkcon::GotoTab -1 }
     bind $PRIV(root) <<TkCon_Close>>	{ ::tkcon::Destroy }
     bind $PRIV(root) <<TkCon_About>>	{ ::tkcon::About }
     bind $PRIV(root) <<TkCon_Help>>	{ ::tkcon::Help }
     bind $PRIV(root) <<TkCon_Find>>	{ ::tkcon::FindBox $::tkcon::PRIV(console) }
     bind $PRIV(root) <<TkCon_Slave>>	{
 	::tkcon::Attach {}
-	::tkcon::Prompt "\n" [::tkcon::CmdGet $::tkcon::PRIV(console)]
+	::tkcon::RePrompt "\n" [::tkcon::CmdGet $::tkcon::PRIV(console)]
     }
     bind $PRIV(root) <<TkCon_Master>>	{
 	if {[string compare {} $::tkcon::PRIV(name)]} {
@@ -4330,11 +4484,11 @@ proc ::tkcon::Bindings {} {
 	} else {
 	    ::tkcon::Attach Main
 	}
-	::tkcon::Prompt "\n" [::tkcon::CmdGet $::tkcon::PRIV(console)]
+	::tkcon::RePrompt "\n" [::tkcon::CmdGet $::tkcon::PRIV(console)]
     }
     bind $PRIV(root) <<TkCon_Main>>	{
 	::tkcon::Attach Main
-	::tkcon::Prompt "\n" [::tkcon::CmdGet $::tkcon::PRIV(console)]
+	::tkcon::RePrompt "\n" [::tkcon::CmdGet $::tkcon::PRIV(console)]
     }
     bind $PRIV(root) <<TkCon_Popup>> {
 	::tkcon::PopupMenu %X %Y
@@ -4614,10 +4768,12 @@ proc ::tkcon::Bindings {} {
     }
 
     bind TkConsolePost <KeyPress> {
-	if {$::tkcon::OPT(lightcmd) && [string compare {} %A]} {
-	    ::tkcon::TagProc %W
+	if {[winfo exists "%W"]} {
+	    if {$::tkcon::OPT(lightcmd) && [string compare {} %A]} {
+		::tkcon::TagProc %W
+	    }
+	    set ::tkcon::PRIV(StatusCursor) [%W index insert]
 	}
-	set ::tkcon::PRIV(StatusCursor) [%W index insert]
     }
 
     bind TkConsolePost <Button-1> {
@@ -5050,7 +5206,7 @@ proc ::tkcon::ExpandBestMatch {l {e {}}} {
 #
 ## These functions courtesy Jan Nijtmans
 ##
-if {[string compare [info command tk] tk]} {
+if {![llength [info commands tk]]} {
     proc tk {option args} {
 	if {![string match app* $option]} {
 	    error "wrong option \"$option\": should be appname"
@@ -5059,10 +5215,10 @@ if {[string compare [info command tk] tk]} {
     }
 }
 
-if {[string compare [info command toplevel] toplevel]} {
+if {![llength [info command toplevel]]} {
     proc toplevel {name args} {
-	eval frame $name $args
-	pack $name
+	eval [linsert $args 0 frame $name]
+	grid $name -sticky news
     }
 }
 
@@ -5104,7 +5260,7 @@ proc ::tkcon::SafeLoad {i f p} {
 	$i alias bindtags ::tkcon::SafeBindtags $i
 	$i alias . ::tkcon::SafeWindow $i {}
 	foreach var {tk_version tk_patchLevel tk_library auto_path} {
-	    $i eval set $var [list [set $var]]
+	    $i eval [list set $var [set $var]]
 	}
 	$i eval {
 	    package provide Tk $tk_version

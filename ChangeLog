@@ -1,3 +1,7 @@
+2004-01-29  Jeff Hobbs  <jeffh@ActiveState.com>
+
+	* tkcon.tcl: first whack at tabbed consoles
+
 2004-01-28  Jeff Hobbs  <jeffh@ActiveState.com>
 
 	* tkcon.tcl: don't use menu tearoffs
