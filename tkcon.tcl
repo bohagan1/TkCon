@@ -125,6 +125,7 @@ proc ::tkcon::Init {args} {
 	if {![info exists COLOR($key)]} { set COLOR($key) $default }
     }
 
+    # expandorder could also include 'Xotcl' (before Procname)
     foreach {key default} {
 	autoload	{}
 	blinktime	500
@@ -188,7 +189,7 @@ proc ::tkcon::Init {args} {
 	    alias clear dir dump echo idebug lremove
 	    tkcon_puts tkcon_gets observe observe_var unalias which what
 	}
-	RCS		{RCS: @(#) $Id: tkcon.tcl,v 1.84 2004/11/18 19:18:06 hobbs Exp $}
+	RCS		{RCS: @(#) $Id: tkcon.tcl,v 1.85 2005/02/21 19:32:11 hobbs Exp $}
 	HEADURL		{http://cvs.sourceforge.net/viewcvs.py/*checkout*/tkcon/tkcon/tkcon.tcl?rev=HEAD}
 
 	docs		"http://tkcon.sourceforge.net/"
@@ -5576,6 +5577,32 @@ proc ::tkcon::ExpandProcname str {
 	    set match $ns
 	}
     }
+    if {[llength $match] > 1} {
+	regsub -all {([^\\]) } [ExpandBestMatch $match $str] {\1\\ } str
+	set match [linsert $match 0 $str]
+    } else {
+	regsub -all {([^\\]) } $match {\1\\ } match
+    }
+    return $match
+}
+
+## ::tkcon::ExpandXotcl - expand an xotcl method name based on $str
+# ARGS:	str	- partial proc name to expand
+# Calls:	::tkcon::ExpandBestMatch
+# Returns:	list containing longest unique match followed by all the
+#		possible further matches
+##
+proc ::tkcon::ExpandXotcl str {
+    # in a first step, get the cmd to check, if we should handle subcommands
+    set cmd [::tkcon::CmdGet $::tkcon::PRIV(console)]
+    # Only do the xotcl magic if there are two cmds and xotcl is loaded
+    if {[llength $cmd] != 2
+	|| ![EvalAttached [list info exists ::xotcl::version]]} {
+	return
+    }
+    set obj [lindex $cmd 0]
+    set sub [lindex $cmd 1]
+    set match [EvalAttached [list $obj info methods $sub*]]
     if {[llength $match] > 1} {
 	regsub -all {([^\\]) } [ExpandBestMatch $match $str] {\1\\ } str
 	set match [linsert $match 0 $str]
