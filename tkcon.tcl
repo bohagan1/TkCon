@@ -189,7 +189,7 @@ proc ::tkcon::Init {args} {
 	    alias clear dir dump echo idebug lremove
 	    tkcon_puts tkcon_gets observe observe_var unalias which what
 	}
-	RCS		{RCS: @(#) $Id: tkcon.tcl,v 1.85 2005/02/21 19:32:11 hobbs Exp $}
+	RCS		{RCS: @(#) $Id: tkcon.tcl,v 1.86 2005/04/07 05:34:00 hobbs Exp $}
 	HEADURL		{http://cvs.sourceforge.net/viewcvs.py/*checkout*/tkcon/tkcon/tkcon.tcl?rev=HEAD}
 
 	docs		"http://tkcon.sourceforge.net/"
@@ -1537,6 +1537,36 @@ proc ::tkcon::InitMenus {w title} {
 		-command ::tkcon::About
 	$m add command -label "Retrieve Latest Version" -underline 0 \
 		-command ::tkcon::Retrieve
+	if {![catch {package require ActiveTcl} ver]} {
+	    set cmd ""
+	    if {$tcl_platform(platform) == "windows"} {
+		package require registry
+		set ver [join [lrange [split $ver .] 0 3] .]
+		set key {HKEY_LOCAL_MACHINE\SOFTWARE\ActiveState\ActiveTcl}
+		if {![catch {registry get "$key\\$ver\\Help" ""} help]
+		    && [file exists $help]} {
+		    set cmd [list exec $::env(COMSPEC) /c start $help]
+		}
+	    } elseif {$tcl_platform(os) == "Darwin"} {
+		set ver ActiveTcl-[join [lrange [split $ver .] 0 1] .]
+		set rsc "/Library/Frameworks/Tcl.framework/Resources"
+		set help "$rsc/English.lproj/$ver/index.html"
+		if {[file exists $help]} {
+		    set cmd [list exec open $help]
+		}
+	    } elseif {$tcl_platform(platform) == "unix"} {
+		set help [file dirname [info nameofexe]]
+		append help /../html/index.html
+		if {[file exists $help]} {
+		    set cmd [list puts "Start $help"]
+		}
+	    }
+	    if {$cmd != ""} {
+		$m add separator
+		$m add command -label "ActiveTcl Help" -underline 10 \
+		    -command $cmd
+	    }
+	}
     }
 }
 
