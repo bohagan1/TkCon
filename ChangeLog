@@ -1,3 +1,9 @@
+2005-07-14  Jeff Hobbs  <jeffh@ActiveState.com>
+
+	* tkcon.tcl: add ::tkcon::OPT(maxlinelen) (default 0 == unlimited)
+	and 'tkcon linelength ?value?' to optionally limit long result
+	lines.  True result is still captured in $_ (and 'puts $_' works).
+
 2005-05-25  Jeff Hobbs  <jeffh@ActiveState.com>
 
 	* tkcon.tcl (InitMenus): add ActiveTcl Help menu item, if AT Help

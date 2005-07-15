@@ -131,6 +131,7 @@ proc ::tkcon::Init {args} {
 	blinktime	500
 	blinkrange	1
 	buffer		512
+	maxlinelen	0
 	calcmode	0
 	cols		80
 	debugPrompt	{(level \#$level) debug [history nextid] > }
@@ -189,7 +190,7 @@ proc ::tkcon::Init {args} {
 	    alias clear dir dump echo idebug lremove
 	    tkcon_puts tkcon_gets observe observe_var unalias which what
 	}
-	RCS		{RCS: @(#) $Id: tkcon.tcl,v 1.86 2005/04/07 05:34:00 hobbs Exp $}
+	RCS		{RCS: @(#) $Id: tkcon.tcl,v 1.87 2005/05/25 20:23:54 hobbs Exp $}
 	HEADURL		{http://cvs.sourceforge.net/viewcvs.py/*checkout*/tkcon/tkcon/tkcon.tcl?rev=HEAD}
 
 	docs		"http://tkcon.sourceforge.net/"
@@ -429,6 +430,11 @@ proc ::tkcon::Init {args} {
 	StateCheckpoint [concat $PRIV(name) $OPT(exec)] slave
     }
     StateCheckpoint $PRIV(name) slave
+
+    puts "buffer line limit:\
+	[expr {$OPT(buffer)?$OPT(buffer):{unlimited}}]  \
+	max line length:\
+	[expr {$OPT(maxlinelen)?$OPT(maxlinelen):{unlimited}}]"
 
     Prompt "$title console display active (Tcl$::tcl_patchLevel / Tk$::tk_patchLevel)\n"
 }
@@ -958,10 +964,18 @@ proc ::tkcon::EvalCmd {w cmd} {
 	    }
 	    AddSlaveHistory $cmd
 	    catch {EvalAttached [list set _ $res]}
+	    set maxlen $OPT(maxlinelen)
+	    set trailer ""
+	    if {($maxlen > 0) && ([string length $res] > $maxlen)} {
+		# If we exceed maximum desired output line length, truncate
+		# the result and add "...+${num}b" in error coloring
+		set trailer ...+[expr {[string length $res]-$maxlen}]b
+		set res [string range $res 0 $maxlen]
+	    }
 	    if {$code} {
 		if {$OPT(hoterrors)} {
 		    set tag [UniqueTag $w]
-		    $w insert output $res [list stderr $tag] \n stderr
+		    $w insert output $res [list stderr $tag] \n$trailer stderr
 		    $w tag bind $tag <Enter> \
 			    [list $w tag configure $tag -under 1]
 		    $w tag bind $tag <Leave> \
@@ -970,10 +984,10 @@ proc ::tkcon::EvalCmd {w cmd} {
 			    "if {!\[info exists tkPriv(mouseMoved)\] || !\$tkPriv(mouseMoved)} \
 			    {[list $OPT(edit) -attach [Attach] -type error -- $PRIV(errorInfo)]}"
 		} else {
-		    $w insert output $res\n stderr
+		    $w insert output $res\n$trailer stderr
 		}
 	    } elseif {[string compare {} $res]} {
-		$w insert output $res\n stdout
+		$w insert output $res stdout $trailer stderr \n stdout
 	    }
 	}
     }
@@ -1257,7 +1271,7 @@ proc ::tkcon::UniqueTag {w} {
 # Outputs:	may delete data in console widget
 ## 
 proc ::tkcon::ConstrainBuffer {w size} {
-    if {[$w index end] > $size} {
+    if {$size && ([$w index end] > $size)} {
 	$w delete 1.0 [expr {int([$w index end])-$size}].0
     }
 }
@@ -3291,6 +3305,17 @@ proc tkcon {cmd args} {
 		}
 	    }
 	    return $OPT(buffer)
+	}
+	linelen* {
+	    ## 'linelength' Sets/Query the maximum line length
+	    if {[llength $args]} {
+		if {[regexp {^-?[0-9]+$} $args]} {
+		    set OPT(maxlinelen) $args
+		} else {
+		    return -code error "buffer must be a valid integer"
+		}
+	    }
+	    return $OPT(maxlinelen)
 	}
 	bg* {
 	    ## 'bgerror' Brings up an error dialog
