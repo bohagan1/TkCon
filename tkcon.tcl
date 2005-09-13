@@ -190,7 +190,7 @@ proc ::tkcon::Init {args} {
 	    alias clear dir dump echo idebug lremove
 	    tkcon_puts tkcon_gets observe observe_var unalias which what
 	}
-	RCS		{RCS: @(#) $Id: tkcon.tcl,v 1.87 2005/05/25 20:23:54 hobbs Exp $}
+	RCS		{RCS: @(#) $Id: tkcon.tcl,v 1.88 2005/07/14 22:57:44 hobbs Exp $}
 	HEADURL		{http://cvs.sourceforge.net/viewcvs.py/*checkout*/tkcon/tkcon/tkcon.tcl?rev=HEAD}
 
 	docs		"http://tkcon.sourceforge.net/"
@@ -599,8 +599,8 @@ proc ::tkcon::InitUI {title} {
     grid rowconfigure $sbar 0 -weight 1
     grid rowconfigure $PRIV(tabframe) 0 -weight 1
     if {$::tcl_version >= 8.4 && [tk windowingsystem] == "aqua"} {
-	# give space for the corner resize handle
-	grid columnconfigure $sbar [lindex [grid size $sbar] 0] -minsize 20
+	# resize control space
+	grid columnconfigure $sbar [lindex [grid size $sbar] 0] -minsize 16
     }
 
     ## Create console tab
@@ -2384,9 +2384,9 @@ proc ::tkcon::MainInit {} {
 	if {$idx != -1} { catch {load {} Tbcload $tmp} }
 	lappend PRIV(interps) [$tmp eval [list tk appname \
 		"[tk appname] $tmp"]]
-	if {[info exist argv0]} {$tmp eval [list set argv0 $argv0]}
-	$tmp eval set argc $argc
-	$tmp eval [list set argv $argv]
+	if {[info exists argv0]} {$tmp eval [list set argv0 $argv0]}
+	if {[info exists argc]}  {$tmp eval [list set argc $argc]}
+	if {[info exists argv]}  {$tmp eval [list set argv $argv]}
 	$tmp eval [list namespace eval ::tkcon {}]
 	$tmp eval [list set ::tkcon::PRIV(name) $tmp]
 	$tmp eval [list set ::tkcon::PRIV(SCRIPT) $::tkcon::PRIV(SCRIPT)]
@@ -3734,6 +3734,7 @@ proc edit {args} {
 		-background $::tkcon::COLOR(bg) \
 		-insertbackground $::tkcon::COLOR(cursor) \
 		-font $::tkcon::OPT(font)
+	catch {$w.text configure -undo 1}
 	scrollbar $w.sx -orient h -takefocus 0 -bd 1 \
 		-command [list $w.text xview]
 	scrollbar $w.sy -orient v -takefocus 0 -bd 1 \
@@ -6255,7 +6256,7 @@ proc ::tkcon::Resource {} {
 ## Initialize only if we haven't yet, and do other stuff that prepares to
 ## run.  It only actually inits (and runs) tkcon if it is the main script.
 ##
-proc ::tkcon::AtSource {argv} {
+proc ::tkcon::AtSource {} {
     variable PRIV
 
     # the info script assumes we always call this while being sourced
@@ -6291,9 +6292,14 @@ proc ::tkcon::AtSource {argv} {
 
     if {(![info exists PRIV(root)] || ![winfo exists $PRIV(root)]) \
 	    && (![info exists ::argv0] || $PRIV(SCRIPT) == $::argv0)} {
-	eval ::tkcon::Init $argv
+	global argv
+	if {[info exists argv]} {
+	    eval ::tkcon::Init $argv
+	} else {
+	    ::tkcon::Init
+	}
     }
 }
-tkcon::AtSource $argv
+tkcon::AtSource
 
 package provide tkcon $::tkcon::VERSION

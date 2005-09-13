@@ -1,3 +1,9 @@
+2005-09-12  Jeff Hobbs  <jeffh@ActiveState.com>
+
+	* tkcon.tcl (::tkcon::AtSource): do not require argv to be defined
+	(edit): enable text -undo in editor
+	(::tkcon::InitUI): shrink aqua resize control space alloted
+
 2005-07-14  Jeff Hobbs  <jeffh@ActiveState.com>
 
 	* tkcon.tcl: add ::tkcon::OPT(maxlinelen) (default 0 == unlimited)
