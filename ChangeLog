@@ -1,3 +1,10 @@
+2006-01-25  Jeff Hobbs  <jeffh@ActiveState.com>
+
+	* tkcon.tcl (MenuConfigure): Fix ActiveTcl Help link when pointing
+	to a file with space in path. [Bug 1408425]
+	(::tkcon::Save, ::tkcon::Load): in VFS paths, use the X11 dialogs
+	that support viewing in VFS dirs.
+
 2005-09-12  Jeff Hobbs  <jeffh@ActiveState.com>
 
 	* tkcon.tcl (::tkcon::AtSource): do not require argv to be defined

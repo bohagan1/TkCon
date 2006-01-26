@@ -190,7 +190,7 @@ proc ::tkcon::Init {args} {
 	    alias clear dir dump echo idebug lremove
 	    tkcon_puts tkcon_gets observe observe_var unalias which what
 	}
-	RCS		{RCS: @(#) $Id: tkcon.tcl,v 1.88 2005/07/14 22:57:44 hobbs Exp $}
+	RCS		{RCS: @(#) $Id: tkcon.tcl,v 1.89 2005/09/12 19:07:17 hobbs Exp $}
 	HEADURL		{http://cvs.sourceforge.net/viewcvs.py/*checkout*/tkcon/tkcon/tkcon.tcl?rev=HEAD}
 
 	docs		"http://tkcon.sourceforge.net/"
@@ -1559,7 +1559,7 @@ proc ::tkcon::InitMenus {w title} {
 		set key {HKEY_LOCAL_MACHINE\SOFTWARE\ActiveState\ActiveTcl}
 		if {![catch {registry get "$key\\$ver\\Help" ""} help]
 		    && [file exists $help]} {
-		    set cmd [list exec $::env(COMSPEC) /c start $help]
+		    set cmd [list exec $::env(COMSPEC) /c start {} $help]
 		}
 	    } elseif {$tcl_platform(os) == "Darwin"} {
 		set ver ActiveTcl-[join [lrange [split $ver .] 0 1] .]
@@ -2288,6 +2288,14 @@ proc ::tkcon::Load { {fn ""} } {
 	{{Text Files}	{.txt}}
 	{{All Files}	*}
     }
+    # Allow for VFS directories, use Tk dialogs automatically when in
+    # VFS-based areas
+    set check [expr {$fn == "" ? [pwd] : $fn}]
+    if {$::tcl_version >= 8.4 && [lindex [file system $check] 0] == "tclvfs"} {
+	set opencmd [list ::tk::dialog::file:: open]
+    } else {
+	set opencmd [list tk_getOpenFile]
+    }
     if {
 	[string match {} $fn] &&
 	([catch {tk_getOpenFile -filetypes $types \
@@ -2313,14 +2321,24 @@ proc ::tkcon::Save { {fn ""} {type ""} {opt ""} {mode w} } {
 	if {$type == 5 || $type == -1} return
 	set type $s($type)
     }
+    # Allow for VFS directories, use Tk dialogs automatically when in
+    # VFS-based areas
+    set check [expr {$opt == "" ? [pwd] : $opt}]
+    if {$::tcl_version >= 8.4 && [lindex [file system $check] 0] == "tclvfs"} {
+	set savecmd [list ::tk::dialog::file:: save]
+    } else {
+	set savecmd [list tk_getSaveFile]
+    }
     if {[string match {} $fn]} {
 	set types {
 	    {{Tcl Files}	{.tcl .tk}}
 	    {{Text Files}	{.txt}}
 	    {{All Files}	*}
 	}
-	if {[catch {tk_getSaveFile -defaultextension .tcl -filetypes $types \
-		-title "Save $type"} fn] || [string match {} $fn]} return
+	if {[catch {eval $savecmd [list -defaultextension .tcl \
+				       -filetypes $types \
+				       -title "Save $type"]} fn]
+	     || [string match {} $fn]} return
     }
     set type [string tolower $type]
     switch $type {
@@ -3734,7 +3752,13 @@ proc edit {args} {
 		-background $::tkcon::COLOR(bg) \
 		-insertbackground $::tkcon::COLOR(cursor) \
 		-font $::tkcon::OPT(font)
-	catch {$w.text configure -undo 1}
+	catch {
+	    # 8.4+ stuff
+	    $w.text configure -undo 1
+	    if {[tk windowingsystem] eq "aqua"} {
+		$w.text configure -highlightthickness 0
+	    }
+	}
 	scrollbar $w.sx -orient h -takefocus 0 -bd 1 \
 		-command [list $w.text xview]
 	scrollbar $w.sy -orient v -takefocus 0 -bd 1 \
@@ -3805,7 +3829,7 @@ proc edit {args} {
 	file	{
 	    $w.text insert 1.0 [::tkcon::EvalOther $app $type eval \
 		    [subst -nocommands {
-		set __tkcon(fid) [open $word r]
+		set __tkcon(fid) [open {$word} r]
 		set __tkcon(data) [read \$__tkcon(fid)]
 		close \$__tkcon(fid)
 		after 1000 unset __tkcon
