@@ -190,7 +190,7 @@ proc ::tkcon::Init {args} {
 	    alias clear dir dump echo idebug lremove
 	    tkcon_puts tkcon_gets observe observe_var unalias which what
 	}
-	RCS		{RCS: @(#) $Id: tkcon.tcl,v 1.89 2005/09/12 19:07:17 hobbs Exp $}
+	RCS		{RCS: @(#) $Id: tkcon.tcl,v 1.90 2006/01/25 23:44:18 hobbs Exp $}
 	HEADURL		{http://cvs.sourceforge.net/viewcvs.py/*checkout*/tkcon/tkcon/tkcon.tcl?rev=HEAD}
 
 	docs		"http://tkcon.sourceforge.net/"
@@ -3363,8 +3363,9 @@ proc tkcon {cmd args} {
 	    bind TkConsole <<TkCon_Eval>> { set ::tkcon::PRIV(wait) 0 }
 	    set w $PRIV(console)
 	    # Make sure to move the limit to get the right data
+	    $w mark set limit end-1c
+	    $w mark gravity limit left
 	    $w mark set insert end
-	    $w mark set limit insert
 	    $w see end
 	    vwait ::tkcon::PRIV(wait)
 	    set line [::tkcon::CmdGet $w]
