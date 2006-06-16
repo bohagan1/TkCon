@@ -190,8 +190,8 @@ proc ::tkcon::Init {args} {
 	    alias clear dir dump echo idebug lremove
 	    tkcon_puts tkcon_gets observe observe_var unalias which what
 	}
-	RCS		{RCS: @(#) $Id: tkcon.tcl,v 1.90 2006/01/25 23:44:18 hobbs Exp $}
-	HEADURL		{http://cvs.sourceforge.net/viewcvs.py/*checkout*/tkcon/tkcon/tkcon.tcl?rev=HEAD}
+	RCS		{RCS: @(#) $Id: tkcon.tcl,v 1.91 2006/02/28 20:45:21 hobbs Exp $}
+	HEADURL		{http://tkcon.cvs.sourceforge.net/*checkout*/tkcon/tkcon/tkcon.tcl}
 
 	docs		"http://tkcon.sourceforge.net/"
 	email		{jeff(a)hobbs(.)org}
@@ -2196,6 +2196,8 @@ proc ::tkcon::AttachNamespace { name } {
     variable PRIV
     variable OPT
 
+    # We could enable 'socket' bound Tcl interps, but we'd have to create
+    # a return listening socket
     if {($OPT(nontcl) && [string match interp $PRIV(apptype)]) \
 	    || [string match socket $PRIV(apptype)] \
 	    || $PRIV(deadapp)} {
