@@ -30,13 +30,13 @@ FEATURES:
         (including non-tcl ones)
     Works on all Tk platforms
 
-CONTACT: Jeffrey Hobbs, jeff.hobbs at acm.org or jeff at hobbs.org
+CONTACT: Jeffrey Hobbs, jeff at hobbs dot org
 
 GETTING STARTED:
 
 tkcon is a single drop-in file.  On Windows, I place this on the desktop
-and double-click on it instead of wish/tclsh.  On Unix, I place it in a
-directory on my path and run this instead of wish.  I don't have a Mac...
+and double-click on it instead of wish/tclsh.  On Unix and OS X, I place it
+in a directory on my path and run this instead of wish.
 
 Documentation can be reading by starting with index.html in the docs/
 subdirectory.  Happying Tcl'ing!
