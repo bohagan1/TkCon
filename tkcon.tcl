@@ -190,7 +190,7 @@ proc ::tkcon::Init {args} {
 	    alias clear dir dump echo idebug lremove
 	    tkcon_puts tkcon_gets observe observe_var unalias which what
 	}
-	RCS		{RCS: @(#) $Id: tkcon.tcl,v 1.91 2006/02/28 20:45:21 hobbs Exp $}
+	RCS		{RCS: @(#) $Id: tkcon.tcl,v 1.92 2006/06/16 00:13:12 hobbs Exp $}
 	HEADURL		{http://tkcon.cvs.sourceforge.net/*checkout*/tkcon/tkcon/tkcon.tcl}
 
 	docs		"http://tkcon.sourceforge.net/"
@@ -210,6 +210,13 @@ proc ::tkcon::Init {args} {
 
     option add *Menu.tearOff 0
     option add *takeFocus 0
+    option add *Text.borderWidth 1
+    option add *Listbox.borderWidth 1
+    option add *Listbox.background white
+    option add *Text.highlightThickness 1
+    if {$::tcl_version >= 8.4 && [tk windowingsystem] != "aqua"} {
+	option add *Scrollbar.borderWidth 1
+    }
 
     if {[info exists PRIV(name)]} {
 	set title $PRIV(name)
@@ -585,10 +592,10 @@ proc ::tkcon::InitUI {title} {
     set PRIV(tabframe)  [frame $sbar.tabs]
     set PRIV(X) [button $sbar.deltab -text "X" -command ::tkcon::DeleteTab \
 		     -activeforeground red -fg red -font tkconfixedbold \
-		     -highlightthickness 0 -padx 2 -pady 0 -bd 1 \
+		     -highlightthickness 0 -padx 2 -pady 0 -borderwidth 1 \
 		     -state disabled -relief flat]
     catch {$PRIV(X) configure -overrelief raised}
-    label $sbar.cursor -relief sunken -bd 1 -anchor e -width 6 \
+    label $sbar.cursor -relief sunken -borderwidth 1 -anchor e -width 6 \
 	    -textvariable ::tkcon::PRIV(StatusCursor)
     set padx [expr {![info exists ::tcl_platform(os)]
 		    || ![string match "Windows CE" $::tcl_platform(os)]}]
@@ -621,7 +628,7 @@ proc ::tkcon::InitUI {title} {
     }
 
     # scrollbar
-    set sy [scrollbar $w.sy -takefocus 0 -bd 1 -command [list $con yview]]
+    set sy [scrollbar $w.sy -takefocus 0 -command [list $con yview]]
     if {!$PRIV(WWW) && [string match "Windows CE" $::tcl_platform(os)]} {
 	$w.sy configure -width 10
     }
@@ -633,7 +640,7 @@ proc ::tkcon::InitUI {title} {
     ## Menus
     ## catch against use in plugin
     if {[catch {menu $w.mbar} PRIV(menubar)]} {
-	set PRIV(menubar) [frame $w.mbar -relief raised -bd 1]
+	set PRIV(menubar) [frame $w.mbar -relief raised -borderwidth 1]
     }
 
     InitMenus $PRIV(menubar) $title
@@ -674,6 +681,11 @@ proc ::tkcon::InitTab {w} {
     set con $w.tab[incr PRIV(uid)]
     text $con -wrap char -foreground $COLOR(stdin) \
 	-insertbackground $COLOR(cursor)
+    catch {
+	if {[tk windowingsystem] == "aqua"} {
+	    $w.text configure -highlightthickness 0
+	}
+    }
     $con mark set output 1.0
     $con mark set limit 1.0
     if {[string compare {} $COLOR(bg)]} {
@@ -699,7 +711,7 @@ proc ::tkcon::InitTab {w} {
     if {!$PRIV(WWW)} {
 	if {[string match "Windows CE" $::tcl_platform(os)]} {
 	    font configure tkconfixed -family Tahoma -size 8
-	    $con configure -font tkconfixed -bd 0 -padx 0 -pady 0
+	    $con configure -font tkconfixed -borderwidth 0 -padx 0 -pady 0
 	    set cw [font measure tkconfixed "0"]
 	    set ch [font metrics tkconfixed -linespace]
 	    set sw [winfo screenwidth $con]
@@ -730,7 +742,7 @@ proc ::tkcon::InitTab {w} {
     set rb [radiobutton $PRIV(tabframe).cb[winfo name $con] \
 		-textvariable ::tkcon::ATTACH($con) \
 		-selectcolor white -relief sunken \
-		-indicatoron 0 -padx 0 -pady 0 -bd 1 \
+		-indicatoron 0 -padx 0 -pady 0 -borderwidth 1 \
 		-variable ::tkcon::PRIV(curtab) -value $con \
 		-command [list ::tkcon::GotoTab $con]]
     if {$::tcl_version >= 8.4} {
@@ -1336,7 +1348,7 @@ proc ::tkcon::About {} {
 	wm group $w $PRIV(root)
 	wm title $w "About tkcon v$PRIV(version)"
 	button $w.b -text Dismiss -command [list wm withdraw $w]
-	text $w.text -height 9 -bd 1 -width 60 \
+	text $w.text -height 9 -width 60 \
 		-foreground $COLOR(stdin) \
 		-background $COLOR(bg) \
 		-font $OPT(font)
@@ -1674,13 +1686,13 @@ proc ::tkcon::InterpPkgs {app type} {
 
 	label $t.ll -text "Loadable:" -anchor w
 	label $t.lr -text "Loaded:" -anchor w
-	listbox $t.loadable -bg white -bd 1 -font tkconfixed \
+	listbox $t.loadable -font tkconfixed \
 	    -yscrollcommand [list $t.llsy set] -selectmode extended
-	listbox $t.loaded -bg white -bd 1 -font tkconfixed \
+	listbox $t.loaded -font tkconfixed \
 	    -yscrollcommand [list $t.lrsy set]
-	scrollbar $t.llsy -bd 1 -command [list $t.loadable yview]
-	scrollbar $t.lrsy -bd 1 -command [list $t.loaded yview]
-	button $t.load -bd 1 -text ">>" \
+	scrollbar $t.llsy -command [list $t.loadable yview]
+	scrollbar $t.lrsy -command [list $t.loaded yview]
+	button $t.load -borderwidth 1 -text ">>" \
 	    -command [list ::tkcon::InterpPkgLoad $app $type $t.loadable]
 	if {$::tcl_version >= 8.4} {
 	    $t.load configure -relief flat -overrelief raised
@@ -1975,7 +1987,7 @@ proc ::tkcon::FindBox {w {str {}}} {
 	checkbutton $base.opt.r -text "Use Regexp" -variable ::tkcon::PRIV(find,reg)
 	pack $base.f.l -side left
 	pack $base.f.e $base.opt.c $base.opt.r -side left -fill both -expand 1
-	pack [frame $base.sep -bd 2 -relief sunken -height 4] -fill x
+	pack [frame $base.sep -borderwidth 2 -relief sunken -height 4] -fill x
 	pack [frame $base.btn] -fill both
 	button $base.btn.fnd -text "Find" -width 6
 	button $base.btn.clr -text "Clear" -width 6
@@ -2678,7 +2690,7 @@ proc ::tkcon::MainInit {} {
 	} else {
 	    toplevel $w
 	    frame $w.btn
-	    scrollbar $w.sy -takefocus 0 -bd 1 -command [list $w.text yview]
+	    scrollbar $w.sy -command [list $w.text yview]
 	    text $w.text -yscrollcommand [list $w.sy set] -height 12 \
 		    -foreground $COLOR(stdin) \
 		    -background $COLOR(bg) \
@@ -3762,10 +3774,8 @@ proc edit {args} {
 		$w.text configure -highlightthickness 0
 	    }
 	}
-	scrollbar $w.sx -orient h -takefocus 0 -bd 1 \
-		-command [list $w.text xview]
-	scrollbar $w.sy -orient v -takefocus 0 -bd 1 \
-		-command [list $w.text yview]
+	scrollbar $w.sx -orient h -command [list $w.text xview]
+	scrollbar $w.sy -orient v -command [list $w.text yview]
 
 	set menu [menu $w.mbar]
 	$w configure -menu $menu
@@ -5104,6 +5114,11 @@ proc ::tkcon::Bindings {} {
     }
     proc ::tkcon::Paste w {
 	if {![catch {GetSelection $w} txt]} {
+	    catch {
+		if {[$w compare sel.first >= limit]} {
+		    $w delete sel.first sel.last
+		}
+	    }
 	    if {[$w compare insert < limit]} { $w mark set insert end }
 	    $w insert insert $txt
 	    $w see insert
