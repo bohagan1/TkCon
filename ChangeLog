@@ -1,3 +1,7 @@
+2006-08-23  Jeff Hobbs  <jeffh@ActiveState.com>
+
+	* tkcon.tcl: remove use of -exact in package require Tk
+
 2006-06-29  Jeff Hobbs  <jeffh@ActiveState.com>
 
 	* tkcon.tcl: updated to handle ttk scrollbars as well as other UI

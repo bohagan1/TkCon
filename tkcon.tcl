@@ -41,7 +41,7 @@ exec wish "$0" ${1+"$@"}
 if {$tcl_version < 8.0} {
     return -code error "tkcon requires at least Tcl/Tk8"
 } else {
-    package require -exact Tk $tcl_version
+    package require Tk
 }
 
 # We need to load some package to get what's available, and we
@@ -190,7 +190,7 @@ proc ::tkcon::Init {args} {
 	    alias clear dir dump echo idebug lremove
 	    tkcon_puts tkcon_gets observe observe_var unalias which what
 	}
-	RCS		{RCS: @(#) $Id: tkcon.tcl,v 1.93 2006/06/29 17:17:30 hobbs Exp $}
+	RCS		{RCS: @(#) $Id: tkcon.tcl,v 1.94 2006/08/05 23:21:57 hobbs Exp $}
 	HEADURL		{http://tkcon.cvs.sourceforge.net/tkcon/tkcon/tkcon.tcl?rev=HEAD}
 
 	docs		"http://tkcon.sourceforge.net/"
