@@ -1,3 +1,8 @@
+2006-08-25  Jeff Hobbs  <jeffh@ActiveState.com>
+
+	* tkcon.tcl (tkcon): default wm protocol to hide tkcon when used
+	in embedded context.
+
 2006-08-23  Jeff Hobbs  <jeffh@ActiveState.com>
 
 	* tkcon.tcl: remove use of -exact in package require Tk

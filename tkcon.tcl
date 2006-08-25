@@ -190,7 +190,7 @@ proc ::tkcon::Init {args} {
 	    alias clear dir dump echo idebug lremove
 	    tkcon_puts tkcon_gets observe observe_var unalias which what
 	}
-	RCS		{RCS: @(#) $Id: tkcon.tcl,v 1.94 2006/08/05 23:21:57 hobbs Exp $}
+	RCS		{RCS: @(#) $Id: tkcon.tcl,v 1.95 2006/08/23 18:00:29 hobbs Exp $}
 	HEADURL		{http://tkcon.cvs.sourceforge.net/tkcon/tkcon/tkcon.tcl?rev=HEAD}
 
 	docs		"http://tkcon.sourceforge.net/"
@@ -3560,7 +3560,10 @@ proc tkcon {cmd args} {
 	sh* - dei* {
 	    ## 'show|deiconify' - deiconifies the console.
 	    if {![info exists PRIV(root)]} {
+		# We are likely in some embedded console configuration.
+		# Make default setup reflect that.
 		set PRIV(showOnStartup) 0
+		set PRIV(protocol) {tkcon hide}
 		set PRIV(root) .tkcon
 		set OPT(exec) ""
 	    }
