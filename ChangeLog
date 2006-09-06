@@ -1,5 +1,8 @@
 2006-09-05  Jeff Hobbs  <jeffh@ActiveState.com>
 
+	* pkgIndex.tcl: sample pkgIndex.tcl that allows using tkcon as a
+	package.
+
 	* tkcon.tcl (::tkcon::InitSlave): adjust to make the first file
 	passed in to be argv0 in the slave
 
