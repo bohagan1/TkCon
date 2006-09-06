@@ -190,7 +190,7 @@ proc ::tkcon::Init {args} {
 	    alias clear dir dump echo idebug lremove
 	    tkcon_puts tkcon_gets observe observe_var unalias which what
 	}
-	RCS		{RCS: @(#) $Id: tkcon.tcl,v 1.95 2006/08/23 18:00:29 hobbs Exp $}
+	RCS		{RCS: @(#) $Id: tkcon.tcl,v 1.96 2006/08/25 18:04:51 hobbs Exp $}
 	HEADURL		{http://tkcon.cvs.sourceforge.net/tkcon/tkcon/tkcon.tcl?rev=HEAD}
 
 	docs		"http://tkcon.sourceforge.net/"
@@ -318,6 +318,7 @@ proc ::tkcon::Init {args} {
     ## and slave is created, but before initializing UI or setting packages.
     set slaveargs {}
     set slavefiles {}
+    set slaveargv0 {}
     set truth {^(1|yes|true|on)$}
     for {set i 0} {$i < $argc} {incr i} {
 	set arg [lindex $args $i]
@@ -342,6 +343,9 @@ proc ::tkcon::Init {args} {
 		default	{ lappend slaveargs $arg; incr i -1 }
 	    }
 	} elseif {[file isfile $arg]} {
+	    if {$i == 0} {
+		set slaveargv0 $arg
+	    }
 	    lappend slavefiles $arg
 	} else {
 	    lappend slaveargs $arg
@@ -350,7 +354,7 @@ proc ::tkcon::Init {args} {
 
     ## Create slave executable
     if {"" != $OPT(exec)} {
-	uplevel \#0 ::tkcon::InitSlave $OPT(exec) $slaveargs
+	InitSlave $OPT(exec) $slaveargs $slaveargv0
     } else {
 	set argc [llength $slaveargs]
 	set args $slaveargs
@@ -452,7 +456,7 @@ proc ::tkcon::Init {args} {
 # ARGS:	slave	- name of slave to init.  If it does not exist, it is created.
 #	args	- args to pass to a slave as argv/argc
 ##
-proc ::tkcon::InitSlave {slave args} {
+proc ::tkcon::InitSlave {slave {slaveargs {}} {slaveargv0 {}}} {
     variable OPT
     variable COLOR
     variable PRIV
@@ -488,11 +492,17 @@ proc ::tkcon::InitSlave {slave args} {
 	interp eval $slave { catch {rename ::gets ::tkcon_tcl_gets} }
 	interp alias $slave ::gets $slave ::tkcon_gets
     }
-    if {[info exists argv0]} {interp eval $slave [list set argv0 $argv0]}
+    if {$slaveargv0 != ""} {
+	# If tkcon was invoked with 1 or more filenames, then make the
+	# first filename argv0 in the slave, as tclsh/wish would do it.
+	interp eval $slave [list set argv0 $slaveargv0]
+    } else {
+	if {[info exists argv0]} {interp eval $slave [list set argv0 $argv0]}
+    }
     interp eval $slave set tcl_interactive $tcl_interactive \; \
 	    set auto_path [list [lremove $auto_path $tk_library]] \; \
-	    set argc [llength $args] \; \
-	    set argv  [list $args] \; {
+	    set argc [llength $slaveargs] \; \
+	    set argv  [list $slaveargs] \; {
 	if {![llength [info command bgerror]]} {
 	    proc bgerror err {
 		global errorInfo

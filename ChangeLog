@@ -1,3 +1,8 @@
+2006-09-05  Jeff Hobbs  <jeffh@ActiveState.com>
+
+	* tkcon.tcl (::tkcon::InitSlave): adjust to make the first file
+	passed in to be argv0 in the slave
+
 2006-08-25  Jeff Hobbs  <jeffh@ActiveState.com>
 
 	* tkcon.tcl (tkcon): default wm protocol to hide tkcon when used
