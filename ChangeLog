@@ -1,5 +1,9 @@
 2006-09-05  Jeff Hobbs  <jeffh@ActiveState.com>
 
+	* tkcon.tcl (::tkcon::NewTab, ::tkcon::GetSlave): ensure that new
+	tabs in other toplevel tkcon windows are built in the correct
+	slave hierarchy.
+
 	* pkgIndex.tcl: sample pkgIndex.tcl that allows using tkcon as a
 	package.
 

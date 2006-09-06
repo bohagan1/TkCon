@@ -190,7 +190,7 @@ proc ::tkcon::Init {args} {
 	    alias clear dir dump echo idebug lremove
 	    tkcon_puts tkcon_gets observe observe_var unalias which what
 	}
-	RCS		{RCS: @(#) $Id: tkcon.tcl,v 1.96 2006/08/25 18:04:51 hobbs Exp $}
+	RCS		{RCS: @(#) $Id: tkcon.tcl,v 1.97 2006/09/05 22:00:11 hobbs Exp $}
 	HEADURL		{http://tkcon.cvs.sourceforge.net/tkcon/tkcon/tkcon.tcl?rev=HEAD}
 
 	docs		"http://tkcon.sourceforge.net/"
@@ -817,10 +817,14 @@ proc ::tkcon::NewTab {{con {}}} {
     variable ATTACH
 
     set con   [InitTab $PRIV(base)]
-    set slave [interp create Slave[GetSlaveNum]]
+    set slave [GetSlave]
     InitSlave $slave
     $slave alias exit ::tkcon::DeleteTab $con $slave
-    set ATTACH($con) [list $slave slave]
+    if {$PRIV(name) != ""} {
+	set ATTACH($con) [list [list $PRIV(name) $slave] slave]
+    } else {
+	set ATTACH($con) [list $slave slave]
+    }
     $PRIV(X) configure -state normal
     MenuConfigure Console "Delete Tab" -state normal
     GotoTab $con
@@ -2401,12 +2405,14 @@ proc ::tkcon::MainInit {} {
     interp alias {} ::tkcon::Main {} ::tkcon::InterpEval Main
     interp alias {} ::tkcon::Slave {} ::tkcon::InterpEval
 
-    proc ::tkcon::GetSlaveNum {} {
-	set i -1
-	while {[interp exists Slave[incr i]]} {
+    proc ::tkcon::GetSlave {{slave {}}} {
+	set i 0
+	puts [info level 0]
+	while {[Slave $slave [list interp exists Slave[incr i]]]} {
 	    # oh my god, an empty loop!
 	}
-	return $i
+	set interp [Slave $slave [list interp create Slave$i]]
+	return $interp
     }
 
     ## ::tkcon::New - create new console window
@@ -2418,7 +2424,7 @@ proc ::tkcon::MainInit {} {
 	variable PRIV
 	global argv0 argc argv
 
-	set tmp [interp create Slave[GetSlaveNum]]
+	set tmp [GetSlave]
 	lappend PRIV(slaves) $tmp
 	load {} Tk $tmp
 	# If we have tbcload, then that should be autoloaded into slaves.
@@ -2435,7 +2441,7 @@ proc ::tkcon::MainInit {} {
 	$tmp alias exit				::tkcon::Exit $tmp
 	$tmp alias ::tkcon::Destroy		::tkcon::Destroy $tmp
 	$tmp alias ::tkcon::New			::tkcon::New
-	$tmp alias ::tkcon::GetSlaveNum		::tkcon::GetSlaveNum
+	$tmp alias ::tkcon::GetSlave		::tkcon::GetSlave $tmp
 	$tmp alias ::tkcon::Main		::tkcon::InterpEval Main
 	$tmp alias ::tkcon::Slave		::tkcon::InterpEval
 	$tmp alias ::tkcon::Interps		::tkcon::Interps
