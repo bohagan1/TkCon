@@ -1,3 +1,10 @@
+2007-04-04  Jeff Hobbs  <jeffh@ActiveState.com>
+
+	* tkcon.tcl: ensure option overrides only effect tkcon and
+	subwidgets.
+	(edit): Add -wrap option to 'edit' command.
+	(::tkcon::AtSource): adjust argv0 existence check
+
 2006-09-05  Jeff Hobbs  <jeffh@ActiveState.com>
 
 	* tkcon.tcl (::tkcon::NewTab, ::tkcon::GetSlave): ensure that new

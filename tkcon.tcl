@@ -190,7 +190,7 @@ proc ::tkcon::Init {args} {
 	    alias clear dir dump echo idebug lremove
 	    tkcon_puts tkcon_gets observe observe_var unalias which what
 	}
-	RCS		{RCS: @(#) $Id: tkcon.tcl,v 1.97 2006/09/05 22:00:11 hobbs Exp $}
+	RCS		{RCS: @(#) $Id: tkcon.tcl,v 1.98 2006/09/05 23:08:31 hobbs Exp $}
 	HEADURL		{http://tkcon.cvs.sourceforge.net/tkcon/tkcon/tkcon.tcl?rev=HEAD}
 
 	docs		"http://tkcon.sourceforge.net/"
@@ -207,16 +207,6 @@ proc ::tkcon::Init {args} {
 	if {![info exists PRIV($key)]} { set PRIV($key) [subst $default] }
     }
     set PRIV(version) $VERSION
-
-    option add *Menu.tearOff 0
-    option add *takeFocus 0
-    option add *Text.borderWidth 1
-    option add *Listbox.borderWidth 1
-    option add *Listbox.background white
-    option add *Text.highlightThickness 1
-    if {$::tcl_version >= 8.4 && [tk windowingsystem] != "aqua"} {
-	option add *Scrollbar.borderWidth 1
-    }
 
     if {[info exists PRIV(name)]} {
 	set title $PRIV(name)
@@ -361,6 +351,16 @@ proc ::tkcon::Init {args} {
 	uplevel \#0 $slaveargs
     }
 
+    # Try not to make tkcon override too many standard defaults, and only
+    # do it for the tkcon bits
+    set optclass [tk appname]$PRIV(root)
+    option add $optclass*Menu.tearOff 0
+    option add $optclass*Menu.borderWidth 1
+    option add $optclass*Menu.activeBorderWidth 1
+    if {$::tcl_version >= 8.4 && [tk windowingsystem] != "aqua"} {
+	option add $optclass*Scrollbar.borderWidth 1
+    }
+
     ## Attach to the slave, EvalAttached will then be effective
     Attach $PRIV(appname) $PRIV(apptype)
     InitUI $title
@@ -481,8 +481,11 @@ proc ::tkcon::InitSlave {slave {slaveargs {}} {slaveargv0 {}}} {
     $slave alias exit exit
     interp eval $slave {
 	# Do package require before changing around puts/gets
+	catch {set __tkcon_error ""; set __tkcon_error $errorInfo}
 	catch {package require bogus-package-name}
 	catch {rename ::puts ::tkcon_tcl_puts}
+	set errorInfo ${__tkcon_error}
+	unset __tkcon_error
     }
     foreach cmd $PRIV(slaveprocs) { $slave eval [dump proc $cmd] }
     foreach cmd $PRIV(slavealias) { $slave alias $cmd $cmd }
@@ -603,7 +606,7 @@ proc ::tkcon::InitUI {title} {
     set PRIV(X) [button $sbar.deltab -text "X" -command ::tkcon::DeleteTab \
 		     -activeforeground red -fg red -font tkconfixedbold \
 		     -highlightthickness 0 -padx 2 -pady 0 -borderwidth 1 \
-		     -state disabled -relief flat]
+		     -state disabled -relief flat -takefocus 0]
     catch {$PRIV(X) configure -overrelief raised}
     label $sbar.cursor -relief sunken -borderwidth 1 -anchor e -width 6 \
 	    -textvariable ::tkcon::PRIV(StatusCursor)
@@ -690,12 +693,7 @@ proc ::tkcon::InitTab {w} {
     # text console
     set con $w.tab[incr PRIV(uid)]
     text $con -wrap char -foreground $COLOR(stdin) \
-	-insertbackground $COLOR(cursor)
-    catch {
-	if {[tk windowingsystem] == "aqua"} {
-	    $w.text configure -highlightthickness 0
-	}
-    }
+	-insertbackground $COLOR(cursor) -borderwidth 1 -highlightthickness 0
     $con mark set output 1.0
     $con mark set limit 1.0
     if {[string compare {} $COLOR(bg)]} {
@@ -749,7 +747,7 @@ proc ::tkcon::InitTab {w} {
     $con tag configure find -background $COLOR(blink)
 
     set ATTACH($con) [Attach]
-    set rb [radiobutton $PRIV(tabframe).cb[winfo name $con] \
+    set rb [radiobutton $PRIV(tabframe).cb[winfo name $con] -takefocus 0 \
 		-textvariable ::tkcon::ATTACH($con) \
 		-selectcolor white -relief sunken \
 		-indicatoron 0 -padx 0 -pady 0 -borderwidth 1 \
@@ -1361,13 +1359,14 @@ proc ::tkcon::About {} {
 	wm transient $w $PRIV(root)
 	wm group $w $PRIV(root)
 	wm title $w "About tkcon v$PRIV(version)"
+	wm resizable $w 0 0
 	button $w.b -text Dismiss -command [list wm withdraw $w]
 	text $w.text -height 9 -width 60 \
 		-foreground $COLOR(stdin) \
 		-background $COLOR(bg) \
-		-font $OPT(font)
-	pack $w.b -fill x -side bottom
-	pack $w.text -fill both -side left -expand 1
+		-font $OPT(font) -borderwidth 1 -highlightthickness 0
+	grid $w.text -sticky news
+	grid $w.b -sticky se -padx 6 -pady 4
 	$w.text tag config center -justify center
 	$w.text tag config title -justify center -font {Courier -18 bold}
 	# strip down the RCS info displayed in the about box
@@ -1700,9 +1699,9 @@ proc ::tkcon::InterpPkgs {app type} {
 
 	label $t.ll -text "Loadable:" -anchor w
 	label $t.lr -text "Loaded:" -anchor w
-	listbox $t.loadable -font tkconfixed \
+	listbox $t.loadable -font tkconfixed -background white -borderwidth 1 \
 	    -yscrollcommand [list $t.llsy set] -selectmode extended
-	listbox $t.loaded -font tkconfixed \
+	listbox $t.loaded -font tkconfixed -background white -borderwidth 1 \
 	    -yscrollcommand [list $t.lrsy set]
 	scrollbar $t.llsy -command [list $t.loadable yview]
 	scrollbar $t.lrsy -command [list $t.loaded yview]
@@ -1921,8 +1920,9 @@ proc ::tkcon::NamespacesList {names} {
     catch {destroy $f}
     toplevel $f
     listbox $f.names -width 30 -height 15 -selectmode single \
-	    -yscrollcommand [list $f.scrollv set] \
-	    -xscrollcommand [list $f.scrollh set]
+	-yscrollcommand [list $f.scrollv set] \
+	-xscrollcommand [list $f.scrollh set] \
+	-background white -borderwidth 1
     scrollbar $f.scrollv -command [list $f.names yview]
     scrollbar $f.scrollh -command [list $f.names xview] -orient horizontal
     frame $f.buttons
@@ -1998,7 +1998,8 @@ proc ::tkcon::FindBox {w {str {}}} {
 	pack [frame $base.opt] -fill x
 	checkbutton $base.opt.c -text "Case Sensitive" \
 		-variable ::tkcon::PRIV(find,case)
-	checkbutton $base.opt.r -text "Use Regexp" -variable ::tkcon::PRIV(find,reg)
+	checkbutton $base.opt.r -text "Use Regexp" \
+	    -variable ::tkcon::PRIV(find,reg)
 	pack $base.f.l -side left
 	pack $base.f.e $base.opt.c $base.opt.r -side left -fill both -expand 1
 	pack [frame $base.sep -borderwidth 2 -relief sunken -height 4] -fill x
@@ -2407,7 +2408,6 @@ proc ::tkcon::MainInit {} {
 
     proc ::tkcon::GetSlave {{slave {}}} {
 	set i 0
-	puts [info level 0]
 	while {[Slave $slave [list interp exists Slave[incr i]]]} {
 	    # oh my god, an empty loop!
 	}
@@ -2711,7 +2711,7 @@ proc ::tkcon::MainInit {} {
 		    -foreground $COLOR(stdin) \
 		    -background $COLOR(bg) \
 		    -insertbackground $COLOR(cursor) \
-		    -font $OPT(font)
+		    -font $OPT(font) -borderwidth 1 -highlightthickness 0
 	    pack $w.btn -side bottom -fill x
 	    pack $w.sy -side right -fill y
 	    pack $w.text -fill both -expand 1
@@ -3446,10 +3446,10 @@ proc tkcon {cmd args} {
 		label $t.gets -text "\"gets stdin\" request:"
 		text $t.data -width 32 -height 5 -wrap none \
 			-xscrollcommand [list $t.sx set] \
-			-yscrollcommand [list $t.sy set]
-		scrollbar $t.sx -orient h -takefocus 0 -highlightthick 0 \
+			-yscrollcommand [list $t.sy set] -borderwidth 1
+		scrollbar $t.sx -orient h -takefocus 0 -highlightthickness 0 \
 			-command [list $t.data xview]
-		scrollbar $t.sy -orient v -takefocus 0 -highlightthick 0 \
+		scrollbar $t.sy -orient v -takefocus 0 -highlightthickness 0 \
 			-command [list $t.data yview]
 		button $t.ok -text "OK" -command {set ::tkcon::PRIV(grab) 1}
 		bind $t.ok <Return> { %W invoke }
@@ -3732,12 +3732,13 @@ proc tkcon_gets args {
 # Returns:	nothing
 ## 
 proc edit {args} {
-    array set opts {-find {} -type {} -attach {}}
+    array set opts {-find {} -type {} -attach {} -wrap {none}}
     while {[string match -* [lindex $args 0]]} {
 	switch -glob -- [lindex $args 0] {
 	    -f*	{ set opts(-find) [lindex $args 1] }
 	    -a*	{ set opts(-attach) [lindex $args 1] }
 	    -t*	{ set opts(-type) [lindex $args 1] }
+	    -w*	{ set opts(-wrap) [lindex $args 1] }
 	    --	{ set args [lreplace $args 0 0]; break }
 	    default {return -code error "unknown option \"[lindex $args 0]\""}
 	}
@@ -3751,7 +3752,7 @@ proc edit {args} {
     }
 
     set word [lindex $args 0]
-    if {[string match {} $opts(-type)]} {
+    if {$opts(-type) == {}} {
 	if {[llength [::tkcon::EvalOther $app $type info commands [list $word]]]} {
 	    set opts(-type) "proc"
 	} elseif {[llength [::tkcon::EvalOther $app $type info vars [list $word]]]} {
@@ -3760,93 +3761,91 @@ proc edit {args} {
 	    set opts(-type) "file"
 	}
     }
-    if {[string compare $opts(-type) {}]} {
-	# Create unique edit window toplevel
-	set w $::tkcon::PRIV(base).__edit
-	set i 0
-	while {[winfo exists $w[incr i]]} {}
-	append w $i
-	toplevel $w
-	wm withdraw $w
-	if {[string length $word] > 20} {
-	    wm title $w "[string range $word 0 16]... - tkcon Edit"
-	} else {
-	    wm title $w "$word - tkcon Edit"
-	}
-
-	if {[package provide ctext] != ""} {
-	    set txt [ctext $w.text]
-	} else {
-	    set txt [text $w.text]
-	}
-	$w.text configure -wrap none \
-		-xscrollcommand [list $w.sx set] \
-		-yscrollcommand [list $w.sy set] \
-		-foreground $::tkcon::COLOR(stdin) \
-		-background $::tkcon::COLOR(bg) \
-		-insertbackground $::tkcon::COLOR(cursor) \
-		-font $::tkcon::OPT(font)
-	catch {
-	    # 8.4+ stuff
-	    $w.text configure -undo 1
-	    if {[tk windowingsystem] eq "aqua"} {
-		$w.text configure -highlightthickness 0
-	    }
-	}
-	scrollbar $w.sx -orient h -command [list $w.text xview]
-	scrollbar $w.sy -orient v -command [list $w.text yview]
-
-	set menu [menu $w.mbar]
-	$w configure -menu $menu
-
-	## File Menu
-	##
-	set m [menu [::tkcon::MenuButton $menu File file]]
-	$m add command -label "Save As..."  -underline 0 \
-		-command [list ::tkcon::Save {} widget $w.text]
-	$m add command -label "Append To..."  -underline 0 \
-		-command [list ::tkcon::Save {} widget $w.text a+]
-	$m add separator
-	$m add command -label "Dismiss" -underline 0 -accel "Ctrl-w" \
-		-command [list destroy $w]
-	bind $w <Control-w>			[list destroy $w]
-	bind $w <$::tkcon::PRIV(meta)-w>	[list destroy $w]
-
-	## Edit Menu
-	##
-	set text $w.text
-	set m [menu [::tkcon::MenuButton $menu Edit edit]]
-	$m add command -label "Cut"   -under 2 \
-		-command [list tk_textCut $text]
-	$m add command -label "Copy"  -under 0 \
-		-command [list tk_textCopy $text]
-	$m add command -label "Paste" -under 0 \
-		-command [list tk_textPaste $text]
-	$m add separator
-	$m add command -label "Find" -under 0 \
-		-command [list ::tkcon::FindBox $text]
-
-	## Send To Menu
-	##
-	set m [menu [::tkcon::MenuButton $menu "Send To..." send]]
-	$m add command -label "Send To $app" -underline 0 \
-		-command "::tkcon::EvalOther [list $app] $type \
-		eval \[$w.text get 1.0 end-1c\]"
-	set other [tkcon attach]
-	if {[string compare $other [list $app $type]]} {
-	    $m add command -label "Send To [lindex $other 0]" \
-		    -command "::tkcon::EvalOther $other \
-		    eval \[$w.text get 1.0 end-1c\]"
-	}
-
-	grid $w.text - $w.sy -sticky news
-	grid $w.sx - -sticky ew
-	grid columnconfigure $w 0 -weight 1
-	grid columnconfigure $w 1 -weight 1
-	grid rowconfigure $w 0 -weight 1
-    } else {
+    if {$opts(-type) == {}} {
 	return -code error "unrecognized type '$word'"
     }
+
+    # Create unique edit window toplevel
+    set w $::tkcon::PRIV(base).__edit
+    set i 0
+    while {[winfo exists $w[incr i]]} {}
+    append w $i
+    toplevel $w
+    wm withdraw $w
+    if {[string length $word] > 20} {
+	wm title $w "[string range $word 0 16]... - tkcon Edit"
+    } else {
+	wm title $w "$word - tkcon Edit"
+    }
+
+    if {[package provide ctext] != ""} {
+	set txt [ctext $w.text]
+    } else {
+	set txt [text $w.text]
+    }
+    $w.text configure -wrap $opts(-wrap) \
+	-xscrollcommand [list $w.sx set] \
+	-yscrollcommand [list $w.sy set] \
+	-foreground $::tkcon::COLOR(stdin) \
+	-background $::tkcon::COLOR(bg) \
+	-insertbackground $::tkcon::COLOR(cursor) \
+	-font $::tkcon::OPT(font) -borderwidth 1 -highlightthickness 0
+    catch {
+	# 8.4+ stuff
+	$w.text configure -undo 1
+    }
+    scrollbar $w.sx -orient h -command [list $w.text xview]
+    scrollbar $w.sy -orient v -command [list $w.text yview]
+
+    set menu [menu $w.mbar]
+    $w configure -menu $menu
+
+    ## File Menu
+    ##
+    set m [menu [::tkcon::MenuButton $menu File file]]
+    $m add command -label "Save As..."  -underline 0 \
+	-command [list ::tkcon::Save {} widget $w.text]
+    $m add command -label "Append To..."  -underline 0 \
+	-command [list ::tkcon::Save {} widget $w.text a+]
+    $m add separator
+    $m add command -label "Dismiss" -underline 0 -accel "Ctrl-w" \
+	-command [list destroy $w]
+    bind $w <Control-w>			[list destroy $w]
+    bind $w <$::tkcon::PRIV(meta)-w>	[list destroy $w]
+
+    ## Edit Menu
+    ##
+    set text $w.text
+    set m [menu [::tkcon::MenuButton $menu Edit edit]]
+    $m add command -label "Cut"   -under 2 \
+	-command [list tk_textCut $text]
+    $m add command -label "Copy"  -under 0 \
+	-command [list tk_textCopy $text]
+    $m add command -label "Paste" -under 0 \
+	-command [list tk_textPaste $text]
+    $m add separator
+    $m add command -label "Find" -under 0 \
+	-command [list ::tkcon::FindBox $text]
+
+    ## Send To Menu
+    ##
+    set m [menu [::tkcon::MenuButton $menu "Send To..." send]]
+    $m add command -label "Send To $app" -underline 0 \
+	-command "::tkcon::EvalOther [list $app] $type \
+		eval \[$w.text get 1.0 end-1c\]"
+    set other [tkcon attach]
+    if {[string compare $other [list $app $type]]} {
+	$m add command -label "Send To [lindex $other 0]" \
+	    -command "::tkcon::EvalOther $other \
+		    eval \[$w.text get 1.0 end-1c\]"
+    }
+
+    grid $w.text - $w.sy -sticky news
+    grid $w.sx - -sticky ew
+    grid columnconfigure $w 0 -weight 1
+    grid columnconfigure $w 1 -weight 1
+    grid rowconfigure $w 0 -weight 1
+
     switch -glob -- $opts(-type) {
 	proc*	{
 	    $w.text insert 1.0 \
@@ -6352,7 +6351,7 @@ proc ::tkcon::AtSource {} {
     }
 
     if {(![info exists PRIV(root)] || ![winfo exists $PRIV(root)]) \
-	    && (![info exists ::argv0] || $PRIV(SCRIPT) == $::argv0)} {
+	    && ([info exists ::argv0] && $PRIV(SCRIPT) == $::argv0)} {
 	global argv
 	if {[info exists argv]} {
 	    eval ::tkcon::Init $argv
