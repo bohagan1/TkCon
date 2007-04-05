@@ -75,7 +75,7 @@ foreach cmd {SetCursor UpDownLine Transpose ScrollPages} {
 namespace eval ::tkcon {
     # when modifying this line, make sure that the auto-upgrade check
     # for version still works.
-    variable VERSION "2.4"
+    variable VERSION "2.5"
     # The OPT variable is an array containing most of the optional
     # info to configure.  COLOR has the color data.
     variable OPT
@@ -190,7 +190,7 @@ proc ::tkcon::Init {args} {
 	    alias clear dir dump echo idebug lremove
 	    tkcon_puts tkcon_gets observe observe_var unalias which what
 	}
-	RCS		{RCS: @(#) $Id: tkcon.tcl,v 1.98 2006/09/05 23:08:31 hobbs Exp $}
+	RCS		{RCS: @(#) $Id: tkcon.tcl,v 1.99 2007/04/04 19:02:08 hobbs Exp $}
 	HEADURL		{http://tkcon.cvs.sourceforge.net/tkcon/tkcon/tkcon.tcl?rev=HEAD}
 
 	docs		"http://tkcon.sourceforge.net/"

@@ -1,5 +1,7 @@
 2007-04-04  Jeff Hobbs  <jeffh@ActiveState.com>
 
+	*** BUMPED TO VERSION 2.5 ***
+
 	* tkcon.tcl: ensure option overrides only effect tkcon and
 	subwidgets.
 	(edit): Add -wrap option to 'edit' command.
