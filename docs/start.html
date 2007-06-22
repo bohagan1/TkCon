@@ -270,6 +270,11 @@ auto_path when the after the resource file is loaded in).
 <DD> A tcl script to execute in the main interpreter after the slave
 interpreter is created and the user interface is initialized.
 
+<DT> <CODE>::tkcon::OPT(maxlinelen)</CODE>
+<DD> A number that specifies the limit of long result lines.
+True result is still captured in $_ (and 'puts $_' works).
+Defaults to 0 (unlimited).
+
 <DT> <CODE>::tkcon::OPT(maxmenu)</CODE>
 <DD> A number that specifies the maximum number of packages to show
 vertically in the Interp-&gt;Packages menu before breaking into

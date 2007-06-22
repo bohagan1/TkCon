@@ -1,3 +1,12 @@
+2007-06-21  Jeff Hobbs  <jeffh@ActiveState.com>
+
+	* docs/tkcon.1.man, docs/tkcon.n.man, docs/tkconrc.5.man (new): 
+	* docs/dump.n.man, docs/observe.n.man, docs/idebug.n.man (new): 
+	* index.html, docs/demopic.gif (removed), docs/demopic.png (new):
+	* docs/plugin.html, docs/start.html, docs/tkcon.html:
+	Updated docs and added doctools equivalents courtesy Sergei Golovan
+	* docs/style.css: updated stylesheet
+	
 2007-04-04  Jeff Hobbs  <jeffh@ActiveState.com>
 
 	*** BUMPED TO VERSION 2.5 ***

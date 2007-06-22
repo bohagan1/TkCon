@@ -1,57 +1,35 @@
 <style type="text/css">
 
-/* default formatting
- *
- * we should be able to combine these as body,td,... but IE 5 isn't
- * isn't standard compliant... (sigh)
- */
-body {
+body, div, p, th, td, li, dd, ul, ol, dl, dt, blockquote {
 	font-family:	Arial, Helvetica, sans-serif;
-	font-size: 	10pt;
 }
-td {
-	font-family:	Arial, Helvetica, sans-serif;
-	font-size: 	10pt;
+body {
+	background-color:  #FFFFFF;
+	font-size:         12px;
+	line-height:       1.25;
+	letter-spacing:    .2px;
 }
 th {
-	font-family:	Arial, Helvetica, sans-serif;
-	font-size: 	10pt;
 	font-style: 	bold;
 	text-align:	left;
 }
-p {
-	font-family:	Arial, Helvetica, sans-serif;
-	font-size: 	10pt;
-}
-ul {
-	font-family:	Arial, Helvetica, sans-serif;
-	font-size: 	10pt;
-}
 a { text-decoration: none }
-.hi {
+.hi, .hi2 {
 	font-weight:	bold;
 	color:		#B82619;
 	background:	#FFFFCC;
 	text-decoration: none;
 }
-.hi2 {
-	font-weight:	bold;
-	color:		#B82619;
-	background:	#CCFFCC;
-	text-decoration: none;
-}
+.hi2 {	background:	#CCFFCC; }
 .indent { margin:	3px; }
 
 /* general styles */	
 .heading { 
-	font-family:	Arial, Helvetica, sans-serif;
-	font-size: 	14pt;
+	font-size: 	14px;
 	font-weight: 	bold;
 	color: 		#B82619;
 }
 .subheading { 
-	font-family:	Arial, Helvetica, sans-serif;
-	font-size: 	10pt;
 	font-weight: 	bold;
 	color: 		#B82619;
 }

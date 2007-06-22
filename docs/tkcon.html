@@ -121,6 +121,10 @@ specified, it separates each command by an extra newline.
 <DT> <CODE>tkcon <b>iconify</b></CODE>
 <DD> Iconifies the tkcon display.
 
+<DT> <CODE>tkcon <b>linelength</b></CODE> ?<i>value</i>?
+<DD> Sets or displays the number that specifies the limit of long result lines.
+True result is still captured in $_ (and 'puts $_' works).
+
 <DT> <CODE>tkcon <b>load</b></CODE> <I>filename</I>
 <DD> Sources named file into the slave interpreter.  If no filename is
 given, it will attempt to call <CODE>tk_getOpenFile</CODE> to pop up the
