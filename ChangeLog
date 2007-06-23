@@ -1,3 +1,13 @@
+2007-06-22  Jeff Hobbs  <jeffh@ActiveState.com>
+
+	* tkcon.tcl (::tkcon::EvalCmd): add OPT(resultfilter) and 'tkcon
+	resultfilter ?cmd?' to allow optional result filter command.
+	Command will be passed result code and data and must return what
+	tkcon will return to the user.  Command is run in attached slave.
+	Ensure that initial files are sources at level #0.
+	Convert args after (--|-argv|-args) into slave arguments and set
+	them as the main $::argv/$::argc for propagation.
+	
 2007-06-21  Jeff Hobbs  <jeffh@ActiveState.com>
 
 	* docs/tkcon.1.man, docs/tkcon.n.man, docs/tkconrc.5.man (new): 

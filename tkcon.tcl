@@ -160,6 +160,7 @@ proc ::tkcon::Init {args} {
 	gets		{congets}
 	overrideexit	1
 	usehistory	1
+	resultfilter	{}
 
 	exec		slave
     } {
@@ -190,7 +191,7 @@ proc ::tkcon::Init {args} {
 	    alias clear dir dump echo idebug lremove
 	    tkcon_puts tkcon_gets observe observe_var unalias which what
 	}
-	RCS		{RCS: @(#) $Id: tkcon.tcl,v 1.99 2007/04/04 19:02:08 hobbs Exp $}
+	RCS		{RCS: @(#) $Id: tkcon.tcl,v 1.100 2007/04/05 00:18:56 hobbs Exp $}
 	HEADURL		{http://tkcon.cvs.sourceforge.net/tkcon/tkcon/tkcon.tcl?rev=HEAD}
 
 	docs		"http://tkcon.sourceforge.net/"
@@ -317,8 +318,9 @@ proc ::tkcon::Init {args} {
 	    ## Handle arg based options
 	    switch -glob -- $arg {
 		-- - -argv - -args {
-		    set argv [concat -- [lrange $argv $i end]]
-		    set argc [llength $argv]
+		    set slaveargs [concat $slaveargs [lrange $args $i end]]
+		    set ::argv $slaveargs
+		    set ::argc [llength $::argv]
 		    break
 		}
 		-color-*	{ set COLOR([string range $arg 7 end]) $val }
@@ -420,7 +422,7 @@ proc ::tkcon::Init {args} {
     ## Source extra command line argument files into slave executable
     foreach fn $slavefiles {
 	puts -nonewline "slave sourcing \"$fn\" ... "
-	if {[catch {EvalSlave source [list $fn]} fnerr]} {
+	if {[catch {EvalSlave uplevel \#0 [list source $fn]} fnerr]} {
 	    puts stderr "error:\n$fnerr"
 	    append PRIV(errorInfo) $errorInfo\n
 	} else { puts "OK" }
@@ -987,6 +989,16 @@ proc ::tkcon::EvalCmd {w cmd} {
 		return
 	    }
 	    AddSlaveHistory $cmd
+	    # Run any user defined result filter command.  The command is
+	    # passed result code and data.
+	    if {[llength $OPT(resultfilter)]} {
+		set cmd [concat $OPT(resultfilter) [list $code $res]]
+		if {[catch {EvalAttached $cmd} res2]} {
+		    $w insert output "Filter failed: $res2" stderr \n stdout
+		} else {
+		    set res $res2
+		}
+	    }
 	    catch {EvalAttached [list set _ $res]}
 	    set maxlen $OPT(maxlinelen)
 	    set trailer ""
@@ -3377,8 +3389,7 @@ proc tkcon {cmd args} {
 	cons* {
 	    ## 'console' - passes the args to the text widget of the console.
 	    set result [uplevel 1 $PRIV(console) $args]
-	    ::tkcon::ConstrainBuffer $PRIV(console) \
-		    $OPT(buffer)
+	    ::tkcon::ConstrainBuffer $PRIV(console) $OPT(buffer)
 	    return $result
 	}
 	congets {
@@ -3530,6 +3541,13 @@ proc tkcon {cmd args} {
 	mas* - eval {
 	    ## 'master' - evals contents in master interpreter
 	    uplevel \#0 $args
+	}
+	result* {
+	    ## 'resultfilter' Sets/queries the result filter command
+	    if {[llength $args]} {
+		set OPT(resultfilter) $args
+	    }
+	    return $OPT(resultfilter)
 	}
 	set {
 	    ## 'set' - set (or get, or unset) simple vars (not whole arrays)
