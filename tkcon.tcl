@@ -191,7 +191,7 @@ proc ::tkcon::Init {args} {
 	    alias clear dir dump echo idebug lremove
 	    tkcon_puts tkcon_gets observe observe_var unalias which what
 	}
-	RCS		{RCS: @(#) $Id: tkcon.tcl,v 1.100 2007/04/05 00:18:56 hobbs Exp $}
+	RCS		{RCS: @(#) $Id: tkcon.tcl,v 1.101 2007/06/23 00:53:41 hobbs Exp $}
 	HEADURL		{http://tkcon.cvs.sourceforge.net/tkcon/tkcon/tkcon.tcl?rev=HEAD}
 
 	docs		"http://tkcon.sourceforge.net/"
@@ -992,7 +992,7 @@ proc ::tkcon::EvalCmd {w cmd} {
 	    # Run any user defined result filter command.  The command is
 	    # passed result code and data.
 	    if {[llength $OPT(resultfilter)]} {
-		set cmd [concat $OPT(resultfilter) [list $code $res]]
+		set cmd [linsert $OPT(resultfilter) end $code $res]
 		if {[catch {EvalAttached $cmd} res2]} {
 		    $w insert output "Filter failed: $res2" stderr \n stdout
 		} else {
@@ -5184,16 +5184,19 @@ proc ::tkcon::Bindings {} {
 
     bind TkConsole <<TkCon_ExpandFile>> {
 	if {[%W compare insert > limit]} {::tkcon::Expand %W path}
-	break
+	break ; # could check "%K" == "Tab"
     }
     bind TkConsole <<TkCon_ExpandProc>> {
 	if {[%W compare insert > limit]} {::tkcon::Expand %W proc}
+	break ; # could check "%K" == "Tab"
     }
     bind TkConsole <<TkCon_ExpandVar>> {
 	if {[%W compare insert > limit]} {::tkcon::Expand %W var}
+	break ; # could check "%K" == "Tab"
     }
     bind TkConsole <<TkCon_Expand>> {
 	if {[%W compare insert > limit]} {::tkcon::Expand %W}
+	break ; # could check "%K" == "Tab"
     }
     bind TkConsole <<TkCon_Tab>> {
 	if {[%W compare insert >= limit]} {
@@ -6142,7 +6145,6 @@ proc ::tkcon::Retrieve {} {
 	}
 	set token [::http::geturl $PRIV(HEADURL) \
 		-headers $headers -timeout 30000]
-	set token [::http::geturl $PRIV(HEADURL) -timeout 30000]
 	::http::wait $token
 	set code [catch {
 	    set ncode [::http::ncode $token]
@@ -6176,7 +6178,7 @@ proc ::tkcon::Retrieve {} {
 	if {$code == 2} {
 	    tk_messageBox -type ok -icon info -parent $PRIV(root) \
 		    -title "Failed to retrieve source" \
-		    -message "Failed to retrieve latest tkcon source:\n$err"
+		    -message "Failed to retrieve latest tkcon source:\n$err\n$PRIV(HEADURL)"
 	} elseif {$code} {
 	    return -code error $err
 	} else {
