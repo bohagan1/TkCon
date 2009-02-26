@@ -1,3 +1,7 @@
+2009-02-25  Jeff Hobbs  <jeffh@ActiveState.com>
+
+	* docs/tkcon.html, docs/tkcon.n.man: add tkcon resultfilter docs.
+
 2008-02-07  Jeff Hobbs  <jeffh@ActiveState.com>
 
 	* tkcon.tcl (::tkcon::Bindings): prevent Expand virtual events

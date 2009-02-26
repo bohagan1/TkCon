@@ -141,6 +141,11 @@ returns the result.
 <DT> <CODE>tkcon <b>new</b></CODE>
 <DD> Creates a new tkcon widget.
 
+<DT> <CODE>tkcon <b>resultfilter</b></CODE> ?<I>command</I>?
+<DD> Specify a command to process the results before outputting it to the
+console window.  The command receives one argument (the result string) and
+the string returned is placed in the console.
+
 <DT> <CODE>tkcon <b>save</b></CODE> ?<I>filename</I> ?<I>type</I>??
 <DD> Saves the console buffer to the given filename.  If no filename is
 given, it will attempt to call <CODE>tk_getSaveFile</CODE> to pop up the
