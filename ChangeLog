@@ -1,5 +1,7 @@
 2009-02-25  Jeff Hobbs  <jeffh@ActiveState.com>
 
+	**** TKCON 2.5 TAGGED FOR RELEASE ****
+
 	* docs/tkcon.html, docs/tkcon.n.man: add tkcon resultfilter docs.
 
 2008-02-07  Jeff Hobbs  <jeffh@ActiveState.com>
