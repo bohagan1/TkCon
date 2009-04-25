@@ -1,5 +1,7 @@
 2009-04-24  Jeff Hobbs  <jeffh@ActiveState.com>
 
+	* tkcon.tcl: override 8.5 [chan puts|gets]. [Bug 1876707]
+
 	* tkcon.tcl: update pre-8.4 private text binding refs
 
 	* tkcon.tcl: clean up cmd global var used [Bug 2441583]

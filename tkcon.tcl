@@ -182,7 +182,7 @@ proc ::tkcon::Init {args} {
 	    alias clear dir dump echo idebug lremove
 	    tkcon_puts tkcon_gets observe observe_var unalias which what
 	}
-	RCS		{RCS: @(#) $Id: tkcon.tcl,v 1.106 2009/04/24 19:12:32 hobbs Exp $}
+	RCS		{RCS: @(#) $Id: tkcon.tcl,v 1.107 2009/04/24 21:03:35 hobbs Exp $}
 	HEADURL		{http://tkcon.cvs.sourceforge.net/tkcon/tkcon/tkcon.tcl?rev=HEAD}
 
 	docs		"http://tkcon.sourceforge.net/"
@@ -366,9 +366,15 @@ proc ::tkcon::Init {args} {
     ## input and output is handled by tkcon
     if {![catch {rename ::puts ::tkcon_tcl_puts}]} {
 	interp alias {} ::puts {} ::tkcon_puts
+	if {[llength [info commands ::tcl::chan::puts]]} {
+	    interp alias {} ::tcl::chan::puts {} ::tkcon_puts
+	}
     }
     if {($OPT(gets) != "") && ![catch {rename ::gets ::tkcon_tcl_gets}]} {
 	interp alias {} ::gets {} ::tkcon_gets
+	if {[llength [info commands ::tcl::chan::gets]]} {
+	    interp alias {} ::tcl::chan::gets {} ::tkcon_gets
+	}
     }
 
     EvalSlave history keep $OPT(history)
@@ -483,9 +489,15 @@ proc ::tkcon::InitSlave {slave {slaveargs {}} {slaveargv0 {}}} {
     foreach cmd $PRIV(slavealias) { $slave alias $cmd $cmd }
     interp alias $slave ::ls $slave ::dir -full
     interp alias $slave ::puts $slave ::tkcon_puts
+    if {[llength [info commands ::tcl::chan::puts]]} {
+	interp alias $slave ::tcl::chan::puts $slave ::tkcon_puts
+    }
     if {$OPT(gets) != ""} {
 	interp eval $slave { catch {rename ::gets ::tkcon_tcl_gets} }
 	interp alias $slave ::gets $slave ::tkcon_gets
+	if {[llength [info commands ::tcl::chan::gets]]} {
+	    interp alias $slave ::tcl::chan::gets $slave ::tkcon_gets
+	}
     }
     if {$slaveargv0 != ""} {
 	# If tkcon was invoked with 1 or more filenames, then make the
@@ -555,6 +567,8 @@ proc ::tkcon::InitInterp {name type} {
 	    catch {interp alias {} ::ls {} ::dir -full}
 	    if {[catch {interp alias {} ::puts {} ::tkcon_puts}]} {
 		catch {rename ::tkcon_puts ::puts}
+	    } elseif {[llength [info commands ::tcl::chan::puts]]} {
+		catch {interp alias {} ::tcl::chan::puts {} ::tkcon_puts}
 	    }
 	}
 	if {$OPT(gets) != ""} {
@@ -562,6 +576,8 @@ proc ::tkcon::InitInterp {name type} {
 		catch {rename ::gets ::tkcon_tcl_gets}
 		if {[catch {interp alias {} ::gets {} ::tkcon_gets}]} {
 		    catch {rename ::tkcon_gets ::gets}
+		} elseif {[llength [info commands ::tcl::chan::gets]]} {
+		    catch {interp alias {} ::tcl::chan::gets {} ::tkcon_gets}
 		}
 	    }
 	}
