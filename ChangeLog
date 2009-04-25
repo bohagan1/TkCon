@@ -1,6 +1,15 @@
-2009-02-25  Jeff Hobbs  <jeffh@ActiveState.com>
+2009-04-24  Jeff Hobbs  <jeffh@ActiveState.com>
+
+	* README.txt, docs/limits.html, docs/nontcl.html: bump to 2.6
+	* pkgIndex.tcl, tkcon.tcl: Use Tcl 8.4 code style.
+
+2009-02-26  Jeff Hobbs  <jeffh@ActiveState.com>
 
 	**** TKCON 2.5 TAGGED FOR RELEASE ****
+
+	* index.html, docs/*.html: update links and references
+
+2009-02-25  Jeff Hobbs  <jeffh@ActiveState.com>
 
 	* docs/tkcon.html, docs/tkcon.n.man: add tkcon resultfilter docs.
 
