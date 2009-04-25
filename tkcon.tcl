@@ -58,18 +58,6 @@ foreach pkg [info loaded {}] {
     }
 }
 
-# Tk 8.4 makes previously exposed stuff private.
-# FIX: Update tkcon to not rely on the private Tk code.
-#
-if {![llength [info globals tkPriv]]} {
-    ::tk::unsupported::ExposePrivateVariable tkPriv
-}
-foreach name {SetCursor UpDownLine Transpose ScrollPages} {
-    if {![llength [info commands tkText$name]]} {
-        ::tk::unsupported::ExposePrivateCommand tkText$name
-    }
-}
-
 # Unset temporary global vars
 catch {unset pkg file name version}
 
@@ -194,7 +182,7 @@ proc ::tkcon::Init {args} {
 	    alias clear dir dump echo idebug lremove
 	    tkcon_puts tkcon_gets observe observe_var unalias which what
 	}
-	RCS		{RCS: @(#) $Id: tkcon.tcl,v 1.105 2009/04/24 19:09:47 hobbs Exp $}
+	RCS		{RCS: @(#) $Id: tkcon.tcl,v 1.106 2009/04/24 19:12:32 hobbs Exp $}
 	HEADURL		{http://tkcon.cvs.sourceforge.net/tkcon/tkcon/tkcon.tcl?rev=HEAD}
 
 	docs		"http://tkcon.sourceforge.net/"
@@ -1020,7 +1008,7 @@ proc ::tkcon::EvalCmd {w cmd} {
 		    $w tag bind $tag <Leave> \
 			    [list $w tag configure $tag -under 0]
 		    $w tag bind $tag <ButtonRelease-1> \
-			    "if {!\[info exists tkPriv(mouseMoved)\] || !\$tkPriv(mouseMoved)} \
+			    "if {!\[info exists tk::Priv(mouseMoved)\] || !\$tk::Priv(mouseMoved)} \
 			    {[list $OPT(edit) -attach [Attach] -type error -- $PRIV(errorInfo)]}"
 		} else {
 		    $w insert output $res\n$trailer stderr
@@ -2976,7 +2964,7 @@ proc ::tkcon::HighlightError w {
 	    $w tag configure $tag -foreground $COLOR(stdout)
 	    $w tag bind $tag <Enter> [list $w tag configure $tag -under 1]
 	    $w tag bind $tag <Leave> [list $w tag configure $tag -under 0]
-	    $w tag bind $tag <ButtonRelease-1> "if {!\$tkPriv(mouseMoved)} \
+	    $w tag bind $tag <ButtonRelease-1> "if {!\$tk::Priv(mouseMoved)} \
 		    {[list $OPT(edit) -attach $app -type proc -find $what -- $cmd]}"
 	}
 	set info [string range $info $c1 end]
@@ -3005,7 +2993,7 @@ proc ::tkcon::HighlightError w {
 	    $w tag configure $tag -foreground $COLOR(proc)
 	    $w tag bind $tag <Enter> [list $w tag configure $tag -under 1]
 	    $w tag bind $tag <Leave> [list $w tag configure $tag -under 0]
-	    $w tag bind $tag <ButtonRelease-1> "if {!\$tkPriv(mouseMoved)} \
+	    $w tag bind $tag <ButtonRelease-1> "if {!\$tk::Priv(mouseMoved)} \
 		    {[list $OPT(edit) -attach $app -type proc -- $cmd]}"
 	}
     }
@@ -4985,7 +4973,7 @@ proc ::tkcon::Bindings {} {
     global tcl_platform tk_version
 
     #-----------------------------------------------------------------------
-    # Elements of tkPriv that are used in this file:
+    # Elements of tk::Priv that are used in this file:
     #
     # mouseMoved -	Non-zero means the mouse has moved a significant
     #			amount since the button went down (so, for example,
@@ -5222,9 +5210,9 @@ proc ::tkcon::Bindings {} {
 
     bind TkConsole <Control-a> {
 	if {[%W compare {limit linestart} == {insert linestart}]} {
-	    tkTextSetCursor %W limit
+	    tk::TextSetCursor %W limit
 	} else {
-	    tkTextSetCursor %W {insert linestart}
+	    tk::TextSetCursor %W {insert linestart}
 	}
     }
     bind TkConsole <Key-Home> [bind TkConsole <Control-a>]
@@ -5248,14 +5236,14 @@ proc ::tkcon::Bindings {} {
     }
     bind TkConsole <<TkCon_Previous>> {
 	if {[%W compare {insert linestart} != {limit linestart}]} {
-	    tkTextSetCursor %W [tkTextUpDownLine %W -1]
+	    tk::TextSetCursor %W [tk::TextUpDownLine %W -1]
 	} else {
 	    ::tkcon::Event -1
 	}
     }
     bind TkConsole <<TkCon_Next>> {
 	if {[%W compare {insert linestart} != {end-1c linestart}]} {
-	    tkTextSetCursor %W [tkTextUpDownLine %W 1]
+	    tk::TextSetCursor %W [tk::TextUpDownLine %W 1]
 	} else {
 	    ::tkcon::Event 1
 	}
@@ -5270,7 +5258,7 @@ proc ::tkcon::Bindings {} {
     }
     bind TkConsole <<TkCon_Transpose>>	{
 	## Transpose current and previous chars
-	if {[%W compare insert > "limit+1c"]} { tkTextTranspose %W }
+	if {[%W compare insert > "limit+1c"]} { tk::TextTranspose %W }
     }
     bind TkConsole <<TkCon_ClearLine>> {
 	## Clear command line (Unix shell staple)
@@ -5288,10 +5276,10 @@ proc ::tkcon::Bindings {} {
 	::tkcon::Insert %W $::tkcon::PRIV(tmp)
 	%W see end
     }
-    catch {bind TkConsole <Key-Page_Up>   { tkTextScrollPages %W -1 }}
-    catch {bind TkConsole <Key-Prior>     { tkTextScrollPages %W -1 }}
-    catch {bind TkConsole <Key-Page_Down> { tkTextScrollPages %W 1 }}
-    catch {bind TkConsole <Key-Next>      { tkTextScrollPages %W 1 }}
+    catch {bind TkConsole <Key-Page_Up>   { tk::TextScrollPages %W -1 }}
+    catch {bind TkConsole <Key-Prior>     { tk::TextScrollPages %W -1 }}
+    catch {bind TkConsole <Key-Page_Down> { tk::TextScrollPages %W 1 }}
+    catch {bind TkConsole <Key-Next>      { tk::TextScrollPages %W 1 }}
     bind TkConsole <$PRIV(meta)-d> {
 	if {[%W compare insert >= limit]} {
 	    %W delete insert {insert wordend}
@@ -5309,7 +5297,7 @@ proc ::tkcon::Bindings {} {
     }
     bind TkConsole <ButtonRelease-2> {
 	if {
-	    (!$tkPriv(mouseMoved) || $tk_strictMotif) &&
+	    (!$tk::Priv(mouseMoved) || $tk_strictMotif) &&
 	    ![catch {::tkcon::GetSelection %W} ::tkcon::PRIV(tmp)]
 	} {
 	    if {[%W compare @%x,%y < limit]} {
