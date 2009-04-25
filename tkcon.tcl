@@ -1,4 +1,5 @@
 #!/bin/sh
+# -*- tcl -*-
 # \
 exec wish "$0" ${1+"$@"}
 
@@ -191,7 +192,7 @@ proc ::tkcon::Init {args} {
 	    alias clear dir dump echo idebug lremove
 	    tkcon_puts tkcon_gets observe observe_var unalias which what
 	}
-	RCS		{RCS: @(#) $Id: tkcon.tcl,v 1.102 2008/02/07 21:02:53 hobbs Exp $}
+	RCS		{RCS: @(#) $Id: tkcon.tcl,v 1.103 2009/04/24 19:07:11 hobbs Exp $}
 	HEADURL		{http://tkcon.cvs.sourceforge.net/tkcon/tkcon/tkcon.tcl?rev=HEAD}
 
 	docs		"http://tkcon.sourceforge.net/"
