@@ -1,5 +1,7 @@
 2009-04-24  Jeff Hobbs  <jeffh@ActiveState.com>
 
+	* tkcon.tcl: clean up cmd global var used [Bug 2441583]
+
 	* tkcon.tcl (::tkcon::Retrieve): support http code redirect for
 	downloading latest version. [Bug 1755500]
 

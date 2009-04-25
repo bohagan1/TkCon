@@ -57,7 +57,6 @@ foreach pkg [info loaded {}] {
 	}
     }
 }
-catch {unset pkg file name version}
 
 # Tk 8.4 makes previously exposed stuff private.
 # FIX: Update tkcon to not rely on the private Tk code.
@@ -65,11 +64,14 @@ catch {unset pkg file name version}
 if {![llength [info globals tkPriv]]} {
     ::tk::unsupported::ExposePrivateVariable tkPriv
 }
-foreach cmd {SetCursor UpDownLine Transpose ScrollPages} {
-    if {![llength [info commands tkText$cmd]]} {
-        ::tk::unsupported::ExposePrivateCommand tkText$cmd
+foreach name {SetCursor UpDownLine Transpose ScrollPages} {
+    if {![llength [info commands tkText$name]]} {
+        ::tk::unsupported::ExposePrivateCommand tkText$name
     }
 }
+
+# Unset temporary global vars
+catch {unset pkg file name version}
 
 # Initialize the ::tkcon namespace
 #
@@ -192,7 +194,7 @@ proc ::tkcon::Init {args} {
 	    alias clear dir dump echo idebug lremove
 	    tkcon_puts tkcon_gets observe observe_var unalias which what
 	}
-	RCS		{RCS: @(#) $Id: tkcon.tcl,v 1.104 2009/04/24 19:08:02 hobbs Exp $}
+	RCS		{RCS: @(#) $Id: tkcon.tcl,v 1.105 2009/04/24 19:09:47 hobbs Exp $}
 	HEADURL		{http://tkcon.cvs.sourceforge.net/tkcon/tkcon/tkcon.tcl?rev=HEAD}
 
 	docs		"http://tkcon.sourceforge.net/"
