@@ -1,5 +1,8 @@
 2009-04-24  Jeff Hobbs  <jeffh@ActiveState.com>
 
+	* tkcon.tcl (::tkcon::Retrieve): support http code redirect for
+	downloading latest version. [Bug 1755500]
+
 	* README.txt, docs/limits.html, docs/nontcl.html: bump to 2.6
 	* pkgIndex.tcl, tkcon.tcl: Use Tcl 8.4 code style.
 

@@ -192,7 +192,7 @@ proc ::tkcon::Init {args} {
 	    alias clear dir dump echo idebug lremove
 	    tkcon_puts tkcon_gets observe observe_var unalias which what
 	}
-	RCS		{RCS: @(#) $Id: tkcon.tcl,v 1.103 2009/04/24 19:07:11 hobbs Exp $}
+	RCS		{RCS: @(#) $Id: tkcon.tcl,v 1.104 2009/04/24 19:08:02 hobbs Exp $}
 	HEADURL		{http://tkcon.cvs.sourceforge.net/tkcon/tkcon/tkcon.tcl?rev=HEAD}
 
 	docs		"http://tkcon.sourceforge.net/"
@@ -6131,6 +6131,22 @@ proc ::tkcon::Retrieve {} {
 	::http::wait $token
 	set code [catch {
 	    set ncode [::http::ncode $token]
+	    set i 0
+	    while {(($ncode >= 301) && ($ncode <= 307)) && [incr i] < 5} {
+		# redirect to meta Location
+		array set meta [::http::meta $token]
+		::http::cleanup $token
+		if {![info exists meta(Location)]} { break }
+		set url $meta(Location)
+		if {![string match "http*" $url]
+		    && [regexp {https?://[^/]+} $PRIV(HEADURL) srvr]} {
+		    # attach the same http server info
+		    set url $srvr/$url
+		}
+		set token [::http::geturl $url -headers $headers -timeout 30000]
+		::http::wait $token
+		set ncode [::http::ncode $token]
+	    }
 	    if {$ncode != 200} {
 		return "expected http return code 200, received $ncode"
 	    }
