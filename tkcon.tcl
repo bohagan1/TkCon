@@ -182,7 +182,7 @@ proc ::tkcon::Init {args} {
 	    alias clear dir dump echo idebug lremove
 	    tkcon_puts tkcon_gets observe observe_var unalias which what
 	}
-	RCS		{RCS: @(#) $Id: tkcon.tcl,v 1.109 2010/01/23 21:22:17 patthoyts Exp $}
+	RCS		{RCS: @(#) $Id: tkcon.tcl,v 1.110 2010/01/24 01:05:56 patthoyts Exp $}
 	HEADURL		{http://tkcon.cvs.sourceforge.net/tkcon/tkcon/tkcon.tcl?rev=HEAD}
 
 	docs		"http://tkcon.sourceforge.net/"
@@ -717,7 +717,6 @@ proc ::tkcon::locate_xdg_icon {name} {
     foreach dir $dirs {
         foreach path [list icons icons/hicolor/48x48/apps] {
             set path [file join $dir $path $name]
-            puts "$path [file exists $path]"
             if {[file exists $path]} {
                 return $path
             }
