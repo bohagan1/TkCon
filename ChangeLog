@@ -1,3 +1,12 @@
+2010-01-24  Pat Thoyts  <patthoyts@users.sourceforge.net>
+
+	* icons/*:                Added an SVG icon and .desktop file suitable
+	* tkcon-console.desktop:  for use installing tkcon into the desktop
+	* install-desktop-menu.sh: menus on a unix desktop. Also an install
+	* tkcon.tcl:              script to show how it is done. And for
+	use with 8.6 on X11 - if we can locate the icon, use it as the
+	tkcon iconphoto so it shows up associated with the running app.
+
 2010-01-23  Pat Thoyts  <patthoyts@users.sourceforge.net>
 
 	* tkcon.tcl: Make use of the extended window manager hints from

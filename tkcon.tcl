@@ -182,7 +182,7 @@ proc ::tkcon::Init {args} {
 	    alias clear dir dump echo idebug lremove
 	    tkcon_puts tkcon_gets observe observe_var unalias which what
 	}
-	RCS		{RCS: @(#) $Id: tkcon.tcl,v 1.108 2009/04/24 21:16:15 hobbs Exp $}
+	RCS		{RCS: @(#) $Id: tkcon.tcl,v 1.109 2010/01/23 21:22:17 patthoyts Exp $}
 	HEADURL		{http://tkcon.cvs.sourceforge.net/tkcon/tkcon/tkcon.tcl?rev=HEAD}
 
 	docs		"http://tkcon.sourceforge.net/"
@@ -683,6 +683,16 @@ proc ::tkcon::InitUI {title} {
 	grid remove $sbar
     }
 
+    # If we can locate the XDG icon file then make use of it.
+    if {[package vsatisfies [package provide Tk] 8.6]} {
+        if {[tk windowingsystem] eq "x11"} {
+            if {[set icon [locate_xdg_icon tkcon-icon.png]] ne ""} {
+                image create photo tkcon_icon -file $icon
+                wm iconphoto $root tkcon_icon
+            }
+        }
+    }
+
     if {!$PRIV(WWW)} {
 	wm title $root "tkcon $PRIV(version) $title"
 	if {$PRIV(showOnStartup)} { wm deiconify $root }
@@ -691,6 +701,29 @@ proc ::tkcon::InitUI {title} {
     if {$OPT(gc-delay)} {
 	after $OPT(gc-delay) ::tkcon::GarbageCollect
     }
+}
+
+# Hunt around the XDG defined directories for the icon.
+# Note: hicolor is the standard theme used by xdg-icon-resource.
+proc ::tkcon::locate_xdg_icon {name} {
+    global env
+    set dirs [list /usr/local/share /usr/share]
+    if {[info exists env(XDG_DATA_DIRS)]} {
+        set dirs [split $env(XDG_DATA_DIRS) :]
+    }
+    if {[file isdirectory ~/.local/share]} {
+        set dirs [linsert $dirs 0 ~/.local/share]
+    }
+    foreach dir $dirs {
+        foreach path [list icons icons/hicolor/48x48/apps] {
+            set path [file join $dir $path $name]
+            puts "$path [file exists $path]"
+            if {[file exists $path]} {
+                return $path
+            }
+        }
+    }
+    return ""
 }
 
 proc ::tkcon::InitTab {w} {
@@ -6321,7 +6354,7 @@ proc ::send::Pop {varname {nth 0}} {
     return $r
 }
 ##
-## end 'send' pacakge
+## end 'send' package
 
 ## special case 'tk appname' in Tcl plugin
 if {$::tkcon::PRIV(WWW)} {
