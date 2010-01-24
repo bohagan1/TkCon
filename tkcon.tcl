@@ -182,7 +182,7 @@ proc ::tkcon::Init {args} {
 	    alias clear dir dump echo idebug lremove
 	    tkcon_puts tkcon_gets observe observe_var unalias which what
 	}
-	RCS		{RCS: @(#) $Id: tkcon.tcl,v 1.107 2009/04/24 21:03:35 hobbs Exp $}
+	RCS		{RCS: @(#) $Id: tkcon.tcl,v 1.108 2009/04/24 21:16:15 hobbs Exp $}
 	HEADURL		{http://tkcon.cvs.sourceforge.net/tkcon/tkcon/tkcon.tcl?rev=HEAD}
 
 	docs		"http://tkcon.sourceforge.net/"
@@ -1377,6 +1377,7 @@ proc ::tkcon::About {} {
 	wm withdraw $w
 	wm transient $w $PRIV(root)
 	wm group $w $PRIV(root)
+	catch {wm attributes $w -type dialog}
 	wm title $w "About tkcon v$PRIV(version)"
 	wm resizable $w 0 0
 	button $w.b -text Dismiss -command [list wm withdraw $w]
@@ -1710,6 +1711,7 @@ proc ::tkcon::InterpPkgs {app type} {
 	wm title $t "$app Packages"
 	wm transient $t $PRIV(root)
 	wm group $t $PRIV(root)
+	catch {wm attributes $t -type dialog}
 	bind $t <Escape> [list destroy $t]
 
 	label $t.ll -text "Loadable:" -anchor w
@@ -1934,6 +1936,7 @@ proc ::tkcon::NamespacesList {names} {
     set f $PRIV(base).namespaces
     catch {destroy $f}
     toplevel $f
+    catch {wm attributes $f -type dialog}
     listbox $f.names -width 30 -height 15 -selectmode single \
 	-yscrollcommand [list $f.scrollv set] \
 	-xscrollcommand [list $f.scrollh set] \
@@ -2005,6 +2008,7 @@ proc ::tkcon::FindBox {w {str {}}} {
     if {![winfo exists $base]} {
 	toplevel $base
 	wm withdraw $base
+	catch {wm attributes $base -type dialog}
 	wm title $base "tkcon Find"
 
 	pack [frame $base.f] -fill x -expand 1
@@ -2276,6 +2280,7 @@ proc ::tkcon::NewSocket {} {
     if {![winfo exists $t]} {
 	toplevel $t
 	wm withdraw $t
+	catch {wm attributes $t -type dialog}
 	wm title $t "tkcon Create Socket"
 	label $t.lhost -text "Host: "
 	entry $t.host -width 16 -takefocus 1
@@ -2614,6 +2619,7 @@ proc ::tkcon::MainInit {} {
 	if {![winfo exists $t]} {
 	    toplevel $t
 	    wm withdraw $t
+	    catch {wm attributes $t -type dialog}
 	    wm title $t "tkcon Attach to Display"
 	    label $t.gets -text "New Display: "
 	    entry $t.data -width 32
@@ -2717,6 +2723,7 @@ proc ::tkcon::MainInit {} {
 	    $w.text delete 1.0 end
 	} else {
 	    toplevel $w
+	    catch {wm attributes $w -type dialog}
 	    frame $w.btn
 	    scrollbar $w.sy -command [list $w.text yview]
 	    text $w.text -yscrollcommand [list $w.sy set] -height 12 \
@@ -3453,6 +3460,7 @@ proc tkcon {cmd args} {
 	    if {![winfo exists $t]} {
 		toplevel $t
 		wm withdraw $t
+		catch {wm attributes $t -type dialog}
 		wm title $t "tkcon gets stdin request"
 		label $t.gets -text "\"gets stdin\" request:"
 		text $t.data -width 32 -height 5 -wrap none \
@@ -6080,6 +6088,7 @@ proc ::tkcon::RetrieveAuthentication {} {
     }
 
     set dlg [toplevel .auth]
+    catch {wm attributes $dlg -type dialog}
     wm title $dlg "Authenticating Proxy Configuration"
     set f1 [frame ${dlg}.f1]
     set f2 [frame ${dlg}.f2]

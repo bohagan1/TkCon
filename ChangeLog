@@ -1,3 +1,8 @@
+2010-01-23  Pat Thoyts  <patthoyts@users.sourceforge.net>
+
+	* tkcon.tcl: Make use of the extended window manager hints from
+	tip 359 on unix for all the dialog windows.
+
 2009-04-24  Jeff Hobbs  <jeffh@ActiveState.com>
 
 	* tkcon.tcl: override 8.5 [chan puts|gets]. [Bug 1876707]
