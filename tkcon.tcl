@@ -13,7 +13,7 @@ exec wish "$0" ${1+"$@"}
 ## Thanks to the following (among many) for early bug reports & code ideas:
 ## Steven Wahl, Jan Nijtmans, Mark Crimmins, Wart
 ##
-## Copyright (c) 1995-2009 Jeffrey Hobbs, jeff(a)hobbs(.)org
+## Copyright (c) 1995-2011 Jeffrey Hobbs, jeff(a)hobbs(.)org
 ## Initiated: Thu Aug 17 15:36:47 PDT 1995
 ##
 ## source standard_disclaimer.tcl
@@ -66,7 +66,7 @@ catch {unset pkg file name version}
 namespace eval ::tkcon {
     # when modifying this line, make sure that the auto-upgrade check
     # for version still works.
-    variable VERSION "2.6"
+    variable VERSION "2.7"
     # The OPT variable is an array containing most of the optional
     # info to configure.  COLOR has the color data.
     variable OPT
@@ -75,6 +75,9 @@ namespace eval ::tkcon {
     # PRIV is used for internal data that only tkcon should fiddle with.
     variable PRIV
     set PRIV(WWW) [info exists embed_args]
+    set PRIV(AQUA) [expr {$::tcl_version >= 8.4 && [tk windowingsystem] == "aqua"}]
+    set PRIV(CTRL) [expr {$PRIV(AQUA) ? "Command-" : "Control-"}]
+    set PRIV(ACC) [expr {$PRIV(AQUA) ? "Command-" : "Ctrl+"}]
 
     variable EXPECT 0
 }
@@ -182,7 +185,7 @@ proc ::tkcon::Init {args} {
 	    alias clear dir dump echo idebug lremove
 	    tkcon_puts tkcon_gets observe observe_var unalias which what
 	}
-	RCS		{RCS: @(#) $Id: tkcon.tcl,v 1.110 2010/01/24 01:05:56 patthoyts Exp $}
+	RCS		{RCS: @(#) $Id: tkcon.tcl,v 1.111 2010/01/24 01:25:26 patthoyts Exp $}
 	HEADURL		{http://tkcon.cvs.sourceforge.net/tkcon/tkcon/tkcon.tcl?rev=HEAD}
 
 	docs		"http://tkcon.sourceforge.net/"
@@ -350,7 +353,7 @@ proc ::tkcon::Init {args} {
     option add $optclass*Menu.tearOff 0
     option add $optclass*Menu.borderWidth 1
     option add $optclass*Menu.activeBorderWidth 1
-    if {$::tcl_version >= 8.4 && [tk windowingsystem] != "aqua"} {
+    if {!$PRIV(AQUA)} {
 	option add $optclass*Scrollbar.borderWidth 1
     }
 
@@ -627,9 +630,10 @@ proc ::tkcon::InitUI {title} {
     grid columnconfigure $sbar 1 -weight 1
     grid rowconfigure $sbar 0 -weight 1
     grid rowconfigure $PRIV(tabframe) 0 -weight 1
-    if {$::tcl_version >= 8.4 && [tk windowingsystem] == "aqua"} {
-	# resize control space
+    if {$PRIV(AQUA)} {
+	# resize control space and correct "X" button space
 	grid columnconfigure $sbar [lindex [grid size $sbar] 0] -minsize 16
+	$PRIV(X) configure -pady 5 -padx 4
     }
 
     ## Create console tab
@@ -796,6 +800,9 @@ proc ::tkcon::InitTab {w} {
 		-command [list ::tkcon::GotoTab $con]]
     if {$::tcl_version >= 8.4} {
 	$rb configure -offrelief flat -overrelief raised
+    }
+    if {$PRIV(AQUA)} {
+	$rb configure -padx 4 -pady 4 -highlightthickness 0
     }
     grid $rb -row 0 -column [lindex [grid size $PRIV(tabframe)] 0] -sticky ns
     grid $con -row 1 -column 1 -sticky news
@@ -1475,7 +1482,8 @@ proc ::tkcon::InitMenus {w title} {
 	$m add command -label "Load File" -underline 0 -command ::tkcon::Load
 	$m add cascade -label "Save ..."  -underline 0 -menu $m.save
 	$m add separator
-	$m add command -label "Quit" -underline 0 -accel Ctrl-q -command exit
+	$m add command -label "Quit" -underline 0 -accel $PRIV(ACC)q \
+	    -command exit
 
 	## Save Menu
 	##
@@ -1498,15 +1506,15 @@ proc ::tkcon::InitMenus {w title} {
     foreach m [list [menu $w.console -disabledfore $COLOR(disabled)] \
 	    [menu $w.pop.console -disabledfore $COLOR(disabled)]] {
 	$m add command -label "$title Console"	-state disabled
-	$m add command -label "New Console"	-underline 0 -accel Ctrl-N \
+	$m add command -label "New Console" -underline 0 -accel $PRIV(ACC)N \
 		-command ::tkcon::New
-	$m add command -label "New Tab"		-underline 4 -accel Ctrl-T \
+	$m add command -label "New Tab" -underline 4 -accel $PRIV(ACC)T \
 		-command ::tkcon::NewTab
-	$m add command -label "Delete Tab"	-underline 0 \
+	$m add command -label "Delete Tab" -underline 0 \
 		-command ::tkcon::DeleteTab -state disabled
-	$m add command -label "Close Console"	-underline 0 -accel Ctrl-w \
+	$m add command -label "Close Console" -underline 0 -accel $PRIV(ACC)w \
 		-command ::tkcon::Destroy
-	$m add command -label "Clear Console"	-underline 1 -accel Ctrl-l \
+	$m add command -label "Clear Console" -underline 1 -accel Ctrl-l \
 		-command { clear; ::tkcon::Prompt }
 	if {[tk windowingsystem] eq "x11"} {
 	    $m add separator
@@ -1551,14 +1559,14 @@ proc ::tkcon::InitMenus {w title} {
     ##
     set text $PRIV(console)
     foreach m [list [menu $w.edit] [menu $w.pop.edit]] {
-	$m add command -label "Cut"   -underline 2 -accel Ctrl-x \
+	$m add command -label "Cut"   -underline 2 -accel $PRIV(ACC)x \
 		-command [list ::tkcon::Cut $text]
-	$m add command -label "Copy"  -underline 0 -accel Ctrl-c \
+	$m add command -label "Copy"  -underline 0 -accel $PRIV(ACC)c \
 		-command [list ::tkcon::Copy $text]
-	$m add command -label "Paste" -underline 0 -accel Ctrl-v \
+	$m add command -label "Paste" -underline 0 -accel $PRIV(ACC)v \
 		 -command [list ::tkcon::Paste $text]
 	$m add separator
-	$m add command -label "Find"  -underline 0 -accel Ctrl-F \
+	$m add command -label "Find"  -underline 0 -accel $PRIV(ACC)F \
 		-command [list ::tkcon::FindBox $text]
     }
 
@@ -1586,10 +1594,15 @@ proc ::tkcon::InitMenus {w title} {
 		-underline 1 -variable ::tkcon::OPT(calcmode)
 	$m add check -label "Show Multiple Matches" \
 		-underline 0 -variable ::tkcon::OPT(showmultiple)
-	$m add check -label "Show Menubar" \
+	if {!$PRIV(AQUA)} {
+	    $m add check -label "Show Menubar" \
 		-underline 5 -variable ::tkcon::OPT(showmenu) \
-		-command {$::tkcon::PRIV(root) configure -menu [expr \
-		{$::tkcon::OPT(showmenu) ? $::tkcon::PRIV(menubar) : {}}]}
+		-command {
+		    $::tkcon::PRIV(root) configure \
+			-menu [expr {$::tkcon::OPT(showmenu) ?
+				     $::tkcon::PRIV(menubar) : {}}]
+		}
+	}
 	$m add check -label "Show Statusbar" \
 	    -underline 5 -variable ::tkcon::OPT(showstatusbar) \
 	    -command {
@@ -1620,7 +1633,7 @@ proc ::tkcon::InitMenus {w title} {
     ## Help Menu
     ##
     foreach m [list [menu $w.help] [menu $w.pop.help]] {
-	$m add command -label "About " -underline 0 -accel Ctrl-A \
+	$m add command -label "About " -underline 0 -accel $PRIV(ACC)A \
 		-command ::tkcon::About
 	$m add command -label "Retrieve Latest Version" -underline 0 \
 		-command ::tkcon::Retrieve
@@ -1764,6 +1777,9 @@ proc ::tkcon::InterpPkgs {app type} {
 	button $f.refresh -width 8 -text "Refresh" -command [info level 0]
 	button $f.dismiss -width 8 -text "Dismiss" -command [list destroy $t]
 	grid $f.refresh $f.dismiss -padx 4 -pady 3 -sticky ew
+	if {$PRIV(AQUA)} { # corner resize control space
+	    grid columnconfigure $f [lindex [grid size $f] 0] -minsize 16
+	}
 
 	grid $t.ll x x $t.lr x -sticky ew
 	grid $t.loadable $t.llsy $t.load $t.loaded $t.lrsy -sticky news
@@ -1853,7 +1869,7 @@ proc ::tkcon::AttachMenu m {
 
     $m delete 0 end
     set cmd {::tkcon::RePrompt \n [::tkcon::CmdGet $::tkcon::PRIV(console)]}
-    $m add radio -label {None (use local slave) } -accel Ctrl-1 \
+    $m add radio -label {None (use local slave) } -accel $PRIV(ACC)1 \
 	    -variable ::tkcon::PRIV(app) \
 	    -value [concat $::tkcon::PRIV(name) $::tkcon::OPT(exec)] \
 	    -command "::tkcon::Attach {}; $cmd"
@@ -1873,13 +1889,13 @@ proc ::tkcon::AttachMenu m {
 		    -variable ::tkcon::PRIV(app) -value $i \
 		    -command "::tkcon::Attach [list $i] slave; $cmd"]
 	    if {$PRIV(name) eq $i} {
-		append opts " -accel Ctrl-2"
+		append opts " -accel $PRIV(ACC)2"
 	    }
-	    eval $m add radio $opts
+	    eval [list $m add radio] $opts
 	} else {
 	    set name [concat Main $i]
 	    if {$name eq "Main"} {
-		$m add radio -label "$name ($interps($i))" -accel Ctrl-3 \
+		$m add radio -label "$name ($interps($i))" -accel $PRIV(ACC)3 \
 			-variable ::tkcon::PRIV(app) -value Main \
 			-command "::tkcon::Attach [list $name] slave; $cmd"
 	    } else {
@@ -2042,29 +2058,37 @@ proc ::tkcon::FindBox {w {str {}}} {
 	wm withdraw $base
 	catch {wm attributes $base -type dialog}
 	wm title $base "tkcon Find"
+	wm resizable $base 1 0
 
-	pack [frame $base.f] -fill x -expand 1
-	label $base.f.l -text "Find:"
-	entry $base.f.e -textvariable ::tkcon::PRIV(find)
-	pack [frame $base.opt] -fill x
-	checkbutton $base.opt.c -text "Case Sensitive" \
-		-variable ::tkcon::PRIV(find,case)
-	checkbutton $base.opt.r -text "Use Regexp" \
+	label $base.l -text "Find:" -anchor e
+	entry $base.e -textvariable ::tkcon::PRIV(find)
+
+	checkbutton $base.case -text "Case Sensitive" \
+	    -variable ::tkcon::PRIV(find,case)
+	checkbutton $base.re -text "Use Regexp" \
 	    -variable ::tkcon::PRIV(find,reg)
-	pack $base.f.l -side left
-	pack $base.f.e $base.opt.c $base.opt.r -side left -fill both -expand 1
-	pack [frame $base.sep -borderwidth 2 -relief sunken -height 4] -fill x
-	pack [frame $base.btn] -fill both
+
+	frame $base.sep -borderwidth 1 -relief sunken -height 2
+	frame $base.btn
+	grid $base.l $base.e - - -sticky ew
+	grid $base.case - $base.re -sticky ew
+	grid $base.sep -columnspan 4 -sticky ew
+	grid $base.btn -columnspan 4 -sticky ew
+	grid columnconfigure $base 3 -weight 1
+
 	button $base.btn.fnd -text "Find" -width 6
 	button $base.btn.clr -text "Clear" -width 6
 	button $base.btn.dis -text "Dismiss" -width 6
-	eval pack [winfo children $base.btn] -padx 4 -pady 2 \
-		-side left -fill both
+	eval grid [winfo children $base.btn] -padx 4 -pady 2 -sticky ew
+	if {$PRIV(AQUA)} { # corner resize control space
+	    grid columnconfigure $base.btn \
+		[lindex [grid size $base.btn] 0] -minsize 16
+	}
 
-	focus $base.f.e
+	focus $base.e
 
-	bind $base.f.e <Return> [list $base.btn.fnd invoke]
-	bind $base.f.e <Escape> [list $base.btn.dis invoke]
+	bind $base.e <Return> [list $base.btn.fnd invoke]
+	bind $base.e <Escape> [list $base.btn.dis invoke]
     }
     $base.btn.fnd config -command "::tkcon::Find [list $w] \$::tkcon::PRIV(find) \
 	    -case \$::tkcon::PRIV(find,case) -reg \$::tkcon::PRIV(find,reg)"
@@ -2084,7 +2108,7 @@ proc ::tkcon::FindBox {w {str {}}} {
     if {[wm state $base] ne "normal"} {
 	wm deiconify $base
     } else { raise $base }
-    $base.f.e select range 0 end
+    $base.e select range 0 end
 }
 
 ## ::tkcon::Find - searches in text widget $w for $str and highlights it
@@ -2314,6 +2338,7 @@ proc ::tkcon::NewSocket {} {
 	wm withdraw $t
 	catch {wm attributes $t -type dialog}
 	wm title $t "tkcon Create Socket"
+	wm resizable $t 1 0
 	label $t.lhost -text "Host: "
 	entry $t.host -width 16 -takefocus 1
 	label $t.lport -text "Port: "
@@ -2327,6 +2352,9 @@ proc ::tkcon::NewSocket {} {
 	grid configure $t.ok -padx 4 -pady 2
 	grid columnconfig $t 1 -weight 1
 	grid rowconfigure $t 1 -weight 1
+	if {$PRIV(AQUA)} { # corner resize control space
+	    grid columnconfigure $t [lindex [grid size $t] 0] -minsize 16
+	}
 	wm transient $t $PRIV(root)
 	wm group $t $PRIV(root)
 	wm geometry $t +[expr {([winfo screenwidth $t]-[winfo \
@@ -2763,42 +2791,43 @@ proc ::tkcon::MainInit {} {
 		    -background $COLOR(bg) \
 		    -insertbackground $COLOR(cursor) \
 		    -font $OPT(font) -borderwidth 1 -highlightthickness 0
-	    pack $w.btn -side bottom -fill x
-	    pack $w.sy -side right -fill y
-	    pack $w.text -fill both -expand 1
-	    button $w.btn.close -text "Dismiss" -width 11 \
-		    -command [list destroy $w]
-	    button $w.btn.check  -text "Recheckpoint" -width 11
-	    button $w.btn.revert -text "Revert" -width 11
-	    button $w.btn.expand -text "Verbose" -width 11
-	    button $w.btn.update -text "Update" -width 11
-	    pack $w.btn.check $w.btn.revert $w.btn.expand $w.btn.update \
-		    $w.btn.close -side left -fill x -padx 4 -pady 2 -expand 1
 	    $w.text tag config red -foreground red
+	    button $w.close -text "Dismiss" -width 8 \
+		-command [list destroy $w]
+	    button $w.check  -text "Recheckpoint" -width 11
+	    button $w.revert -text "Revert" -width 8
+	    button $w.expand -text "Verbose" -width 8
+	    button $w.update -text "Update" -width 8
+
+	    grid $w.text - - - - - $w.sy -sticky news
+	    grid x $w.check $w.revert $w.expand $w.update $w.close
+	    grid configure $w.close -padx {4 0}
+	    grid rowconfigure $w 0 -weight 1
+	    grid columnconfigure $w 0 -weight 1
 	}
 	wm title $w "Compare State: $type [list $app]"
 
-	$w.btn.check config \
+	$w.check config \
 		-command "::tkcon::StateCheckpoint [list $app] $type; \
 		::tkcon::StateCompare [list $app] $type $verbose"
-	$w.btn.revert config \
+	$w.revert config \
 		-command "::tkcon::StateRevert [list $app] $type; \
 		::tkcon::StateCompare [list $app] $type $verbose"
-	$w.btn.update config -command [info level 0]
+	$w.update config -command [info level 0]
 	if {$verbose} {
-	    $w.btn.expand config -text Brief \
+	    $w.expand config -text Brief \
 		    -command [list ::tkcon::StateCompare $app $type 0]
 	} else {
-	    $w.btn.expand config -text Verbose \
+	    $w.expand config -text Verbose \
 		    -command [list ::tkcon::StateCompare $app $type 1]
 	}
 	## Don't allow verbose mode unless 'dump' exists in $app
 	## We're assuming this is tkcon's dump command
 	set hasdump [llength [EvalOther $app $type info commands dump]]
 	if {$hasdump} {
-	    $w.btn.expand config -state normal
+	    $w.expand config -state normal
 	} else {
-	    $w.btn.expand config -state disabled
+	    $w.expand config -state disabled
 	}
 
 	set cmds [lremove [EvalOther $app $type info commands *] \
@@ -3790,6 +3819,9 @@ proc tkcon_gets args {
 # Returns:	nothing
 ## 
 proc edit {args} {
+    variable ::tkcon::PRIV
+    variable ::tkcon::COLOR
+
     array set opts {-find {} -type {} -attach {} -wrap {none}}
     while {[string match -* [lindex $args 0]]} {
 	switch -glob -- [lindex $args 0] {
@@ -3824,7 +3856,7 @@ proc edit {args} {
     }
 
     # Create unique edit window toplevel
-    set w $::tkcon::PRIV(base).__edit
+    set w $PRIV(base).__edit
     set i 0
     while {[winfo exists $w[incr i]]} {}
     append w $i
@@ -3844,9 +3876,9 @@ proc edit {args} {
     $w.text configure -wrap $opts(-wrap) \
 	-xscrollcommand [list $w.sx set] \
 	-yscrollcommand [list $w.sy set] \
-	-foreground $::tkcon::COLOR(stdin) \
-	-background $::tkcon::COLOR(bg) \
-	-insertbackground $::tkcon::COLOR(cursor) \
+	-foreground $COLOR(stdin) \
+	-background $COLOR(bg) \
+	-insertbackground $COLOR(cursor) \
 	-font $::tkcon::OPT(font) -borderwidth 1 -highlightthickness 0
     catch {
 	# 8.4+ stuff
@@ -3866,10 +3898,10 @@ proc edit {args} {
     $m add command -label "Append To..."  -underline 0 \
 	-command [list ::tkcon::Save {} widget $w.text a+]
     $m add separator
-    $m add command -label "Dismiss" -underline 0 -accel "Ctrl-w" \
+    $m add command -label "Dismiss" -underline 0 -accel $PRIV(ACC)w \
 	-command [list destroy $w]
-    bind $w <Control-w>			[list destroy $w]
-    bind $w <$::tkcon::PRIV(meta)-w>	[list destroy $w]
+    bind $w <$PRIV(CTRL)w>		[list destroy $w]
+    bind $w <Alt-w>		[list destroy $w]
 
     ## Edit Menu
     ##
@@ -5036,39 +5068,32 @@ proc ::tkcon::Bindings {} {
     #			start dragging out a selection).
     #-----------------------------------------------------------------------
 
-    switch -glob $tcl_platform(platform) {
-	win*	{ set PRIV(meta) Alt }
-	mac*	{ set PRIV(meta) Command }
-	default	{ set PRIV(meta) Meta }
-    }
-
     ## Get all Text bindings into TkConsole
     foreach ev [bind Text] { bind TkConsole $ev [bind Text $ev] }
     ## We really didn't want the newline insertion
     bind TkConsole <Control-Key-o> {}
 
     ## Now make all our virtual event bindings
-    foreach {ev key} [subst -nocommand -noback {
-	<<TkCon_Exit>>		<Control-q>
-	<<TkCon_New>>		<Control-N>
-	<<TkCon_NewTab>>	<Control-T>
+    set bindings {
+	<<TkCon_Exit>>		<$PRIV(CTRL)-q>
+	<<TkCon_New>>		<$PRIV(CTRL)-N>
+	<<TkCon_NewTab>>	<$PRIV(CTRL)-T>
 	<<TkCon_NextTab>>	<Control-Key-Tab>
 	<<TkCon_PrevTab>>	<Control-Shift-Key-Tab>
-	<<TkCon_Close>>		<Control-w>
-	<<TkCon_About>>		<Control-A>
-	<<TkCon_Help>>		<Control-H>
-	<<TkCon_Find>>		<Control-F>
-	<<TkCon_Slave>>		<Control-Key-1>
-	<<TkCon_Master>>	<Control-Key-2>
-	<<TkCon_Main>>		<Control-Key-3>
+	<<TkCon_Close>>		<$PRIV(CTRL)-w>
+	<<TkCon_About>>		<$PRIV(CTRL)-A>
+	<<TkCon_Find>>		<$PRIV(CTRL)F>
+	<<TkCon_Slave>>		<$PRIV(CTRL)Key-1>
+	<<TkCon_Master>>	<$PRIV(CTRL)Key-2>
+	<<TkCon_Main>>		<$PRIV(CTRL)Key-3>
 	<<TkCon_Expand>>	<Key-Tab>
 	<<TkCon_ExpandFile>>	<Key-Escape>
 	<<TkCon_ExpandProc>>	<Control-P>
 	<<TkCon_ExpandVar>>	<Control-V>
 	<<TkCon_Tab>>		<Control-i>
-	<<TkCon_Tab>>		<$PRIV(meta)-i>
+	<<TkCon_Tab>>		<Alt-i>
 	<<TkCon_Newline>>	<Control-o>
-	<<TkCon_Newline>>	<$PRIV(meta)-o>
+	<<TkCon_Newline>>	<Alt-o>
 	<<TkCon_Newline>>	<Control-Key-Return>
 	<<TkCon_Newline>>	<Control-Key-KP_Enter>
 	<<TkCon_Eval>>		<Return>
@@ -5083,8 +5108,14 @@ proc ::tkcon::Bindings {} {
 	<<TkCon_Transpose>>	<Control-t>
 	<<TkCon_ClearLine>>	<Control-u>
 	<<TkCon_SaveCommand>>	<Control-z>
-	<<TkCon_Popup>>		<Button-3>
-    }] {
+    }
+    if {$PRIV(AQUA)} {
+	lappend bindings <<TkCon_Popup>> <Control-Button-1> \
+	    <<TkCon_Popup>> <Button-2>
+    } else {
+	lappend bindings <<TkCon_Popup>> <Button-3>
+    }
+    foreach {ev key} [subst -nocommand -noback $bindings] {
 	event add $ev $key
 	## Make sure the specific key won't be defined
 	bind TkConsole $key {}
@@ -5098,7 +5129,6 @@ proc ::tkcon::Bindings {} {
     bind $PRIV(root) <<TkCon_PrevTab>>	{ ::tkcon::GotoTab -1 ; break }
     bind $PRIV(root) <<TkCon_Close>>	{ ::tkcon::Destroy }
     bind $PRIV(root) <<TkCon_About>>	{ ::tkcon::About }
-    bind $PRIV(root) <<TkCon_Help>>	{ ::tkcon::Help }
     bind $PRIV(root) <<TkCon_Find>>	{ ::tkcon::FindBox $::tkcon::PRIV(console) }
     bind $PRIV(root) <<TkCon_Slave>>	{
 	::tkcon::Attach {}
@@ -5193,7 +5223,7 @@ proc ::tkcon::Bindings {} {
 
     ## Redefine for TkConsole what we need
     ##
-    event delete <<Paste>> <Control-V>
+    event delete <<Paste>> <$PRIV(CTRL)V>
     ::tkcon::ClipboardKeysyms <Copy> <Cut> <Paste>
 
     bind TkConsole <Insert> {
@@ -5336,17 +5366,17 @@ proc ::tkcon::Bindings {} {
     catch {bind TkConsole <Key-Prior>     { tk::TextScrollPages %W -1 }}
     catch {bind TkConsole <Key-Page_Down> { tk::TextScrollPages %W 1 }}
     catch {bind TkConsole <Key-Next>      { tk::TextScrollPages %W 1 }}
-    bind TkConsole <$PRIV(meta)-d> {
+    bind TkConsole <Alt-d> {
 	if {[%W compare insert >= limit]} {
 	    %W delete insert {insert wordend}
 	}
     }
-    bind TkConsole <$PRIV(meta)-BackSpace> {
+    bind TkConsole <Alt-BackSpace> {
 	if {[%W compare {insert -1c wordstart} >= limit]} {
 	    %W delete {insert -1c wordstart} insert
 	}
     }
-    bind TkConsole <$PRIV(meta)-Delete> {
+    bind TkConsole <Alt-Delete> {
 	if {[%W compare insert >= limit]} {
 	    %W delete insert {insert wordend}
 	}
