@@ -185,7 +185,7 @@ proc ::tkcon::Init {args} {
 	    alias clear dir dump echo idebug lremove
 	    tkcon_puts tkcon_gets observe observe_var unalias which what
 	}
-	RCS		{RCS: @(#) $Id: tkcon.tcl,v 1.111 2010/01/24 01:25:26 patthoyts Exp $}
+	RCS		{RCS: @(#) $Id: tkcon.tcl,v 1.112 2011/10/28 15:14:34 hobbs Exp $}
 	HEADURL		{http://tkcon.cvs.sourceforge.net/tkcon/tkcon/tkcon.tcl?rev=HEAD}
 
 	docs		"http://tkcon.sourceforge.net/"
@@ -3671,7 +3671,7 @@ proc tkcon {cmd args} {
 		set OPT(exec) ""
 	    }
 	    if {![winfo exists $PRIV(root)]} {
-		::tkcon::Init
+		eval [linsert $args 0 ::tkcon::Init]
 	    }
 	    wm deiconify $PRIV(root)
 	    raise $PRIV(root)
@@ -4359,8 +4359,8 @@ proc idebug {opt args} {
 		    }
 		}
 		if {[string match {} $line]} continue
-		set key [lindex $line 0]
-		if {![regexp {^([#-]?[0-9]+)} [lreplace $line 0 0] lvl]} {
+		set key [regexp -inline {\S+} $line]
+		if {![regexp {^\s*\S+\s+([#-]?[0-9]+)} $line -> lvl]} {
 		    set lvl \#$level
 		}
 		set res {}; set c 0
