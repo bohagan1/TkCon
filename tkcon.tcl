@@ -185,7 +185,7 @@ proc ::tkcon::Init {args} {
 	    alias clear dir dump echo idebug lremove
 	    tkcon_puts tkcon_gets observe observe_var unalias which what
 	}
-	RCS		{RCS: @(#) $Id: tkcon.tcl,v 1.113 2012/03/07 03:02:21 hobbs Exp $}
+	RCS		{RCS: @(#) $Id: tkcon.tcl,v 1.114 2012/12/27 22:04:32 hobbs Exp $}
 	HEADURL		{http://tkcon.cvs.sourceforge.net/tkcon/tkcon/tkcon.tcl?rev=HEAD}
 
 	docs		"http://tkcon.sourceforge.net/"
@@ -561,7 +561,7 @@ proc ::tkcon::InitInterp {name type} {
 	switch -exact $type {
 	    slave {
 		foreach cmd $PRIV(slavealias) {
-		    Main interp alias $name ::$cmd $PRIV(name) ::$cmd
+		    Main [list interp alias $name ::$cmd $PRIV(name) ::$cmd]
 		}
 	    }
 	    interp {

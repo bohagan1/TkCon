@@ -5,6 +5,9 @@
 	signals to differentiate "I'm not responsible" results from "I
 	don't have any results". (neumann)
 
+	* tkcon.tcl (::tkcon::InitInterp): correct sending tkcon commands
+	to user created interps [Bug #42] (kuhn)
+
 2012-03-06  Jeff Hobbs  <jeffh@>
 
 	* tkcon.tcl (idebug): better line handling to not use list
