@@ -1,5 +1,8 @@
 2012-12-27  Jeff Hobbs  <jeffh@ActiveState.com>
 
+	* docs/{dump.man,tkcon.1.man,tkconc.5.man}: make dtplite happy for
+	the docs [Bug #47]
+
 	* tkcon.tcl (::tkcon::Init): update to use latest /viewvc/tkcon
 	url to retrieve head version of tkcon.
 
