@@ -1,5 +1,8 @@
 2012-12-27  Jeff Hobbs  <jeffh@ActiveState.com>
 
+	* tkcon.tcl (edit): add support for ::tkcon::OPT(tabspace) to
+	adjust tab spacing in edit window (default: 8). [Bug #7]
+
 	* tkcon.tcl (::tkcon::Bindings): minimal patch for 8.6b3+ event
 	compatibility. Larger patch to come that addresses shift towards
 	virtual events in core widgets. [Bug #48] (gollwitzer)

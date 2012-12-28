@@ -150,6 +150,7 @@ proc ::tkcon::Init {args} {
 	slaveeval	{}
 	slaveexit	close
 	subhistory	1
+	tabspace	8
 	gc-delay	60000
 	gets		{congets}
 	overrideexit	1
@@ -185,7 +186,7 @@ proc ::tkcon::Init {args} {
 	    alias clear dir dump echo idebug lremove
 	    tkcon_puts tkcon_gets observe observe_var unalias which what
 	}
-	RCS		{RCS: @(#) $Id: tkcon.tcl,v 1.117 2012/12/27 22:31:07 hobbs Exp $}
+	RCS		{RCS: @(#) $Id: tkcon.tcl,v 1.118 2012/12/27 22:44:53 hobbs Exp $}
 	HEADURL		{http://tkcon.cvs.sourceforge.net/viewvc/tkcon/tkcon/tkcon.tcl}
 
 	docs		"http://tkcon.sourceforge.net/"
@@ -3830,6 +3831,7 @@ proc tkcon_gets args {
 proc edit {args} {
     variable ::tkcon::PRIV
     variable ::tkcon::COLOR
+    variable ::tkcon::OPT
 
     array set opts {-find {} -type {} -attach {} -wrap {none}}
     while {[string match -* [lindex $args 0]]} {
@@ -3888,11 +3890,14 @@ proc edit {args} {
 	-foreground $COLOR(stdin) \
 	-background $COLOR(bg) \
 	-insertbackground $COLOR(cursor) \
-	-font $::tkcon::OPT(font) -borderwidth 1 -highlightthickness 0
+	-font $::tkcon::OPT(font) -borderwidth 1 -highlightthickness 0 \
+	-undo 1
     catch {
-	# 8.4+ stuff
-	$w.text configure -undo 1
+	# 8.5+ stuff
+	set tabsp [expr {$OPT(tabspace) * [font measure $OPT(font) 0]}]
+	$w.text configure -tabs [list $tabsp left] -tabstyle wordprocessor
     }
+
     scrollbar $w.sx -orient h -command [list $w.text xview]
     scrollbar $w.sy -orient v -command [list $w.text yview]
 
