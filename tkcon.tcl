@@ -185,7 +185,7 @@ proc ::tkcon::Init {args} {
 	    alias clear dir dump echo idebug lremove
 	    tkcon_puts tkcon_gets observe observe_var unalias which what
 	}
-	RCS		{RCS: @(#) $Id: tkcon.tcl,v 1.114 2012/12/27 22:04:32 hobbs Exp $}
+	RCS		{RCS: @(#) $Id: tkcon.tcl,v 1.115 2012/12/27 22:17:43 hobbs Exp $}
 	HEADURL		{http://tkcon.cvs.sourceforge.net/tkcon/tkcon/tkcon.tcl?rev=HEAD}
 
 	docs		"http://tkcon.sourceforge.net/"
@@ -705,7 +705,10 @@ proc ::tkcon::InitUI {title} {
 
     if {!$PRIV(WWW)} {
 	wm title $root "tkcon $PRIV(version) $title"
-	if {$PRIV(showOnStartup)} { wm deiconify $root }
+	if {$PRIV(showOnStartup)} {
+	    # this may throw an error if toplevel is embedded
+	    catch {wm deiconify $root}
+	}
     }
     if {$PRIV(showOnStartup)} { focus -force $PRIV(console) }
     if {$OPT(gc-delay)} {
