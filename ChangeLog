@@ -1,3 +1,10 @@
+2012-12-27  Jeff Hobbs  <jeffh@ActiveState.com>
+
+	* tkcon.tcl (::tkcon::ExpandMethodname): improved expansion for
+	xotcl methods.  Also enhance expansion to allow break/continue
+	signals to differentiate "I'm not responsible" results from "I
+	don't have any results". (neumann)
+
 2012-03-06  Jeff Hobbs  <jeffh@>
 
 	* tkcon.tcl (idebug): better line handling to not use list

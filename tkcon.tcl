@@ -119,7 +119,7 @@ proc ::tkcon::Init {args} {
 	if {![info exists COLOR($key)]} { set COLOR($key) $default }
     }
 
-    # expandorder could also include 'Xotcl' (before Procname)
+    # expandorder could also include 'Methodname' for XOTcl/NSF methods
     foreach {key default} {
 	autoload	{}
 	blinktime	500
@@ -185,7 +185,7 @@ proc ::tkcon::Init {args} {
 	    alias clear dir dump echo idebug lremove
 	    tkcon_puts tkcon_gets observe observe_var unalias which what
 	}
-	RCS		{RCS: @(#) $Id: tkcon.tcl,v 1.112 2011/10/28 15:14:34 hobbs Exp $}
+	RCS		{RCS: @(#) $Id: tkcon.tcl,v 1.113 2012/03/07 03:02:21 hobbs Exp $}
 	HEADURL		{http://tkcon.cvs.sourceforge.net/tkcon/tkcon/tkcon.tcl?rev=HEAD}
 
 	docs		"http://tkcon.sourceforge.net/"
@@ -320,7 +320,13 @@ proc ::tkcon::Init {args} {
 		-color-*	{ set COLOR([string range $arg 7 end]) $val }
 		-exec		{ set OPT(exec) $val }
 		-main - -e - -eval	{ append OPT(maineval) \n$val\n }
-		-package - -load	{ lappend OPT(autoload) $val }
+		-package - -load	{
+		    lappend OPT(autoload) $val
+		    if {$val eq "nsf" || $val eq "nx" || $val eq "XOTcl" } {
+			# If xotcl is loaded, prepend expand order for it
+			set OPT(expandorder) [concat Methodname $OPT(expandorder)]
+		    }
+		}
 		-slave		{ append OPT(slaveeval) \n$val\n }
 		-nontcl		{ set OPT(nontcl) [regexp -nocase $truth $val]}
 		-root		{ set PRIV(root) $val }
@@ -5671,17 +5677,22 @@ proc ::tkcon::Expand {w {type ""}} {
     set exp "\[^\\\\\]\[\[ \t\n\r\\\{\"$\]"
     set tmp [$w search -backwards -regexp $exp insert-1c limit-1c]
     if {[string compare {} $tmp]} {append tmp +2c} else {set tmp limit}
-    if {[$w compare $tmp >= insert]} return
     set str [$w get $tmp insert]
+    # Expand procs can return "break" to indicate not to try further
+    # matches, otherwise "continue" says "I got nothing, continue on"
+    # We can ignore return codes from the specific expand type checks
     switch -glob $type {
-	pa* { set res [ExpandPathname $str] }
-	pr* { set res [ExpandProcname $str] }
-	v*  { set res [ExpandVariable $str] }
+	pa* { set code [catch {ExpandPathname $str} res] }
+	pr* { set code [catch {ExpandProcname $str} res] }
+	v*  { set code [catch {ExpandVariable $str} res] }
 	default {
+	    # XXX could be extended to allow the results of all matches
+	    # XXX to be amalgamted ... may be confusing to user
 	    set res {}
 	    foreach t $::tkcon::OPT(expandorder) {
-		if {![catch {Expand$t $str} res] && \
-			[string compare {} $res]} break
+		set code [catch {Expand$t $str} res]
+		if {$code == 0 || $code == 3} { break }
+		set res {}
 	    }
 	}
     }
@@ -5707,6 +5718,10 @@ proc ::tkcon::Expand {w {type ""}} {
 #		possible further matches
 ## 
 proc ::tkcon::ExpandPathname str {
+
+    # require at least a single character, otherwise continue
+    if {$str eq ""} {return -code continue}
+
     set pwd [EvalAttached pwd]
     # Cause a string like {C:/Program\ Files/} to become "C:/Program Files/"
     regsub -all {\\([][ ])} $str {\1} str
@@ -5753,7 +5768,7 @@ proc ::tkcon::ExpandPathname str {
 	}
     }
     EvalAttached [list cd $pwd]
-    return $match
+    return -code [expr {$match eq "" ? "continue" : "break"}] $match
 }
 
 ## ::tkcon::ExpandProcname - expand a tcl proc name based on $str
@@ -5763,6 +5778,10 @@ proc ::tkcon::ExpandPathname str {
 #		possible further matches
 ##
 proc ::tkcon::ExpandProcname str {
+
+    # require at least a single character, otherwise continue
+    if {$str eq ""} {return -code continue}
+
     set match [EvalAttached [list info commands $str*]]
     if {[llength $match] == 0} {
 	set ns [EvalAttached \
@@ -5779,33 +5798,58 @@ proc ::tkcon::ExpandProcname str {
     } else {
 	regsub -all {([^\\]) } $match {\1\\ } match
     }
-    return $match
+    return -code [expr {$match eq "" ? "continue" : "break"}] $match
 }
 
-## ::tkcon::ExpandXotcl - expand an xotcl method name based on $str
+## ::tkcon::ExpandMethodname - expand an NSF/XOTcl method name based on $str
 # ARGS:	str	- partial proc name to expand
 # Calls:	::tkcon::ExpandBestMatch
 # Returns:	list containing longest unique match followed by all the
 #		possible further matches
 ##
-proc ::tkcon::ExpandXotcl str {
-    # in a first step, get the cmd to check, if we should handle subcommands
-    set cmd [::tkcon::CmdGet $::tkcon::PRIV(console)]
-    # Only do the xotcl magic if there are two cmds and xotcl is loaded
-    if {[llength $cmd] != 2
-	|| ![EvalAttached [list info exists ::xotcl::version]]} {
-	return
+proc ::tkcon::ExpandMethodname str {
+
+    # In a first step, obtain the typed-in cmd from the console
+    set typedCmd [::tkcon::CmdGet $::tkcon::PRIV(console)]
+    set obj [lindex $typedCmd 0]
+    if {$obj eq $typedCmd} {
+	# just a single word, can't be a method expansion
+        return -code continue
     }
-    set obj [lindex $cmd 0]
-    set sub [lindex $cmd 1]
-    set match [EvalAttached [list $obj info methods $sub*]]
-    if {[llength $match] > 1} {
-	regsub -all {([^\\]) } [ExpandBestMatch $match $str] {\1\\ } str
-	set match [linsert $match 0 $str]
+    # Get the full string after the object
+    set sub [string trimleft [string range $typedCmd [string length [list $obj]] end]]
+    if {[EvalAttached [list info exists ::nsf::version]]} {
+	# Next Scripting Framework is loaded
+	if {![EvalAttached [list ::nsf::object::exists $obj]]} {return -code continue}
+	if {[string match ::* $sub]} {
+	    # NSF allows dispatch of unregistered methods via absolute
+	    # paths
+	    set cmd "concat \[info commands $sub*\] \[namespace children \[namespace qualifiers $sub\] $sub*\]"
+	} else {
+	    set cmd [list $obj ::nsf::methods::object::info::lookupmethods -callprotection public -path -- $sub*]
+	}
+    } elseif {[EvalAttached [list info exists ::xotcl::version]]} {
+	# XOTcl < 2.* is loaded
+	if {![EvalAttached [list ::xotcl::Object isobject $obj]]} {return -code continue}
+	set cmd [list $obj info methods $sub*]
     } else {
-	regsub -all {([^\\]) } $match {\1\\ } match
+	# No NSF/XOTcl loaded
+        return -code continue
     }
-    return $match
+
+    set match [EvalAttached $cmd]
+    if {[llength $match] > 1} {
+	regsub -all {([^\\]) } [ExpandBestMatch $match $str] {\1\\ } bestMatch
+	if {$str eq "" && [string match "* " $bestMatch]} {
+	    set match [linsert $match 0 ""]
+	} else {
+	    regsub -all {\\ } $bestMatch { } bestMatch
+	    set match [linsert $match 0 [lindex $bestMatch end]]
+	}
+    } else {
+	set match [lindex [lindex $match 0] end]
+    }
+    return -code break $match
 }
 
 ## ::tkcon::ExpandVariable - expand a tcl variable name based on $str
@@ -5815,6 +5859,10 @@ proc ::tkcon::ExpandXotcl str {
 #		possible further matches
 ## 
 proc ::tkcon::ExpandVariable str {
+
+    # require at least a single character, otherwise continue
+    if {$str eq ""} {return -code continue}
+
     if {[regexp {([^\(]*)\((.*)} $str junk ary str]} {
 	## Looks like they're trying to expand an array.
 	set match [EvalAttached [list array names $ary $str*]]
@@ -5835,7 +5883,7 @@ proc ::tkcon::ExpandVariable str {
 	    regsub -all {([^\\]) } $match {\1\\ } match
 	}
     }
-    return $match
+    return -code [expr {$match eq "" ? "continue" : "break"}] $match
 }
 
 ## ::tkcon::ExpandBestMatch2 - finds the best unique match in a list of names
