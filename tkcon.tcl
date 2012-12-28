@@ -185,7 +185,7 @@ proc ::tkcon::Init {args} {
 	    alias clear dir dump echo idebug lremove
 	    tkcon_puts tkcon_gets observe observe_var unalias which what
 	}
-	RCS		{RCS: @(#) $Id: tkcon.tcl,v 1.116 2012/12/27 22:22:49 hobbs Exp $}
+	RCS		{RCS: @(#) $Id: tkcon.tcl,v 1.117 2012/12/27 22:31:07 hobbs Exp $}
 	HEADURL		{http://tkcon.cvs.sourceforge.net/viewvc/tkcon/tkcon/tkcon.tcl}
 
 	docs		"http://tkcon.sourceforge.net/"
@@ -5081,6 +5081,11 @@ proc ::tkcon::Bindings {} {
     foreach ev [bind Text] { bind TkConsole $ev [bind Text $ev] }
     ## We really didn't want the newline insertion
     bind TkConsole <Control-Key-o> {}
+
+    ## in 8.6b3, the virtual events <<NextLine>> and <<PrevLine>> 
+    #  mess up our history feature
+    bind TkConsole <<NextLine>> {}
+    bind TkConsole <<PrevLine>> {}
 
     ## Now make all our virtual event bindings
     set bindings {
