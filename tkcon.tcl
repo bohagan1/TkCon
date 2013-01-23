@@ -186,7 +186,7 @@ proc ::tkcon::Init {args} {
 	    alias clear dir dump echo idebug lremove
 	    tkcon_puts tkcon_gets observe observe_var unalias which what
 	}
-	RCS		{RCS: @(#) $Id: tkcon.tcl,v 1.118 2012/12/27 22:44:53 hobbs Exp $}
+	RCS		{RCS: @(#) $Id: tkcon.tcl,v 1.119 2012/12/27 23:06:24 hobbs Exp $}
 	HEADURL		{http://tkcon.cvs.sourceforge.net/viewvc/tkcon/tkcon/tkcon.tcl}
 
 	docs		"http://tkcon.sourceforge.net/"
@@ -3683,8 +3683,8 @@ proc tkcon {cmd args} {
 	    if {![winfo exists $PRIV(root)]} {
 		eval [linsert $args 0 ::tkcon::Init]
 	    }
-	    wm deiconify $PRIV(root)
-	    raise $PRIV(root)
+	    # this may throw an error if toplevel is embedded
+	    catch {wm deiconify $PRIV(root); raise $PRIV(root)}
 	    focus -force $PRIV(console)
 	}
 	ti* {

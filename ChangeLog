@@ -1,3 +1,8 @@
+2013-01-22  Jeff Hobbs  <jeffh@ActiveState.com>
+
+	* tkcon.tcl (tkcon show): catch deiconify as it will throw an
+	error if tkcon is embedded.
+
 2012-12-27  Jeff Hobbs  <jeffh@ActiveState.com>
 
 	* tkcon.tcl (edit): add support for ::tkcon::OPT(tabspace) to
