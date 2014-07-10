@@ -186,7 +186,7 @@ proc ::tkcon::Init {args} {
 	    alias clear dir dump echo idebug lremove
 	    tkcon_puts tkcon_gets observe observe_var unalias which what
 	}
-	RCS		{RCS: @(#) $Id: tkcon.tcl,v 1.119 2012/12/27 23:06:24 hobbs Exp $}
+	RCS		{RCS: @(#) $Id: tkcon.tcl,v 1.120 2013/01/23 01:19:51 hobbs Exp $}
 	HEADURL		{http://tkcon.cvs.sourceforge.net/viewvc/tkcon/tkcon/tkcon.tcl}
 
 	docs		"http://tkcon.sourceforge.net/"
@@ -4328,14 +4328,15 @@ proc idebug {opt args} {
     set level [expr {[info level]-1}]
     switch -glob -- $opt {
 	on	{
-	    if {[llength $args]} { set IDEBUG(id) $args }
+	    # id is just arg0 [bug #50]
+	    if {[llength $args]} { set IDEBUG(id) [lindex $args 0] }
 	    return [set IDEBUG(on) 1]
 	}
 	off	{ return [set IDEBUG(on) 0] }
 	id  {
 	    if {![llength $args]} {
 		return $IDEBUG(id)
-	    } else { return [set IDEBUG(id) $args] }
+	    } else { return [set IDEBUG(id) [lindex $args 0]] }
 	}
 	break {
 	    if {!$IDEBUG(on) || $IDEBUG(debugging) || \

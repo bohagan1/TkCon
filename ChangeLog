@@ -1,3 +1,7 @@
+2014-07-09  Jeff Hobbs  <jeffh@ActiveState.com>
+
+	* tkcon.tcl (idebug): allow multi-char patterns as debug id [Lama]
+
 2013-01-22  Jeff Hobbs  <jeffh@ActiveState.com>
 
 	* tkcon.tcl (tkcon show): catch deiconify as it will throw an
