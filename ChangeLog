@@ -1,3 +1,8 @@
+2014-09-09  Jeff Hobbs  <jeffh@ActiveState.com>
+
+	* tkcon.tcl (::tkcon::SaveHistory): save history at each command
+	to prevent loss during abnormal termination. [bachmann]
+
 2014-07-09  Jeff Hobbs  <jeffh@ActiveState.com>
 
 	* tkcon.tcl (idebug): allow multi-char patterns as debug id [Lama]

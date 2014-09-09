@@ -186,7 +186,7 @@ proc ::tkcon::Init {args} {
 	    alias clear dir dump echo idebug lremove
 	    tkcon_puts tkcon_gets observe observe_var unalias which what
 	}
-	RCS		{RCS: @(#) $Id: tkcon.tcl,v 1.120 2013/01/23 01:19:51 hobbs Exp $}
+	RCS		{RCS: @(#) $Id: tkcon.tcl,v 1.121 2014/07/10 02:13:20 hobbs Exp $}
 	HEADURL		{http://tkcon.cvs.sourceforge.net/viewvc/tkcon/tkcon/tkcon.tcl}
 
 	docs		"http://tkcon.sourceforge.net/"
@@ -1121,6 +1121,10 @@ proc ::tkcon::AddSlaveHistory cmd {
     set code [catch {EvalSlave history event $ev} lastCmd]
     if {$code || $cmd ne $lastCmd} {
 	EvalSlave history add $cmd
+	# Save history every time so it's not lost in case of an abnormal termination.
+	# Do not warn in case of an error: we don't want an error message 
+	# after each command if the history file is not writable.
+	catch {SaveHistory}
     }
 }
 
@@ -2600,30 +2604,40 @@ proc ::tkcon::MainInit {} {
 	}
 	proc ::exit args {
 	    if {$::tkcon::OPT(usehistory)} {
-		if {[catch {open $::tkcon::PRIV(histfile) w} fid]} {
-		    puts stderr "unable to save history file:\n$fid"
+		if {[catch {::tkcon::SaveHistory} msg]} {
+		    puts stderr "unable to save history file:\n$msg"
 		    # pause a moment, because we are about to die finally...
 		    after 1000
-		} else {
-		    set max [::tkcon::EvalSlave history nextid]
-		    set id [expr {$max - $::tkcon::OPT(history)}]
-		    if {$id < 1} { set id 1 }
-		    ## FIX: This puts history in backwards!!
-		    while {($id < $max) && ![catch \
-			    {::tkcon::EvalSlave history event $id} cmd]} {
-			if {$cmd ne ""} {
-			    puts $fid "::tkcon::EvalSlave\
-				    history add [list $cmd]"
-			}
-			incr id
-		    }
-		    close $fid
 		}
 	    }
 	    uplevel 1 ::tkcon::FinalExit $args
 	}
     }
 
+    ## ::tkcon::SaveHistory - saves history to history file
+    ## If the history file is not writable it raises an error
+    proc ::tkcon::SaveHistory {} {
+	if {$::tkcon::OPT(usehistory)} {
+	    if {[catch {open $::tkcon::PRIV(histfile) w} fid]} {
+		error $fid
+	    } else {
+		set max [::tkcon::EvalSlave history nextid]
+		set id [expr {$max - $::tkcon::OPT(history)}]
+		if {$id < 1} { set id 1 }
+		## FIX: This puts history in backwards!!
+		while {($id < $max) && ![catch \
+			{::tkcon::EvalSlave history event $id} cmd]} {
+		    if {$cmd ne ""} {
+			puts $fid "::tkcon::EvalSlave\
+			    history add [list $cmd]"
+			}
+		    incr id
+		}
+		close $fid
+	    }
+	}
+    }
+    
     ## ::tkcon::InterpEval - passes evaluation to another named interpreter
     ## If the interpreter is named, but no args are given, it returns the
     ## [tk appname] of that interps master (not the associated eval slave).
