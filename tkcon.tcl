@@ -1624,6 +1624,11 @@ proc ::tkcon::InitMenus {w title} {
 		    grid $::tkcon::PRIV(statusbar)
 		} else { grid remove $::tkcon::PRIV(statusbar) }
 	    }
+        $m add command -label "Console Font" -command { 
+           tk fontchooser show
+           tk fontchooser configure -font [ $::tkcon::PRIV(console) cget -font ] \
+            -command [list ::tkcon::fontchooserFontSelection $::tkcon::PRIV(console)] 
+        }
 	$m add cascade -label "Scrollbar" -underline 2 -menu $m.scroll
 
 	## Scrollbar Menu
@@ -2154,6 +2159,12 @@ proc ::tkcon::Find {w str args} {
     $w tag configure find -background $::tkcon::COLOR(blink)
     catch {$w see find.first}
     return [expr {[llength [$w tag ranges find]]/2}]
+}
+
+# Change font
+#
+proc ::tkcon::fontchooserFontSelection {w font args} {
+    $w configure -font [font actual $font]
 }
 
 ## ::tkcon::Attach - called to attach tkcon to an interpreter
