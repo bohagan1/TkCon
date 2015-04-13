@@ -119,7 +119,6 @@ proc ::tkcon::Init {args} {
 	if {![info exists COLOR($key)]} { set COLOR($key) $default }
     }
 
-    # expandorder could also include 'Methodname' for XOTcl/NSF methods
     foreach {key default} {
 	autoload	{}
 	blinktime	500
@@ -131,7 +130,7 @@ proc ::tkcon::Init {args} {
 	debugPrompt	{(level \#$level) debug [history nextid] > }
 	dead		{}
 	edit		edit
-	expandorder	{Pathname Variable Procname}
+	expandorder	{Methodname Pathname Variable Procname}
 	font		{}
 	history		48
 	hoterrors	1
@@ -323,10 +322,6 @@ proc ::tkcon::Init {args} {
 		-main - -e - -eval	{ append OPT(maineval) \n$val\n }
 		-package - -load	{
 		    lappend OPT(autoload) $val
-		    if {$val eq "nsf" || $val eq "nx" || $val eq "XOTcl" } {
-			# If xotcl is loaded, prepend expand order for it
-			set OPT(expandorder) [concat Methodname $OPT(expandorder)]
-		    }
 		}
 		-slave		{ append OPT(slaveeval) \n$val\n }
 		-nontcl		{ set OPT(nontcl) [regexp -nocase $truth $val]}
@@ -5847,16 +5842,31 @@ proc ::tkcon::ExpandProcname str {
 #		possible further matches
 ##
 proc ::tkcon::ExpandMethodname str {
+    # Locate the start of the current command looking back from the insert
+    # cursor to the end of the prompt (mark "limit"). Note the start of the
+    # command may be following a ";", "[", not necessarily the beginning.
+    set start [$::tkcon::PRIV(console) search -backwards -regexp {^|[;\[]\s*} insert-1c limit-1c]
+    if {[string compare {} $start]} {
+	append start +1c
+    } else {
+	set start limit
+    }
+    set typedCmd [string trimleft [$::tkcon::PRIV(console) get $start insert]]
 
-    # In a first step, obtain the typed-in cmd from the console
-    set typedCmd [::tkcon::CmdGet $::tkcon::PRIV(console)]
     set obj [lindex $typedCmd 0]
     if {$obj eq $typedCmd} {
 	# just a single word, can't be a method expansion
         return -code continue
     }
     # Get the full string after the object
-    set sub [string trimleft [string range $typedCmd [string length [list $obj]] end]]
+    set sub [string trimleft [string range $typedCmd [string length $obj] end]]
+ 
+    # Deal with cases where the object is actually stored in a variable
+    # extract the real object name (ie. $x methodcall).
+    if {[string index $obj 0] eq "\$"} {
+        set obj [EvalAttached [list set [string range $obj 1 end]]]
+    }
+
     if {[EvalAttached [list info exists ::nsf::version]]} {
 	# Next Scripting Framework is loaded
 	if {![EvalAttached [list ::nsf::object::exists $obj]]} {return -code continue}
@@ -5871,6 +5881,20 @@ proc ::tkcon::ExpandMethodname str {
 	# XOTcl < 2.* is loaded
 	if {![EvalAttached [list ::xotcl::Object isobject $obj]]} {return -code continue}
 	set cmd [list $obj info methods $sub*]
+    } elseif {[llength [EvalAttached [list ::info commands oo::define]]]} {
+	if {![EvalAttached "::info object isa object $obj"]} {
+	    return -code continue
+	}
+        set cmd [list apply {
+            {obj sub} {
+                set matches {}
+                foreach meth [::info object methods $obj -all] {
+                    if {[string match $sub* $meth]} {
+                        lappend matches $meth
+                    }
+                }
+                return $matches
+            }} $obj $sub]
     } else {
 	# No NSF/XOTcl loaded
         return -code continue
