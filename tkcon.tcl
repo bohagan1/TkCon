@@ -1619,11 +1619,7 @@ proc ::tkcon::InitMenus {w title} {
 		    grid $::tkcon::PRIV(statusbar)
 		} else { grid remove $::tkcon::PRIV(statusbar) }
 	    }
-        $m add command -label "Console Font" -command { 
-           tk fontchooser show
-           tk fontchooser configure -font [ $::tkcon::PRIV(console) cget -font ] \
-            -command [list ::tkcon::fontchooserFontSelection $::tkcon::PRIV(console)] 
-        }
+        $m add command -label "Console Font" -command [list ::tkcon::fontchooserSelect %W]
 	$m add cascade -label "Scrollbar" -underline 2 -menu $m.scroll
 
 	## Scrollbar Menu
@@ -2158,8 +2154,51 @@ proc ::tkcon::Find {w str args} {
 
 # Change font
 #
-proc ::tkcon::fontchooserFontSelection {w font args} {
-    $w configure -font [font actual $font]
+proc ::tkcon::fontchooserSelect {w} {
+    if { [winfo exists .tkcontop] ==1 } return
+    set fonts_list [tkcon master font families]
+    tkcon master toplevel .tkcontop
+    tkcon master wm title .tkcontop "Console Font"
+    tkcon master wm resizable .tkcontop 0 0
+    tkcon master labelframe .tkcontop.fontname_label -text name
+    tkcon master labelframe .tkcontop.size_label -text size
+    tkcon master listbox  .tkcontop.fontname_label.fontslist -yscrollcommand [list .tkcontop.fontname_label.yscroll  set ]
+    tkcon master pack .tkcontop.fontname_label -side left -anchor n
+    tkcon master scrollbar .tkcontop.fontname_label.yscroll -command [list  .tkcontop.fontname_label.fontslist  yview ]
+    
+    tkcon master pack .tkcontop.fontname_label.fontslist  -side left
+    tkcon master pack .tkcontop.size_label -side left -anchor n
+    tkcon master pack .tkcontop.fontname_label.yscroll -side left -anchor e -expand 1 -fill y -after  .tkcontop.fontname_label.fontslist
+    foreach single_font $fonts_list {
+	tkcon master .tkcontop.fontname_label.fontslist insert end $single_font
+    }
+
+    tkcon master entry .tkcontop.size_label.size_entry
+    tkcon master pack .tkcontop.size_label.size_entry 
+    #highlight  the current font name in use in the font names listbox : [lindex [tkcon font] 0 ] ]
+    set current_font_list_index [ lsearch -exact $fonts_list [lindex [tkcon font] 0 ] ]
+    if {  $current_font_list_index == -1 }  { set current_font_list_index 0 }
+    tkcon master      .tkcontop.fontname_label.fontslist see $current_font_list_index
+    tkcon master      .tkcontop.fontname_label.fontslist selection set  $current_font_list_index
+    
+    #get the current font size in use: [lindex [tkcon font] 1 ] ]
+    set  font_size  [ lindex [tkcon font] 1 ] 
+    #tkcon master puts [tkcon font]
+    if { [string length $font_size] ==0 }  { set font_size 8 }
+    tkcon master  .tkcontop.size_label.size_entry  delete 0 end
+    tkcon master  .tkcontop.size_label.size_entry insert 0 $font_size
+    
+    tkcon master button .tkcontop.apply_font_button -text Apply -command  {   
+	set fontsize [ string trim  [ .tkcontop.size_label.size_entry get ] ]
+	set fontname [ .tkcontop.fontname_label.fontslist get [  .tkcontop.fontname_label.fontslist curselection ] ]
+	if { [string is integer $fontsize] && $fontsize >0 }  { 
+	    tkcon font $fontname $fontsize
+	}  else {
+	    tkcon font $fontname
+	}
+        destroy  .tkcontop
+    }
+    tkcon master pack .tkcontop.apply_font_button -side bottom 
 }
 
 ## ::tkcon::Attach - called to attach tkcon to an interpreter
