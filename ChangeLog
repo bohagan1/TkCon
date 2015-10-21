@@ -1,3 +1,8 @@
+2015-10-20  Jeff Hobbs  <jeffh@ActiveState.com>
+
+	* tkcon.tcl (edit): prevent file edit from undoing loading of file
+	[Bug #52] (budyak)
+
 2014-09-09  Jeff Hobbs  <jeffh@ActiveState.com>
 
 	* tkcon.tcl (::tkcon::SaveHistory): save history at each command

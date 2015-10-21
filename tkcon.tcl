@@ -185,7 +185,7 @@ proc ::tkcon::Init {args} {
 	    alias clear dir dump echo idebug lremove
 	    tkcon_puts tkcon_gets observe observe_var unalias which what
 	}
-	RCS		{RCS: @(#) $Id: tkcon.tcl,v 1.121 2014/07/10 02:13:20 hobbs Exp $}
+	RCS		{RCS: @(#) $Id: tkcon.tcl,v 1.122 2014/09/09 10:46:15 hobbs Exp $}
 	HEADURL		{http://tkcon.cvs.sourceforge.net/viewvc/tkcon/tkcon/tkcon.tcl}
 
 	docs		"http://tkcon.sourceforge.net/"
@@ -4041,6 +4041,8 @@ proc edit {args} {
 	    $w.text insert 1.0 [join $args \n]
 	}
     }
+    # prevent stuff above being "undoable" in newer Tk
+    catch { $w.text edit reset ; $w.text edit modified 0 }
     wm deiconify $w
     focus $w.text
     if {[string compare $opts(-find) {}]} {
