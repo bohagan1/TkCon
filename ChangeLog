@@ -1,3 +1,8 @@
+2016-09-14  Jeff Hobbs  <jeffh@ActiveState.com>
+
+	* tkcon.tcl: Use -underline clearly to disambiguate from new 8.6.6
+	option -underlinefg [Bug #54] (bachmann)
+
 2015-10-20  Jeff Hobbs  <jeffh@ActiveState.com>
 
 	* tkcon.tcl (edit): prevent file edit from undoing loading of file
