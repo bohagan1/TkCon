@@ -1774,24 +1774,24 @@ proc ::tkcon::InterpPkgs {app type} {
 	    -yscrollcommand [list $t.lrsy set]
 	ttk::scrollbar $t.llsy -command [list $t.loadable yview]
 	ttk::scrollbar $t.lrsy -command [list $t.loaded yview]
-	ttk::button $t.load -text ">>" \
+	button $t.load -text ">>" \
 	    -command [list ::tkcon::InterpPkgLoad $app $type $t.loadable]
 	$t.load configure -relief flat -overrelief raised
 
 	set f [frame $t.btns]
-	ttk::button $f.refresh -width 8 -text "Refresh" -command [info level 0]
-	ttk::button $f.dismiss -width 8 -text "Dismiss" -command [list destroy $t]
+	ttk::button $f.refresh -text "Refresh" -command [info level 0]
+	ttk::button $f.dismiss -text "Dismiss" -command [list destroy $t]
 	grid $f.refresh $f.dismiss -padx 4 -pady 3 -sticky ew
 	if {$PRIV(AQUA)} { # corner resize control space
 	    grid columnconfigure $f [lindex [grid size $f] 0] -minsize 16
 	}
 
-	grid $t.ll x x $t.lr x -sticky ew
-	grid $t.loadable $t.llsy $t.load $t.loaded $t.lrsy -sticky news
+	grid $t.ll x x $t.lr x -sticky ew -padx 2
+	grid $t.loadable $t.llsy $t.load $t.loaded $t.lrsy -sticky news -padx 2
 	grid $t.btns -sticky e -columnspan 5
 	grid columnconfigure $t {0 3} -weight 1
 	grid rowconfigure $t 1 -weight 1
-	grid configure $t.load -sticky ""
+	grid configure $t.load -sticky "" -padx 2
 
 	bind $t.loadable <Double-1> "[list $t.load invoke]; break"
     }
@@ -1990,6 +1990,8 @@ proc ::tkcon::NamespacesList {names} {
     catch {destroy $f}
     toplevel $f
     catch {wm attributes $f -type dialog}
+    wm transient $f $PRIV(root)
+    wm group $f $PRIV(root)
     listbox $f.names -width 30 -height 15 -selectmode single \
 	-yscrollcommand [list $f.scrollv set] \
 	-xscrollcommand [list $f.scrollh set] \
@@ -2002,7 +2004,7 @@ proc ::tkcon::NamespacesList {names} {
     grid $f.names $f.scrollv -sticky nesw
     grid $f.scrollh -sticky ew
     grid $f.buttons -sticky nesw
-    grid $f.cancel -in $f.buttons -pady 6
+    grid $f.cancel -in $f.buttons -padx 6 -pady 6
 
     grid columnconfigure $f 0 -weight 1
     grid rowconfigure $f  0 -weight 1
@@ -2062,6 +2064,8 @@ proc ::tkcon::FindBox {w {str {}}} {
 	toplevel $base
 	wm withdraw $base
 	catch {wm attributes $base -type dialog}
+	wm transient $base $PRIV(root)
+	wm group $base $PRIV(root)
 	wm title $base "tkcon Find"
 	wm resizable $base 1 0
 
@@ -2075,10 +2079,10 @@ proc ::tkcon::FindBox {w {str {}}} {
 
 	frame $base.sep -borderwidth 1 -relief sunken -height 2
 	frame $base.btn
-	grid $base.l $base.e - - -sticky ew
-	grid $base.case - $base.re -sticky ew
+	grid $base.l $base.e - - -sticky ew -padx 4 -pady 4
+	grid $base.case - $base.re -sticky ew -padx 4
 	grid $base.sep -columnspan 4 -sticky ew
-	grid $base.btn -columnspan 4 -sticky ew
+	grid $base.btn -columnspan 4 -sticky ew -padx 2 -pady 2
 	grid columnconfigure $base 3 -weight 1
 
 	ttk::button $base.btn.fnd -text "Find"
@@ -2112,7 +2116,9 @@ proc ::tkcon::FindBox {w {str {}}} {
 
     if {[wm state $base] ne "normal"} {
 	wm deiconify $base
-    } else { raise $base }
+    } else {
+	raise $base
+    }
     $base.e select range 0 end
 }
 
@@ -2394,8 +2400,8 @@ proc ::tkcon::NewSocket {} {
 	wm resizable $t 1 0
 	label $t.lhost -text "Host: "
 	entry $t.host -width 16 -takefocus 1
-	label $t.lport -text "Port: "
-	entry $t.port -takefocus 1
+	label $t.lport -text " Port: "
+	entry $t.port -width 5 -takefocus 1
 	ttk::button $t.ok -text "OK" -command {set ::tkcon::PRIV(grab) 1} \
 	    -takefocus 1
 	bind $t.host <Return> [list focus $t.port]
@@ -2410,9 +2416,6 @@ proc ::tkcon::NewSocket {} {
 	}
 	wm transient $t $PRIV(root)
 	wm group $t $PRIV(root)
-	wm geometry $t +[expr {([winfo screenwidth $t]-[winfo \
-		reqwidth $t]) / 2}]+[expr {([winfo \
-		screenheight $t]-[winfo reqheight $t]) / 2}]
 	bind $t <Escape> [list destroy $t]
     }
     #$t.host delete 0 end
@@ -2845,6 +2848,8 @@ proc ::tkcon::MainInit {} {
 	} else {
 	    toplevel $w
 	    catch {wm attributes $w -type dialog}
+	    wm transient $w $PRIV(root)
+	    wm group $w $PRIV(root)
 	    frame $w.btn
 	    ttk::scrollbar $w.sy -command [list $w.text yview]
 	    text $w.text -yscrollcommand [list $w.sy set] -height 12 \
@@ -2853,15 +2858,15 @@ proc ::tkcon::MainInit {} {
 		    -insertbackground $COLOR(cursor) \
 		    -font $OPT(font) -borderwidth 1 -highlightthickness 0
 	    $w.text tag config red -foreground red
-	    ttk::button $w.close -text "Dismiss" -width 8 \
+	    ttk::button $w.close -text "Dismiss" \
 		-command [list destroy $w]
 	    ttk::button $w.check  -text "Recheckpoint"
-	    ttk::button $w.revert -text "Revert" -width 8
-	    ttk::button $w.expand -text "Verbose" -width 8
-	    ttk::button $w.update -text "Update" -width 8
+	    ttk::button $w.revert -text "Revert"
+	    ttk::button $w.expand -text "Verbose"
+	    ttk::button $w.update -text "Update"
 
 	    grid $w.text - - - - - $w.sy -sticky news
-	    grid x $w.check $w.revert $w.expand $w.update $w.close
+	    grid x $w.check $w.revert $w.expand $w.update $w.close -padx 2 -pady 2
 	    grid configure $w.close -padx {4 0}
 	    grid rowconfigure $w 0 -weight 1
 	    grid columnconfigure $w 0 -weight 1
