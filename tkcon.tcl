@@ -3,6 +3,21 @@
 # \
 exec wish "$0" ${1+"$@"}
 
+# @@ Meta Begin
+# Application tkcon 2.7
+# Meta platform     tcl
+# Meta summary      Enhanced Tk Console
+# Meta description  Enhanced Tk Console
+# Meta description  Originally based off Brent Welch's
+# Meta description  Tcl Shell Widget
+# Meta category     Shell
+# Meta subject      console tk remote
+# Meta require      {Tk 8} {Tcl 8} {http 2}
+# Meta recommend    ctext base64 Trf ActiveTcl
+# Meta author       Jeff Hobbs
+# Meta license      Tcl (+ bourbonware clause).
+# @@ Meta End
+
 #
 ## tkcon.tcl
 ## Enhanced Tk Console, part of the VerTcl system
@@ -70,10 +85,12 @@ namespace eval ::tkcon {
 
     # PRIV is used for internal data that only tkcon should fiddle with.
     variable PRIV
-    set PRIV(WWW) [info exists embed_args]
+    set PRIV(WWW)        [info exists embed_args]
     set PRIV(AQUA) [expr {[tk windowingsystem] eq "aqua"}]
-    set PRIV(CTRL) [expr {$PRIV(AQUA) ? "Command-" : "Control-"}]
-    set PRIV(ACC) [expr {$PRIV(AQUA) ? "Command-" : "Ctrl+"}]
+    set PRIV(CTRL)       [expr {$PRIV(AQUA) ? "Command-" : "Control-"}]
+    set PRIV(ACC)        [expr {$PRIV(AQUA) ? "Command-" : "Ctrl+"}]
+    set PRIV(font.scale) 1.0
+    set PRIV(font.list)  {tkconfixed 12 tkconfixedbold 12 tkconfixedlarge 18 tkconfixedsmall 8}
 
     variable EXPECT 0
 }
@@ -608,12 +625,10 @@ proc ::tkcon::InitUI {title} {
     }
     set PRIV(base) $w
 
-    catch {
-	font create tkconfixed {*}[font configure TkFixedFont]
-    }
-    catch {
-	font create tkconfixedbold {*}[font configure TkFixedFont] -weight bold
-    }
+    catch {font create tkconfixed      -family Courier -size -12}
+    catch {font create tkconfixedbold  -family Courier -size -12 -weight bold}
+    catch {font create tkconfixedlarge -family Courier -size -18 -weight bold}
+    catch {font create tkconfixedsmall -family Courier -size -8  -weight bold}
 
     set PRIV(statusbar) [set sbar [frame $w.fstatus]]
     set PRIV(tabframe)  [frame $sbar.tabs]
@@ -1433,7 +1448,7 @@ proc ::tkcon::About {} {
 	grid $w.text -sticky news
 	grid $w.b -sticky se -padx 6 -pady 4
 	$w.text tag config center -justify center
-	$w.text tag config title -justify center -font {Courier -18 bold}
+	$w.text tag config title  -justify center -font tkconfixedlarge
 	# strip down the RCS info displayed in the about box
 	regexp {,v ([0-9\./: ]*)} $PRIV(RCS) -> RCS
 	$w.text insert 1.0 "\nAbout tkcon v$PRIV(version)" title \
@@ -2660,24 +2675,24 @@ proc ::tkcon::MainInit {} {
 	if {$::tkcon::OPT(usehistory)} {
 	    if {[catch {open $::tkcon::PRIV(histfile) w} fid]} {
 		error $fid
-	    } else {
-		set max [::tkcon::EvalSlave history nextid]
-		set id [expr {$max - $::tkcon::OPT(history)}]
-		if {$id < 1} { set id 1 }
-		## FIX: This puts history in backwards!!
-		while {($id < $max) && ![catch \
-			{::tkcon::EvalSlave history event $id} cmd]} {
-		    if {$cmd ne ""} {
-			puts $fid "::tkcon::EvalSlave\
-			    history add [list $cmd]"
+		} else {
+		    set max [::tkcon::EvalSlave history nextid]
+		    set id [expr {$max - $::tkcon::OPT(history)}]
+		    if {$id < 1} { set id 1 }
+		    ## FIX: This puts history in backwards!!
+		    while {($id < $max) && ![catch \
+			    {::tkcon::EvalSlave history event $id} cmd]} {
+			if {$cmd ne ""} {
+			    puts $fid "::tkcon::EvalSlave\
+				    history add [list $cmd]"
 			}
-		    incr id
+			incr id
+		    }
+		    close $fid
 		}
-		close $fid
 	    }
-	}
     }
-    
+
     ## ::tkcon::InterpEval - passes evaluation to another named interpreter
     ## If the interpreter is named, but no args are given, it returns the
     ## [tk appname] of that interps master (not the associated eval slave).
@@ -5114,6 +5129,60 @@ proc tcl_unknown args {
 
 } ; # end exclusionary code for WWW
 
+#---------------------------------------------------------------------------
+#
+# Procedures for manipulating the font sizes.
+# The scale can be bumped up or down, but is restricted to 0.20...5.0.
+#
+#---------------------------------------------------------------------------
+
+############################################################################
+#
+# ResizeSet <scale>
+#
+# Sets the scaling factor for fonts (and TkCon UI)
+# Updates the relative sizes of the UI fonts
+# Refreshes the UI to reflect the updated fonts.
+#
+############################################################################
+proc ::tkcon::ResizeSet {{scale 1.0}} {
+  if {$scale < 0.20} {
+	set scale 0.20
+  } elseif {$scale > 5.0} {
+    set scale 5.0
+  }
+  set ::tkcon::PRIV(font.scale) $scale
+
+  foreach {name size} $::tkcon::PRIV(font.list) {
+    font configure $name -size [expr {round($size * $scale)}]
+  }
+
+  $::tkcon::PRIV(console) configure -font tkconfixed
+#  $::tkcon::PRIV(menubar) configure -font tkconfixed
+}; # ResizeSet {}
+
+############################################################################
+#
+# ResizeUp
+#
+# Increases the font sizes by a factor of 1.08.
+#
+############################################################################
+proc ::tkcon::ResizeUp {} {
+  ResizeSet [expr {$::tkcon::PRIV(font.scale) * 1.08}]
+}; # ResizeUp {}
+
+############################################################################
+#
+# ResizeDn
+#
+# Decreases the font sizes by a factor of 1.08.
+#
+############################################################################
+proc ::tkcon::ResizeDn {} {
+  ResizeSet [expr {$::tkcon::PRIV(font.scale) / 1.08}]
+}; # ResizeDn {}
+
 proc ::tkcon::Bindings {} {
     variable PRIV
     global tcl_platform tk_version
@@ -5142,6 +5211,8 @@ proc ::tkcon::Bindings {} {
 
     ## Now make all our virtual event bindings
     set bindings {
+	<<TkCon_ResizeUp>>	<$PRIV(CTRL)-plus>
+	<<TkCon_ResizeDn>>	<$PRIV(CTRL)-minus>
 	<<TkCon_Exit>>		<$PRIV(CTRL)-q>
 	<<TkCon_New>>		<$PRIV(CTRL)-N>
 	<<TkCon_NewTab>>	<$PRIV(CTRL)-T>
@@ -5189,15 +5260,18 @@ proc ::tkcon::Bindings {} {
     }
 
     ## Make the ROOT bindings
-    bind $PRIV(root) <<TkCon_Exit>>	exit
-    bind $PRIV(root) <<TkCon_New>>	{ ::tkcon::New }
-    bind $PRIV(root) <<TkCon_NewTab>>	{ ::tkcon::NewTab }
-    bind $PRIV(root) <<TkCon_NextTab>>	{ ::tkcon::GotoTab 1 ; break }
-    bind $PRIV(root) <<TkCon_PrevTab>>	{ ::tkcon::GotoTab -1 ; break }
-    bind $PRIV(root) <<TkCon_Close>>	{ ::tkcon::Destroy }
-    bind $PRIV(root) <<TkCon_About>>	{ ::tkcon::About }
-    bind $PRIV(root) <<TkCon_Find>>	{ ::tkcon::FindBox $::tkcon::PRIV(console) }
-    bind $PRIV(root) <<TkCon_Slave>>	{
+    bind $PRIV(root) <<TkCon_ResizeUp>> ::tkcon::ResizeUp
+    bind $PRIV(root) <<TkCon_ResizeDn>> ::tkcon::ResizeDn
+
+    bind $PRIV(root) <<TkCon_Exit>>     exit
+    bind $PRIV(root) <<TkCon_New>>      { ::tkcon::New }
+    bind $PRIV(root) <<TkCon_NewTab>>   { ::tkcon::NewTab }
+    bind $PRIV(root) <<TkCon_NextTab>>  { ::tkcon::GotoTab 1 ; break }
+    bind $PRIV(root) <<TkCon_PrevTab>>  { ::tkcon::GotoTab -1 ; break }
+    bind $PRIV(root) <<TkCon_Close>>    { ::tkcon::Destroy }
+    bind $PRIV(root) <<TkCon_About>>    { ::tkcon::About }
+    bind $PRIV(root) <<TkCon_Find>>     { ::tkcon::FindBox $::tkcon::PRIV(console) }
+    bind $PRIV(root) <<TkCon_Slave>>    {
 	::tkcon::Attach {}
 	::tkcon::RePrompt "\n" [::tkcon::CmdGet $::tkcon::PRIV(console)]
     }
