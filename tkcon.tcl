@@ -2470,7 +2470,7 @@ proc ::tkcon::Load { {fn ""} } {
     # Allow for VFS directories, use Tk dialogs automatically when in
     # VFS-based areas
     set check [expr {$fn eq "" ? [pwd] : $fn}]
-    if {[lindex [file system $check] 0] eq "tclvfs"} {
+    if {[lindex [file system $check] 0] ne "native"} {
 	set opencmd [list ::tk::dialog::file:: open]
     } else {
 	set opencmd [list tk_getOpenFile]
@@ -2502,7 +2502,7 @@ proc ::tkcon::Save { {fn ""} {type ""} {opt ""} {mode w} } {
     # Allow for VFS directories, use Tk dialogs automatically when in
     # VFS-based areas
     set check [expr {$opt eq "" ? [pwd] : $opt}]
-    if {[lindex [file system $check] 0] eq "tclvfs"} {
+    if {[lindex [file system $check] 0] ne "native"} {
 	set savecmd [list ::tk::dialog::file:: save]
     } else {
 	set savecmd [list tk_getSaveFile]
@@ -3544,7 +3544,7 @@ proc tkcon {cmd args} {
 	congets {
 	    ## 'congets' a replacement for [gets stdin]
 	    # Use the 'gets' alias of 'tkcon_gets' command instead of
-	    # calling the *get* methods directly for best compatability
+	    # calling the *get* methods directly for best compatibility
 	    if {[llength $args]} {
 		return -code error "wrong # args: must be \"tkcon congets\""
 	    }
