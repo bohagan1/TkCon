@@ -5211,8 +5211,8 @@ proc ::tkcon::Bindings {} {
 
     ## Now make all our virtual event bindings
     set bindings {
-	<<TkCon_ResizeUp>>	<$PRIV(CTRL)-plus>
-	<<TkCon_ResizeDn>>	<$PRIV(CTRL)-minus>
+	<<TkCon_ResizeUp>>  <$PRIV(CTRL)-plus>
+	<<TkCon_ResizeDn>>  <$PRIV(CTRL)-minus>
 	<<TkCon_Exit>>		<$PRIV(CTRL)-q>
 	<<TkCon_New>>		<$PRIV(CTRL)-N>
 	<<TkCon_NewTab>>	<$PRIV(CTRL)-T>
@@ -5260,8 +5260,8 @@ proc ::tkcon::Bindings {} {
     }
 
     ## Make the ROOT bindings
-    bind $PRIV(root) <<TkCon_ResizeUp>> ::tkcon::ResizeUp
-    bind $PRIV(root) <<TkCon_ResizeDn>> ::tkcon::ResizeDn
+	bind $PRIV(root) <<TkCon_ResizeUp>> ::tkcon::ResizeUp
+	bind $PRIV(root) <<TkCon_ResizeDn>> ::tkcon::ResizeDn
 
     bind $PRIV(root) <<TkCon_Exit>>     exit
     bind $PRIV(root) <<TkCon_New>>      { ::tkcon::New }
