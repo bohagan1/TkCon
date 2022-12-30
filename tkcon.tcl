@@ -192,7 +192,7 @@ proc ::tkcon::Init {args} {
 	protocol	exit
 	showOnStartup	1
 	slaveprocs	{
-	    alias clear dir dump echo idebug lremove
+	    alias clear dir dump echo idebug tkcon_lremove
 	    tkcon_puts tkcon_gets observe observe_var unalias which what
 	}
 	RCS		{RCS: @(#) $Id: tkcon.tcl,v 1.124 2016/09/14 21:14:43 hobbs Exp $}
@@ -485,7 +485,7 @@ proc ::tkcon::InitSlave {slave {slaveargs {}} {slaveargv0 {}}} {
 	$slave alias open SafeOpen $slave
 	$slave alias file file
 	interp eval $slave \
-	    [list set auto_path [lremove $auto_path $tk_library]]
+	    [list set auto_path [tkcon_lremove $auto_path $tk_library]]
 	interp eval $slave [dump var -nocomplain tcl_library env]
 	interp eval $slave { catch {source [file join $tcl_library init.tcl]} }
 	interp eval $slave { catch unknown }
@@ -522,7 +522,7 @@ proc ::tkcon::InitSlave {slave {slaveargs {}} {slaveargv0 {}}} {
 	if {[info exists argv0]} {interp eval $slave [list set argv0 $argv0]}
     }
     interp eval $slave set tcl_interactive $tcl_interactive \; \
-	    set auto_path [list [lremove $auto_path $tk_library]] \; \
+	    set auto_path [list [tkcon_lremove $auto_path $tk_library]] \; \
 	    set argc [llength $slaveargs] \; \
 	    set argv  [list $slaveargs] \; {
 	if {![llength [info command bgerror]]} {
@@ -537,7 +537,7 @@ proc ::tkcon::InitSlave {slave {slaveargs {}} {slaveargv0 {}}} {
 	}
     }
 
-    foreach pkg [lremove [package names] Tcl] {
+    foreach pkg [tkcon_lremove [package names] Tcl] {
 	foreach v [package versions $pkg] {
 	    interp eval $slave [list package ifneeded $pkg $v \
 		    [package ifneeded $pkg $v]]
@@ -1817,7 +1817,7 @@ proc ::tkcon::InterpPkgs {app type} {
 	set loaded($pkg) [package provide $pkg]
     }
     # get all package names currently visible
-    foreach pkg [lremove [EvalAttached {package names}] Tcl] {
+    foreach pkg [tkcon_lremove [EvalAttached {package names}] Tcl] {
 	set version [EvalAttached [list package provide $pkg]]
 	if {$version ne ""} {
 	    set loaded($pkg) $version
@@ -1885,7 +1885,7 @@ proc ::tkcon::AttachMenu m {
 	    -command "::tkcon::Attach {}; $cmd"
     $m add separator
     $m add command -label "Foreign Tk Interpreters" -state disabled
-    foreach i [lsort [lremove [::send::interps] [array names tknames]]] {
+    foreach i [lsort [tkcon_lremove [::send::interps] [array names tknames]]] {
 	$m add radio -label $i -variable ::tkcon::PRIV(app) -value $i \
 		-command "::tkcon::Attach [list $i] interp; $cmd"
     }
@@ -2637,8 +2637,8 @@ proc ::tkcon::MainInit {} {
 	    set name [InterpEval $slave]
 	    interp delete $slave
 	}
-	set PRIV(interps) [lremove $PRIV(interps) [list $name]]
-	set PRIV(slaves)  [lremove $PRIV(slaves) [list $slave]]
+	set PRIV(interps) [tkcon_lremove $PRIV(interps) [list $name]]
+	set PRIV(slaves)  [tkcon_lremove $PRIV(slaves) [list $slave]]
 	StateCleanup $slave
     }
 
@@ -2901,9 +2901,9 @@ proc ::tkcon::MainInit {} {
 	    $w.expand config -state disabled
 	}
 
-	set cmds [lremove [EvalOther $app $type info commands *] \
+	set cmds [tkcon_lremove [EvalOther $app $type info commands *] \
 		$CPS($type,$app,cmd)]
-	set vars [lremove [EvalOther $app $type info vars *] \
+	set vars [tkcon_lremove [EvalOther $app $type info vars *] \
 		$CPS($type,$app,var)]
 
 	if {$hasdump && $verbose} {
@@ -2931,11 +2931,11 @@ proc ::tkcon::MainInit {} {
 	if {![tk_dialog $PRIV(base).warning "Revert State?" \
 		"Are you sure you want to revert the state in $type \"$app\"?"\
 		questhead 1 "Do It" "Cancel"]} {
-	    foreach i [lremove [EvalOther $app $type info commands *] \
+	    foreach i [tkcon_lremove [EvalOther $app $type info commands *] \
 		    $CPS($type,$app,cmd)] {
 		catch {EvalOther $app $type rename $i {}}
 	    }
-	    foreach i [lremove [EvalOther $app $type info vars *] \
+	    foreach i [tkcon_lremove [EvalOther $app $type info vars *] \
 		    $CPS($type,$app,var)] {
 		catch {EvalOther $app $type unset $i}
 	    }
@@ -4553,7 +4553,7 @@ proc idebug {opt args} {
 	    switch -glob -- $type {
 		v* { set vars [uplevel $level {lsort [info vars]}] }
 		l* { set vars [uplevel $level {lsort [info locals]}] }
-		g* { set vars [lremove [uplevel $level {info vars}] \
+		g* { set vars [tkcon_lremove [uplevel $level {info vars}] \
 			[uplevel $level {info locals}]] }
 	    }
 	    if {[string match VERBOSE $verbose]} {
@@ -4879,7 +4879,7 @@ proc dir {args} {
 }
 interp alias {} ::ls {} ::dir -full
 
-## lremove - remove items from a list
+## tkcon_lremove - remove items from a list
 # OPTS:
 #   -all	remove all instances of each item
 #   -glob	remove all instances matching glob pattern
@@ -4887,7 +4887,7 @@ interp alias {} ::ls {} ::dir -full
 # ARGS:	l	a list to remove items from
 #	args	items to remove (these are 'join'ed together)
 ##
-proc lremove {args} {
+proc tkcon_lremove {args} {
     array set opts {-all 0 pattern -exact}
     while {[string match -* [lindex $args 0]]} {
 	switch -glob -- [lindex $args 0] {
