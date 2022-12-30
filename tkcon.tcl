@@ -637,7 +637,7 @@ proc ::tkcon::InitUI {title} {
 		     -highlightthickness 0 -padx 2 -pady 0 -borderwidth 1 \
 		     -state disabled -relief flat -takefocus 0]
     catch {$PRIV(X) configure -overrelief raised}
-    label $sbar.cursor -relief sunken -anchor e -width 6 \
+    ttk::label $sbar.cursor -relief sunken -anchor e -width 6 \
 	    -textvariable ::tkcon::PRIV(StatusCursor)
     set padx [expr {![info exists ::tcl_platform(os)]
 		    || ($::tcl_platform(os) ne "Windows CE")}]
@@ -812,16 +812,10 @@ proc ::tkcon::InitTab {w} {
     $con tag configure find -background $COLOR(blink)
 
     set ATTACH($con) [Attach]
-    set rb [radiobutton $PRIV(tabframe).cb[winfo name $con] -takefocus 0 \
+    set rb [ttk::radiobutton $PRIV(tabframe).cb[winfo name $con] -takefocus 0 \
 		-textvariable ::tkcon::ATTACH($con) \
-		-selectcolor white -relief sunken \
-		-indicatoron 0 -padx 0 -pady 0 -borderwidth 1 \
 		-variable ::tkcon::PRIV(curtab) -value $con \
 		-command [list ::tkcon::GotoTab $con]]
-    $rb configure -offrelief flat -overrelief raised
-    if {$PRIV(AQUA)} {
-	$rb configure -padx 4 -pady 4 -highlightthickness 0
-    }
     grid $rb -row 0 -column [lindex [grid size $PRIV(tabframe)] 0] -sticky ns
     grid $con -row 1 -column 1 -sticky news
 
@@ -1451,7 +1445,7 @@ proc ::tkcon::About {} {
 	$w.text tag config title  -justify center -font tkconfixedlarge
 	# strip down the RCS info displayed in the about box
 	regexp {,v ([0-9\./: ]*)} $PRIV(RCS) -> RCS
-	$w.text insert 1.0 "\nAbout tkcon v$PRIV(version)" title \
+	$w.text insert 1.0 "About tkcon v$PRIV(version)" title \
 		"\n\nCopyright 1995-2002 Jeffrey Hobbs, $PRIV(email)\
 		\nRelease Info: v$PRIV(version), CVS v$RCS\
 		\nDocumentation available at:\n$PRIV(docs)\
@@ -1472,7 +1466,7 @@ proc ::tkcon::InitMenus {w title} {
     global tcl_platform
 
     if {[catch {menu $w.pop}]} {
-	label $w.label -text "Menus not available in plugin mode"
+	ttk::label $w.label -text "Menus not available in plugin mode"
 	grid $w.label -sticky ew
 	return
     }
@@ -1781,17 +1775,16 @@ proc ::tkcon::InterpPkgs {app type} {
 	catch {wm attributes $t -type dialog}
 	bind $t <Escape> [list destroy $t]
 
-	label $t.ll -text "Loadable:" -anchor w
-	label $t.lr -text "Loaded:" -anchor w
+	ttk::label $t.ll -text "Loadable:" -anchor w
+	ttk::label $t.lr -text "Loaded:" -anchor w
 	listbox $t.loadable -font tkconfixed -background white -borderwidth 1 \
 	    -yscrollcommand [list $t.llsy set] -selectmode extended
 	listbox $t.loaded -font tkconfixed -background white -borderwidth 1 \
 	    -yscrollcommand [list $t.lrsy set]
 	ttk::scrollbar $t.llsy -command [list $t.loadable yview]
 	ttk::scrollbar $t.lrsy -command [list $t.loaded yview]
-	button $t.load -text ">>" \
+	ttk::button $t.load -text ">>" \
 	    -command [list ::tkcon::InterpPkgLoad $app $type $t.loadable]
-	$t.load configure -relief flat -overrelief raised
 
 	set f [frame $t.btns]
 	ttk::button $f.refresh -text "Refresh" -command [info level 0]
@@ -2084,7 +2077,7 @@ proc ::tkcon::FindBox {w {str {}}} {
 	wm title $base "tkcon Find"
 	wm resizable $base 1 0
 
-	label $base.l -text "Find:" -anchor e
+	ttk::label $base.l -text "Find:" -anchor e
 	entry $base.e -textvariable ::tkcon::PRIV(find)
 
 	ttk::checkbutton $base.case -text "Case Sensitive" \
@@ -2413,9 +2406,9 @@ proc ::tkcon::NewSocket {} {
 	catch {wm attributes $t -type dialog}
 	wm title $t "tkcon Create Socket"
 	wm resizable $t 1 0
-	label $t.lhost -text "Host: "
+	ttk::label $t.lhost -text "Host: "
 	entry $t.host -width 16 -takefocus 1
-	label $t.lport -text " Port: "
+	ttk::label $t.lport -text " Port: "
 	entry $t.port -width 5 -takefocus 1
 	ttk::button $t.ok -text "OK" -command {set ::tkcon::PRIV(grab) 1} \
 	    -takefocus 1
@@ -3604,7 +3597,7 @@ proc tkcon {cmd args} {
 		wm withdraw $t
 		catch {wm attributes $t -type dialog}
 		wm title $t "tkcon gets stdin request"
-		label $t.gets -text "\"gets stdin\" request:"
+		ttk::label $t.gets -text "\"gets stdin\" request:"
 		text $t.data -width 32 -height 5 -wrap none \
 			-xscrollcommand [list $t.sx set] \
 			-yscrollcommand [list $t.sy set] -borderwidth 1
@@ -6368,8 +6361,8 @@ proc ::tkcon::RetrieveAuthentication {} {
     set f2 [frame ${dlg}.f2]
     ttk::button $f2.b -text "OK" -command "destroy $dlg"
     pack $f2.b -side right
-    label $f1.l2 -text "Username"
-    label $f1.l3 -text "Password"
+    ttk::label $f1.l2 -text "Username"
+    ttk::label $f1.l3 -text "Password"
     entry $f1.e2 -textvariable "[namespace current]::conf_userid"
     entry $f1.e3 -textvariable "[namespace current]::conf_passwd" -show *
     grid $f1.l2 -column 0 -row 0 -sticky e
