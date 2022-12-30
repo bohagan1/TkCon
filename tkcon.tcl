@@ -1,7 +1,4 @@
-#!/bin/sh
-# -*- tcl -*-
-# \
-exec wish "$0" ${1+"$@"}
+#!/usr/bin/env wish
 
 # @@ Meta Begin
 # Application tkcon 2.7
@@ -1652,7 +1649,7 @@ proc ::tkcon::InitMenus {w title} {
 	$m add command -label "About " -underline 0 -accel $PRIV(ACC)A \
 		-command ::tkcon::About
 	$m add command -label "Retrieve Latest Version" -underline 0 \
-		-command ::tkcon::Retrieve
+		-command ::tkcon::Retrieve -state disabled
 	if {![catch {package require ActiveTcl} ver]} {
 	    set cmd ""
 	    if {$tcl_platform(platform) eq "windows"} {
