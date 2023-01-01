@@ -1431,6 +1431,10 @@ proc ::tkcon::About {} {
 	catch {wm attributes $w -type dialog}
 	wm title $w "About tkcon v$PRIV(version)"
 	wm resizable $w 0 0
+	set parent [winfo parent $w]
+	set x [expr {[winfo x $parent] + 100}]
+	set y [expr {[winfo y $parent] + 100}]
+	wm geometry $w [format %+d%+d $x $y]
 	ttk::button $w.b -text Dismiss -command [list wm withdraw $w]
 	text $w.text -height 9 -width 60 \
 		-foreground $COLOR(stdin) \
@@ -1622,7 +1626,7 @@ proc ::tkcon::InitMenus {w title} {
 		    grid $::tkcon::PRIV(statusbar)
 		} else { grid remove $::tkcon::PRIV(statusbar) }
 	    }
-        $m add command -label "Console Font" -command [list ::tkcon::fontchooserSelect %W]
+        $m add command -label "Console Font" -command [list ::tkcon::fontchooserSelect]
 	$m add cascade -label "Scrollbar" -underline 2 -menu $m.scroll
 
 	## Scrollbar Menu
@@ -1770,6 +1774,10 @@ proc ::tkcon::InterpPkgs {app type} {
 	wm transient $t $PRIV(root)
 	wm group $t $PRIV(root)
 	catch {wm attributes $t -type dialog}
+	set parent [winfo parent $t]
+	set x [expr {[winfo x $parent] + 100}]
+	set y [expr {[winfo y $parent] + 100}]
+	wm geometry $t [format %+d%+d $x $y]
 	bind $t <Escape> [list destroy $t]
 
 	ttk::label $t.ll -text "Loadable:" -anchor w
@@ -1997,7 +2005,11 @@ proc ::tkcon::NamespacesList {names} {
     catch {wm attributes $f -type dialog}
     wm transient $f $PRIV(root)
     wm group $f $PRIV(root)
-    listbox $f.names -width 30 -height 15 -selectmode single \
+    set parent [winfo parent $f]
+    set x [expr {[winfo x $parent] + 100}]
+    set y [expr {[winfo y $parent] + 100}]
+    wm geometry $f [format %+d%+d $x $y]
+   listbox $f.names -width 30 -height 15 -selectmode single \
 	-yscrollcommand [list $f.scrollv set] \
 	-xscrollcommand [list $f.scrollh set] \
 	-background white -borderwidth 1
@@ -2073,6 +2085,10 @@ proc ::tkcon::FindBox {w {str {}}} {
 	wm group $base $PRIV(root)
 	wm title $base "tkcon Find"
 	wm resizable $base 1 0
+	set parent [winfo parent $base]
+	set x [expr {[winfo x $parent] + 100}]
+	set y [expr {[winfo y $parent] + 100}]
+	wm geometry $base [format %+d%+d $x $y]
 
 	ttk::label $base.l -text "Find:" -anchor e
 	entry $base.e -textvariable ::tkcon::PRIV(find)
@@ -2158,53 +2174,25 @@ proc ::tkcon::Find {w str args} {
     return [expr {[llength [$w tag ranges find]]/2}]
 }
 
+# Select font
+#
+proc ::tkcon::fontchooserSelect {} {
+    variable PRIV
+    set root $PRIV(root)
+
+    set font [tkcon font]
+    set title [tkcon master wm title $root]
+    tk fontchooser configure -parent $root -title [format "Select %s Console Font" $title] \
+	-font $font -command [list ::tkcon::fontchooserHandler]
+    tk fontchooser show
+}
+
+#
 # Change font
 #
-proc ::tkcon::fontchooserSelect {w} {
-    if { [winfo exists .tkcontop] ==1 } return
-    set fonts_list [tkcon master font families]
-    tkcon master toplevel .tkcontop
-    tkcon master wm title .tkcontop "Console Font"
-    tkcon master wm resizable .tkcontop 0 0
-    tkcon master labelframe .tkcontop.fontname_label -text name
-    tkcon master labelframe .tkcontop.size_label -text size
-    tkcon master listbox  .tkcontop.fontname_label.fontslist -yscrollcommand [list .tkcontop.fontname_label.yscroll  set ]
-    tkcon master pack .tkcontop.fontname_label -side left -anchor n
-    tkcon master scrollbar .tkcontop.fontname_label.yscroll -command [list  .tkcontop.fontname_label.fontslist  yview ]
-    
-    tkcon master pack .tkcontop.fontname_label.fontslist  -side left
-    tkcon master pack .tkcontop.size_label -side left -anchor n
-    tkcon master pack .tkcontop.fontname_label.yscroll -side left -anchor e -expand 1 -fill y -after  .tkcontop.fontname_label.fontslist
-    foreach single_font $fonts_list {
-	tkcon master .tkcontop.fontname_label.fontslist insert end $single_font
-    }
-
-    tkcon master entry .tkcontop.size_label.size_entry
-    tkcon master pack .tkcontop.size_label.size_entry 
-    #highlight  the current font name in use in the font names listbox : [lindex [tkcon font] 0 ] ]
-    set current_font_list_index [ lsearch -exact $fonts_list [lindex [tkcon font] 0 ] ]
-    if {  $current_font_list_index == -1 }  { set current_font_list_index 0 }
-    tkcon master      .tkcontop.fontname_label.fontslist see $current_font_list_index
-    tkcon master      .tkcontop.fontname_label.fontslist selection set  $current_font_list_index
-    
-    #get the current font size in use: [lindex [tkcon font] 1 ] ]
-    set  font_size  [ lindex [tkcon font] 1 ] 
-    #tkcon master puts [tkcon font]
-    if { [string length $font_size] ==0 }  { set font_size 8 }
-    tkcon master  .tkcontop.size_label.size_entry  delete 0 end
-    tkcon master  .tkcontop.size_label.size_entry insert 0 $font_size
-    
-    tkcon master button .tkcontop.apply_font_button -text Apply -command  {   
-	set fontsize [ string trim  [ .tkcontop.size_label.size_entry get ] ]
-	set fontname [ .tkcontop.fontname_label.fontslist get [  .tkcontop.fontname_label.fontslist curselection ] ]
-	if { [string is integer $fontsize] && $fontsize >0 }  { 
-	    tkcon font $fontname $fontsize
-	}  else {
-	    tkcon font $fontname
-	}
-        destroy  .tkcontop
-    }
-    tkcon master pack .tkcontop.apply_font_button -side bottom 
+proc ::tkcon::fontchooserHandler {args} {
+    tk fontchooser hide
+    tkcon font {*}$args
 }
 
 ## ::tkcon::Attach - called to attach tkcon to an interpreter
@@ -2421,6 +2409,10 @@ proc ::tkcon::NewSocket {} {
 	}
 	wm transient $t $PRIV(root)
 	wm group $t $PRIV(root)
+	set parent [winfo parent $t]
+	set x [expr {[winfo x $parent] + 100}]
+	set y [expr {[winfo y $parent] + 100}]
+	wm geometry $t [format %+d%+d $x $y]
 	bind $t <Escape> [list destroy $t]
     }
     #$t.host delete 0 end
@@ -2855,6 +2847,10 @@ proc ::tkcon::MainInit {} {
 	    catch {wm attributes $w -type dialog}
 	    wm transient $w $PRIV(root)
 	    wm group $w $PRIV(root)
+	    set parent [winfo parent $w]
+	    set x [expr {[winfo x $parent] + 100}]
+	    set y [expr {[winfo y $parent] + 100}]
+	    wm geometry $w [format %+d%+d $x $y]
 	    frame $w.btn
 	    ttk::scrollbar $w.sy -command [list $w.text yview]
 	    text $w.text -yscrollcommand [list $w.sy set] -height 12 \
@@ -2863,8 +2859,7 @@ proc ::tkcon::MainInit {} {
 		    -insertbackground $COLOR(cursor) \
 		    -font $OPT(font) -borderwidth 1 -highlightthickness 0
 	    $w.text tag config red -foreground red
-	    ttk::button $w.close -text "Dismiss" \
-		-command [list destroy $w]
+	    ttk::button $w.close -text "Dismiss" -command [list destroy $w]
 	    ttk::button $w.check  -text "Recheckpoint"
 	    ttk::button $w.revert -text "Revert"
 	    ttk::button $w.expand -text "Verbose"
