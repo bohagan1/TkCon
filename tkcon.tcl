@@ -628,7 +628,7 @@ proc ::tkcon::InitUI {title} {
     catch {font create tkconfixedsmall -family Courier -size -8  -weight bold}
 
     set PRIV(statusbar) [set sbar [frame $w.fstatus]]
-    set PRIV(tabframe)  [frame $sbar.tabs]
+    set PRIV(tabframe)  [frame $sbar.tabs -relief sunken -borderwidth 1]
     set PRIV(X) [button $sbar.deltab -text "X" -command ::tkcon::DeleteTab \
 		     -activeforeground red -fg red -font tkconfixedbold \
 		     -highlightthickness 0 -padx 2 -pady 0 -borderwidth 1 \
