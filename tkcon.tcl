@@ -51,7 +51,7 @@
 #    tkcon master set ::tkcon:PRIV(proxy) wwwproxy:8080
 #
 
-package require Tk 8.5
+package require Tk 8.5-
 
 # We need to load some package to get what's available, and we
 # choose ctext because we'll use it if its available in the editor
