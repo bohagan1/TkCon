@@ -3764,7 +3764,7 @@ proc tkcon {cmd args} {
 		catch {interp eval $OPT(exec) [list unset $slaveVar]}
 	    }
 	    interp eval $OPT(exec) \
-		    [list trace variable $slaveVar rwu \
+		    [list trace add variable $slaveVar rwu \
 		    [list tkcon set $masterVar $OPT(exec)]]
 	    return
 	}
@@ -4637,14 +4637,14 @@ proc observe {opt name args} {
 			\"$type\", must be: read, write or unset"
 	    }
 	    if {![llength $args]} { set args observe_var }
-	    foreach c [uplevel 1 [list trace vinfo $name]] {
+	    foreach c [uplevel 1 [list trace info variable $name]] {
 		# don't double up on the traces
 		if {[list $type $args] eq $c} { return }
 	    }
 	    uplevel 1 [list trace $opt $name $type $args]
 	}
 	vi* {
-	    uplevel 1 [list trace vinfo $name]
+	    uplevel 1 [list trace info variable $name]
 	}
 	default {
 	    return -code error "bad [lindex [info level 0] 0] option\
@@ -6178,7 +6178,7 @@ proc ::tkcon::SafeSubst {i a} {
 	    } else {
 		catch {unset $newvalue}
 	    }
-	    $i eval trace variable $value rwu \{[list tkcon set $newvalue $i]\}
+	    $i eval trace add variable $value rwu \{[list tkcon set $newvalue $i]\}
 	    set value $newvalue
 	} elseif {![string compare $arg -command]} {
 	    set value [list $i eval $value]
