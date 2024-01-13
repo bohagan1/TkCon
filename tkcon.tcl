@@ -2613,13 +2613,21 @@ proc ::tkcon::MainInit {} {
     proc ::tkcon::Destroy {{slave {}}} {
 	variable PRIV
 
+	set confirmed 0
+	if {[tk_messageBox -parent $PRIV(root) -title "Close window?" \
+	    -message "Close the current window?" -default no \
+	    -icon question -type yesno] == "yes"} {
+	    set confirmed 1
+	}
+
+	if {!$confirmed} {
+	    return
+	}
+
 	# Just close on the last one
 	if {[llength $PRIV(interps)] == 1} { exit }
 	if {$slave eq ""} {
 	    ## Main interpreter close request
-	    if {[tk_messageBox -parent $PRIV(root) -title "Quit tkcon?" \
-		     -message "Close all windows and exit tkcon?" \
-		     -icon question -type yesno] eq "yes"} { exit }
 	    return
 	} elseif {$slave eq $::tkcon::OPT(exec)} {
 	    set name  [tk appname]
