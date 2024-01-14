@@ -6344,14 +6344,12 @@ proc ::tkcon::RetrieveFilter {host} {
 
 proc ::tkcon::RetrieveAuthentication {} {
     package require Tk
-    if {[catch {package require base64}]} {
-        if {[catch {package require Trf}]} {
-            error "base64 support not available"
-        } else {
-            set local64 "base64 -mode enc"
-        }
+    if {[info tclversion] >= 8.6} {
+	set local64 [list binary encode base64]
+    } else if {![catch {package require base64}]} {
+	set local64 [list base64::encode]
     } else {
-        set local64 "base64::encode"
+	error "base64 support not available"
     }
 
     set dlg [toplevel .auth]
@@ -6377,7 +6375,7 @@ proc ::tkcon::RetrieveAuthentication {} {
     if {[info exists [namespace current]::conf_userid]} {
 	set data [subst $[namespace current]::conf_userid]
 	append data : [subst $[namespace current]::conf_passwd]
-	set data [$local64 $data]
+	set data [{*}$local64 $data]
 	set result [list "Proxy-Authorization" "Basic $data"]
     }
     unset [namespace current]::conf_passwd
