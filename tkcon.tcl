@@ -82,12 +82,10 @@ namespace eval ::tkcon {
 
     # PRIV is used for internal data that only tkcon should fiddle with.
     variable PRIV
-    set PRIV(WWW)        [info exists embed_args]
-    set PRIV(AQUA) [expr {[tk windowingsystem] eq "aqua"}]
-    set PRIV(CTRL)       [expr {$PRIV(AQUA) ? "Command-" : "Control-"}]
-    set PRIV(ACC)        [expr {$PRIV(AQUA) ? "Command-" : "Ctrl+"}]
-    set PRIV(font.scale) 1.0
-    set PRIV(font.list)  {tkconfixed 12 tkconfixedbold 12 tkconfixedlarge 18 tkconfixedsmall 8}
+    set PRIV(WWW)	[info exists embed_args]
+    set PRIV(AQUA)	[expr {[tk windowingsystem] eq "aqua"}]
+    set PRIV(CTRL)	[expr {$PRIV(AQUA) ? "Command-" : "Control-"}]
+    set PRIV(ACC)	[expr {$PRIV(AQUA) ? "Command-" : "Ctrl+"}]
 
     variable EXPECT 0
 }
@@ -622,10 +620,15 @@ proc ::tkcon::InitUI {title} {
     }
     set PRIV(base) $w
 
-    catch {font create tkconfixed      -family Courier -size -12}
-    catch {font create tkconfixedbold  -family Courier -size -12 -weight bold}
-    catch {font create tkconfixedlarge -family Courier -size -18 -weight bold}
-    catch {font create tkconfixedsmall -family Courier -size -8  -weight bold}
+    set family [font actual TkFixedFont -family]
+    if {$::tcl_platform(platform) eq "windows"} {
+	set family "Consolas"
+    }
+    set size [font actual TkFixedFont -size]
+    catch {font create tkconfixed      -family $family -size $size}
+    catch {font create tkconfixedbold  -family $family -size $size -weight bold}
+    catch {font create tkconfixedlarge -family $family -size [expr {$size + 4}] -weight bold}
+    catch {font create tkconfixedsmall -family $family -size [expr {$size - 4}] -weight bold}
 
     set PRIV(statusbar) [set sbar [frame $w.fstatus]]
     set PRIV(tabframe)  [frame $sbar.tabs -relief sunken -borderwidth 1]
@@ -2190,9 +2193,17 @@ proc ::tkcon::fontchooserSelect {} {
 #
 # Change font
 #
-proc ::tkcon::fontchooserHandler {args} {
+proc ::tkcon::fontchooserHandler {font args} {
+    variable PRIV
     tk fontchooser hide
-    tkcon font {*}$args
+    set list [font actual $font -displayof $PRIV(root)]
+    array set attrs $list
+
+    font configure tkconfixed {*}$list
+    font configure tkconfixedbold {*}$list -weight bold
+    font configure tkconfixedlarge {*}$list -weight bold -size [expr {$attrs(-size)+4}]
+    font configure tkconfixedsmall {*}$list -weight bold -size [expr {$attrs(-size)-4}]
+    tkcon font {*}$list
 }
 
 ## ::tkcon::Attach - called to attach tkcon to an interpreter
@@ -5138,43 +5149,61 @@ proc tcl_unknown args {
 # Refreshes the UI to reflect the updated fonts.
 #
 ############################################################################
-proc ::tkcon::ResizeSet {{scale 1.0}} {
-  if {$scale < 0.20} {
-	set scale 0.20
-  } elseif {$scale > 5.0} {
-    set scale 5.0
-  }
-  set ::tkcon::PRIV(font.scale) $scale
+proc ::tkcon::ResizeSet {incr} {
+    set size [font configure tkconfixed -size]
+    set new [expr {$size + $incr}]
+    if {$new < 6 || $new > 64} {
+	return
+    }
 
-  foreach {name size} $::tkcon::PRIV(font.list) {
-    font configure $name -size [expr {round($size * $scale)}]
-  }
+    foreach name [list tkconfixed tkconfixedbold tkconfixedlarge tkconfixedsmall] {
+	set size [font configure $name -size]
+	font configure $name -size [incr size $incr]
+    }
 
-  $::tkcon::PRIV(console) configure -font tkconfixed
-#  $::tkcon::PRIV(menubar) configure -font tkconfixed
-}; # ResizeSet {}
+    tkcon font {*}[font actual tkconfixed]
+    $::tkcon::PRIV(console) configure -font tkconfixed
+#   $::tkcon::PRIV(menubar) configure -font tkconfixed
+}
 
 ############################################################################
 #
 # ResizeUp
 #
-# Increases the font sizes by a factor of 1.08.
+# Increases the font sizes
 #
 ############################################################################
 proc ::tkcon::ResizeUp {} {
-  ResizeSet [expr {$::tkcon::PRIV(font.scale) * 1.08}]
-}; # ResizeUp {}
+    set size [font configure tkconfixed -size]
+    if {$size < 14} {
+	set incr 1
+    } elseif {$size < 24} {
+	set incr 2
+    } else {
+	set incr 4
+    }
+    ResizeSet $incr
+}
 
 ############################################################################
 #
 # ResizeDn
 #
-# Decreases the font sizes by a factor of 1.08.
+# Decreases the font sizes
 #
 ############################################################################
 proc ::tkcon::ResizeDn {} {
-  ResizeSet [expr {$::tkcon::PRIV(font.scale) / 1.08}]
-}; # ResizeDn {}
+    set size [font configure tkconfixed -size]
+    if {$size <= 14} {
+	set incr -1
+    } elseif {$size <= 24} {
+	set incr -2
+    } else {
+	set incr -4
+    }
+    ResizeSet $incr
+}
+
 
 proc ::tkcon::Bindings {} {
     variable PRIV
@@ -5204,8 +5233,8 @@ proc ::tkcon::Bindings {} {
 
     ## Now make all our virtual event bindings
     set bindings {
-	<<TkCon_ResizeUp>>  <$PRIV(CTRL)-plus>
-	<<TkCon_ResizeDn>>  <$PRIV(CTRL)-minus>
+	<<TkCon_ResizeUp>>	<$PRIV(CTRL)-plus>
+	<<TkCon_ResizeDn>>	<$PRIV(CTRL)-minus>
 	<<TkCon_Exit>>		<$PRIV(CTRL)-q>
 	<<TkCon_New>>		<$PRIV(CTRL)-N>
 	<<TkCon_NewTab>>	<$PRIV(CTRL)-T>
