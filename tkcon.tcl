@@ -735,8 +735,15 @@ proc ::tkcon::locate_xdg_icon {name} {
     if {[info exists env(XDG_DATA_DIRS)]} {
         set dirs [split $env(XDG_DATA_DIRS) :]
     }
-    if {[file isdirectory ~/.local/share]} {
-        set dirs [linsert $dirs 0 ~/.local/share]
+    if {[info tclversion] < 9.0} {
+	if {[file isdirectory ~/.local/share]} {
+            set dirs [linsert $dirs 0 ~/.local/share]
+	}
+    } else {
+	set p [file tildeexpand  ~/.local/share]
+	if {[file isdirectory $p]} {
+            set dirs [linsert $dirs 0 $p]
+	}
     }
     foreach dir $dirs {
         foreach path [list icons icons/hicolor/48x48/apps] {
@@ -1426,7 +1433,7 @@ proc ::tkcon::About {} {
 
     set w $PRIV(base).about
     if {![winfo exists $w]} {
-	global tk_patchLevel tcl_patchLevel tcl_version
+	global tk_patchLevel tcl_patchLevel
 	toplevel $w
 	wm withdraw $w
 	wm transient $w $PRIV(root)
@@ -1440,8 +1447,7 @@ proc ::tkcon::About {} {
 	wm geometry $w [format %+d%+d $x $y]
 	ttk::button $w.b -text Dismiss -command [list wm withdraw $w]
 	text $w.text -height 9 -width 60 \
-		-foreground $COLOR(stdin) \
-		-background $COLOR(bg) \
+		-foreground $COLOR(stdin) -background $COLOR(bg) \
 		-font $OPT(font) -borderwidth 1 -highlightthickness 0
 	grid $w.text -sticky news
 	grid $w.b -sticky se -padx 6 -pady 4
@@ -2627,7 +2633,7 @@ proc ::tkcon::MainInit {} {
 	set confirmed 0
 	if {[tk_messageBox -parent $PRIV(root) -title "Close window?" \
 	    -message "Close the current window?" -default no \
-	    -icon question -type yesno] == "yes"} {
+	    -icon question -type yesno] eq "yes"} {
 	    set confirmed 1
 	}
 
@@ -3375,8 +3381,8 @@ proc ::tkcon::Expect {cmd} {
     set EXP(row) 0
     set EXP(col) 0
 
-    set env(LINES)   $OPT(rows)
-    set env(COLUMNS) $OPT(cols)
+    set EXP(LINES)   $OPT(rows)
+    set EXP(COLUMNS) $OPT(cols)
 
     ExpectInit
     log_user 0
@@ -3415,14 +3421,14 @@ proc ::tkcon::Expect {cmd} {
 		::tkcon::term_update_cursor $::tkcon::PRIV(console)
 	    } "^\r" {
 		# (cr,) Go to beginning of line
-		update idle
+		update idletasks
 		set ::tkcon::EXP(col) 0
 		::tkcon::term_update_cursor $::tkcon::PRIV(console)
 	    } "^\n" {
 		# (ind,do) Move cursor down one line
 		if {$::tcl_platform(platform) eq "windows"} {
 		    # Windows seems to get the LF without the CR
-		    update idle
+		    update idletasks
 		    set ::tkcon::EXP(col) 0
 		}
 		::tkcon::term_down $::tkcon::PRIV(console)
@@ -5111,13 +5117,28 @@ proc tcl_unknown args {
 	## We've got nothing so far
 	## Check and see if Tk wasn't loaded, but it appears to be a Tk cmd
 	if {![uplevel \#0 info exists tk_version]} {
-	    lappend tkcmds bell bind bindtags button \
-		    canvas checkbutton clipboard destroy \
-		    entry event focus font frame grab grid image \
-		    label labelframe listbox lower menu menubutton message \
-		    option pack panedwindow place radiobutton raise \
-		    scale scrollbar selection send spinbox \
-		    text tk tkwait toplevel winfo wm
+	    lappend tkcmds bell grid scale tk_library ttk::label \
+		bind image scrollbar tk_menuSetFocus ttk::labelframe \
+		bindtags keysyms selection tk_messageBox ttk::menubutton \
+		bitmap label send tk_optionMenu ttk::notebook \
+		busy labelframe spinbox tk_patchLevel ttk::panedwindow \
+		button listbox sysnotify tk_popup ttk::progressbar \
+		canvas lower systray tk_setPalette ttk::radiobutton \
+		checkbutton menu text tk_strictMotif ttk::scale \
+		clipboard menubutton tk tk_textCopy ttk::scrollbar \
+		colors message tk::mac tk_textCut ttk::separator \
+		console nsimage tk::scalingPct tk_textPaste ttk::sizegrip ]
+		cursors option tk::svgFmt tk_version ttk::spinbox \
+		destroy options tk_bisque tkerror ttk::style \
+		entry pack tk_chooseColor tkwait ttk::treeview \
+		event panedwindow tk_chooseDirectory toplevel ttk::widget \
+		focus photo tk_dialog ttk::button ttk_image \
+		font place tk_focusFollowsMouse ttk::checkbutton ttk_vsapi \
+		fontchooser print tk_focusNext ttk::combobox winfo \
+		frame radiobutton tk_focusPrev ttk::entry wm \
+		geometry raise tk_getOpenFile ttk::frame \
+		grab safe::loadTk tk_getSaveFile ttk::intro 
+
 	    if {[lsearch -exact $tkcmds $name] >= 0 && \
 		    [tkcon master tk_messageBox -icon question -parent . \
 		    -title "Load Tk?" -type retrycancel -default retry \
