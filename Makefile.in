@@ -206,13 +206,32 @@ libraries:
 # end user machine when building from source.
 #========================================================================
 
-doc:
-	@echo "If you have documentation to create, place the commands to"
-	@echo "build the docs in the 'doc:' target.  For example:"
-	@echo "        xml2nroff sample.xml > sample.n"
-	@echo "        xml2html sample.xml > sample.html"
+DTPLITE=$(TCLSH) @DTPLITE@
+doc: tkcon.n
 
-install: all install-binaries install-libraries #install-doc
+tkcon.n: $(srcdir)/doc/tkcon.n.man
+	@echo "make nroff documentation"
+	@if [ -n "$(DTPLITE)" -a -x "$(DTPLITE)" ]; then \
+	    @list='dump.n idebug.n observe.n tkcon.n tkcon.1 tkconrc.5'; \
+	    for i in $$list; do \
+		if test -f $$i ; then \
+		    echo "Make $$i"; \
+		    $(DTPLITE) -o $(srcdir)/doc/$$i nroff $(srcdir)/doc/$$(i).man ; \
+		fi; \
+	    done; \
+	fi
+
+tkcon.html: $(srcdir)/doc/tkcon.n.man
+	@echo "make HTML documentation"
+	@if [ -n "$(DTPLITE)" -a -x "$(DTPLITE)" ]; then \
+	    @list='dump idebug observe tkcon'; \
+	    for i in $$list; do \
+		$(DTPLITE) -o $(srcdir)/doc/$$i.html html $(srcdir)/doc/$$(i).n.man ; \
+	    done; \
+	fi
+
+
+install: all install-binaries install-libraries install-doc-n install-doc-html
 
 install-binaries: binaries install-lib-binaries install-bin-binaries
 
@@ -234,12 +253,55 @@ install-libraries: libraries
 # directory.
 #========================================================================
 
-install-doc: doc
-	@$(INSTALL_DATA_DIR) $(DESTDIR)$(mandir)/mann
-	@echo "Installing documentation in $(DESTDIR)$(mandir)"
+install-doc-html: tkcon.html
+	@$(INSTALL_DATA_DIR) "$(DESTDIR)$(pkglibdir)/html"
+	@echo "Installing HTML documentation in $(DESTDIR)$(pkglibdir)/html"
+	@list='$(srcdir)/doc/*.html $(srcdir)/doc/*.css'; for i in $$list; do \
+	    if test -f $$i ; then \
+		echo "Installing $$i"; \
+		$(INSTALL_DATA) $$i "$(DESTDIR)$(pkglibdir)/html"; \
+	    fi; \
+	done
+
+install-doc-n: tkcon.n
+	@$(INSTALL_DATA_DIR) "$(DESTDIR)$(mandir)/mann"
+	@echo "Installing nroff documentation in $(DESTDIR)$(mandir)/mann"
 	@list='$(srcdir)/doc/*.n'; for i in $$list; do \
-	    echo "Installing $$i"; \
-	    $(INSTALL_DATA) $$i $(DESTDIR)$(mandir)/mann ; \
+	    if test -f $$i ; then \
+		echo "Installing $$i"; \
+		if test -f "$(DESTDIR)$(mandir)/mann/Tcl.n.gz" ; then \
+		    gzip -k $$i ; \
+		    $(INSTALL_DATA) $$i.gz "$(DESTDIR)$(mandir)/mann" ; \
+		else \
+		    $(INSTALL_DATA) $$i "$(DESTDIR)$(mandir)/mann" ; \
+		fi; \
+	    fi; \
+	done
+	@$(INSTALL_DATA_DIR) "$(DESTDIR)$(mandir)/man1"
+	@echo "Installing nroff documentation in $(DESTDIR)$(mandir)/man1"
+	@list='$(srcdir)/doc/*.1'; for i in $$list; do \
+	    if test -f $$i ; then \
+		echo "Installing $$i"; \
+		if test -f "$(DESTDIR)$(mandir)/mann/Tcl.n.gz" ; then \
+		    gzip -k $$i ; \
+		    $(INSTALL_DATA) $$i.gz "$(DESTDIR)$(mandir)/man1" ; \
+		else \
+		    $(INSTALL_DATA) $$i "$(DESTDIR)$(mandir)/man1" ; \
+		fi; \
+	    fi; \
+	done
+	@$(INSTALL_DATA_DIR) "$(DESTDIR)$(mandir)/man5"
+	@echo "Installing nroff documentation in $(DESTDIR)$(mandir)/man5"
+	@list='$(srcdir)/doc/*.5'; for i in $$list; do \
+	    if test -f $$i ; then \
+		echo "Installing $$i"; \
+		if test -f "$(DESTDIR)$(mandir)/mann/Tcl.n.gz" ; then \
+		    gzip -k $$i ; \
+		    $(INSTALL_DATA) $$i.gz "$(DESTDIR)$(mandir)/man5" ; \
+		else \
+		    $(INSTALL_DATA) $$i "$(DESTDIR)$(mandir)/man5" ; \
+		fi; \
+	    fi; \
 	done
 
 test: binaries libraries
@@ -391,6 +453,7 @@ distclean: clean
 	-rm -f $(CONFIG_CLEAN_FILES)
 	-rm -f config.cache config.log config.status configure~
 	-rm -fR autom4te.cache
+	-rm -f doc/*.gz
 
 #========================================================================
 # Install binary object libraries.  On Windows this includes both .dll and

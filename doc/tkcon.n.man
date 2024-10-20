@@ -1,5 +1,5 @@
 [comment {-*- tcl -*- tkcon manpage}]
-[manpage_begin tkcon n 2.5]
+[manpage_begin tkcon n 2.8]
 [copyright {Jeffrey Hobbs <jeff at hobbs.org>}]
 [moddesc   {TkCon}]
 [titledesc {Controlling TkCon console}]

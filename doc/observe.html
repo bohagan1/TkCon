@@ -1,104 +1,169 @@
-<HTML>
-<HEAD>
-<TITLE>tkcon: observe procedure</TITLE>
-<LINK REL="STYLESHEET" TYPE="text/css" HREF="./style.css">
-</HEAD>
-
-<BODY BGCOLOR=#FFFFFF>
-
-<TABLE WIDTH=100% BORDER=0 CELLSPACING=2 CELLPADDING=0 BGCOLOR=#000000><TR><TD>
-<!-- start header info -->
-<TABLE WIDTH=100% BORDER=0 CELLSPACING=0 CELLPADDING=0 BGCOLOR=#FFFFFF>
-<TR>
-<TH><FONT SIZE=+3>tkcon: <CODE>observe</CODE> procedure</FONT></TH>
-<TD align=right>
-<A href="http://tkcon.sourceforge.net/"> 
-<IMG src="http://sourceforge.net/sflogo.php?group_id=11462&type=1" width="88"
-height="31" border="0" alt="SourceForge Logo"></A>
-</TD>
-</TR>
-</TABLE>
-<!-- end header info -->
-
-</TD></TR><TR><TD>
-<!-- start main navigation table -->
-<TABLE BORDER=1 CELLPADDING=2 CELLSPACING=2 BGCOLOR=#CCCCCC width=100%>
-<TR>
-<TH CLASS="hi"><A HREF="index.html" CLASS="hi">Documentation</A></TH>
-<TH><A HREF="purpose.html">Purpose &amp; Features</A></TH>
-<TH><A HREF="limits.html">Limitations</A></TH>
-<TH><A HREF="todo.html">To&nbsp;Do</A></TH>
-<TH><A HREF="license.terms">License</A></TH>
-</TR><TR>
-<TH COLSPAN=2><A HREF="plugin.html">Online Demo</A>
-(requires <A HREF="http://tcl.activestate.com/software/plugin/">Tk plugin</A>)</TH>
-<TH COLSPAN=3><A HREF="nontcl.html">Using TkCon with other Tk Languages</A></TH>
-</TR>
-</TABLE>
-<!-- end main navigation table -->
-</TD></TR><TR><TD>
-<!-- start secondary navigation table -->
-<TABLE BORDER=1 CELLPADDING=2 CELLSPACING=2 BGCOLOR=#BBBBBB width=100%>
-<TR>
-<TH><A HREF="start.html">Getting Started</A></TH>
-<TH><A HREF="bindings.html">Special Bindings</A></TH>
-<TH><A HREF="procs.html">Procedures</A></TH>
-<TH><A HREF="demopic.png">Screenshot</A></TH>
-</TR>
-<TR>
-<TH><A HREF="dump.html"><CODE>dump</CODE></A></TH>
-<TH><A HREF="tkcon.html"><CODE>tkcon</CODE></A></TH>
-<TH><A HREF="idebug.html"><CODE>idebug</CODE></A></TH>
-<TH CLASS="hi2"><A HREF="observe.html" CLASS="hi2"><CODE>observe</CODE></A></TH>
-</TR>
-</TABLE>
-<!-- end secondary navigation table -->
-</TD></TR><TR><TD BGCOLOR=#FFFFFF>
-<DIV CLASS="indent">
- <P>
-This command provides runtime debugging output for variables and commands
-without the need to edit your code.  For variables, the underlying mechanism
-uses <code>trace</code> and <code>dump var</code>.  For commands, it renames
-the observed procedure and uses a special wrapper procedure.  <b><font
-color="#FF0000">WARNING:</font></b> using this procedure after checkpointing
-state will result in major problems if you clean state because the renamed
-(true) commands will be lost.
- <P>
-
-This procedure is experimental.  Comments are encouraged.
-
-<DL>
-
-<DT> <CODE>observe <b>command</b></CODE> <I>cmdname ?maxlevel?</I>
-<DD> This will create a wrapper command which prints out (using
-<code>dump</code>) the call stack to the console.  <i>maxlevel</i>
-represents the maximum number of levels of the call stack which will be
-printed (defaults to 4).
-
-<DT> <CODE>observe <b>cdelete</b></CODE> <I>cmdname</I>
-<DD> Removes the wrapper around an observed command.
-
-<DT> <CODE>observe <b>cinfo</b></CODE> <I>cmdname</I>
-<DD> Prints out useless info.
-
-<DT> <CODE>observe <b>variable</b></CODE> <I>varname operation ?args?</I>
-<DD> Currently a wrapper around trace that uses <code>dump</code> to
-print out the value of the named variable whenever the specified operation
-on that variable occurs (must be read, write or unset).
-
-<DT> <CODE>observe <b>vdelete</b></CODE> <I>varname operation</I>
-<DD> Deletes the trace wrapper around the named variable.
-
-<DT> <CODE>observe <b>vinfo</b></CODE> <I>varname</I>
-<DD> Prints out trace info about the named variable.
-
-</DL>
-</DIV>
-</TD></TR></TABLE>
-
-<HR NOSHADE SIZE=1>
-<ADDRESS><FONT SIZE=2>&copy;
-Jeffrey Hobbs</FONT></ADDRESS>
-
-</BODY>
-</HTML>
+<!DOCTYPE html><html><head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>observe - TkCon</title>
+<style type="text/css"><!--
+    HTML {
+	background: 	#FFFFFF;
+	color: 		black;
+    }
+    BODY {
+	background: 	#FFFFFF;
+	color:	 	black;
+    }
+    DIV.doctools {
+	margin-left:	10%;
+	margin-right:	10%;
+    }
+    DIV.doctools H1,DIV.doctools H2 {
+	margin-left:	-5%;
+    }
+    H1, H2, H3, H4 {
+	margin-top: 	1em;
+	font-family:	sans-serif;
+	font-size:	large;
+	color:		#005A9C;
+	background: 	transparent;
+	text-align:		left;
+    }
+    H1.doctools_title {
+	text-align: center;
+    }
+    UL,OL {
+	margin-right: 0em;
+	margin-top: 3pt;
+	margin-bottom: 3pt;
+    }
+    UL LI {
+	list-style: disc;
+    }
+    OL LI {
+	list-style: decimal;
+    }
+    DT {
+	padding-top: 	1ex;
+    }
+    UL.doctools_toc,UL.doctools_toc UL, UL.doctools_toc UL UL {
+	font:		normal 12pt/14pt sans-serif;
+	list-style:	none;
+    }
+    LI.doctools_section, LI.doctools_subsection {
+	list-style: 	none;
+	margin-left: 	0em;
+	text-indent:	0em;
+	padding: 	0em;
+    }
+    PRE {
+	display: 	block;
+	font-family:	monospace;
+	white-space:	pre;
+	margin:		0%;
+	padding-top:	0.5ex;
+	padding-bottom:	0.5ex;
+	padding-left:	1ex;
+	padding-right:	1ex;
+	width:		100%;
+    }
+    PRE.doctools_example {
+	color: 		black;
+	background: 	#f5dcb3;
+	border:		1px solid black;
+    }
+    UL.doctools_requirements LI, UL.doctools_syntax LI {
+	list-style: 	none;
+	margin-left: 	0em;
+	text-indent:	0em;
+	padding:	0em;
+    }
+    DIV.doctools_synopsis {
+	color: 		black;
+	background: 	#80ffff;
+	border:		1px solid black;
+	font-family:	serif;
+	margin-top: 	1em;
+	margin-bottom: 	1em;
+    }
+    UL.doctools_syntax {
+	margin-top: 	1em;
+	border-top:	1px solid black;
+    }
+    UL.doctools_requirements {
+	margin-bottom: 	1em;
+	border-bottom:	1px solid black;
+    }
+--></style>
+</head>
+<!-- Generated from file 'observe.n.man' by tcllib/doctools with format 'html'
+   -->
+<!-- Copyright &amp;copy; Jeffrey Hobbs &amp;lt;jeff at hobbs.org&amp;gt;
+   -->
+<!-- observe.n
+   -->
+<body><div class="doctools">
+<h1 class="doctools_title">observe(n) 2.8 observe.n &quot;TkCon&quot;</h1>
+<div id="name" class="doctools_section"><h2><a name="name">Name</a></h2>
+<p>observe - Runtime debugging output in TkCon</p>
+</div>
+<div id="toc" class="doctools_section"><h2><a name="toc">Table Of Contents</a></h2>
+<ul class="doctools_toc">
+<li class="doctools_section"><a href="#toc">Table Of Contents</a></li>
+<li class="doctools_section"><a href="#synopsis">Synopsis</a></li>
+<li class="doctools_section"><a href="#section1">Description</a></li>
+<li class="doctools_section"><a href="#see-also">See Also</a></li>
+<li class="doctools_section"><a href="#keywords">Keywords</a></li>
+<li class="doctools_section"><a href="#copyright">Copyright</a></li>
+</ul>
+</div>
+<div id="synopsis" class="doctools_section"><h2><a name="synopsis">Synopsis</a></h2>
+<div class="doctools_synopsis">
+<ul class="doctools_syntax">
+<li><a href="#1"><b class="cmd">observe</b> <i class="arg">command</i> <i class="arg">cmdname</i> <span class="opt">?<i class="arg">maxlevel</i>?</span></a></li>
+<li><a href="#2"><b class="cmd">observe</b> <i class="arg">cdelete</i> <i class="arg">cmdname</i></a></li>
+<li><a href="#3"><b class="cmd">observe</b> <i class="arg">cinfo</i> <i class="arg">cmdname</i></a></li>
+<li><a href="#4"><b class="cmd">observe</b> <i class="arg">variable</i> <i class="arg">varname</i> <i class="arg">operation</i> <span class="opt">?<i class="arg">args</i>?</span></a></li>
+<li><a href="#5"><b class="cmd">observe</b> <i class="arg">vdelete</i> <i class="arg">varname</i> <i class="arg">operation</i></a></li>
+<li><a href="#6"><b class="cmd">observe</b> <i class="arg">vinfo</i> <i class="arg">varname</i></a></li>
+</ul>
+</div>
+</div>
+<div id="section1" class="doctools_section"><h2><a name="section1">Description</a></h2>
+<p>This command provides runtime debugging output for variables
+and commands without the need to edit your code.
+For variables, the underlying mechanism uses <b class="cmd">trace</b> and <b class="cmd">dump</b> var.
+For commands, it renames the observed procedure and uses a
+special wrapper procedure.
+WARNING: using this procedure after checkpointing state will
+result in major problems if you clean state because the
+renamed (true) commands will be lost.</p>
+<p>This procedure is experimental.
+Comments are encouraged.</p>
+<dl class="doctools_definitions">
+<dt><a name="1"><b class="cmd">observe</b> <i class="arg">command</i> <i class="arg">cmdname</i> <span class="opt">?<i class="arg">maxlevel</i>?</span></a></dt>
+<dd><p>This will create a wrapper command which prints out (using <b class="cmd">dump</b>)
+the call stack to the console.
+maxlevel represents the maximum number of levels of the call
+stack which will be printed (defaults to 4).</p></dd>
+<dt><a name="2"><b class="cmd">observe</b> <i class="arg">cdelete</i> <i class="arg">cmdname</i></a></dt>
+<dd><p>Removes the wrapper around an observed command.</p></dd>
+<dt><a name="3"><b class="cmd">observe</b> <i class="arg">cinfo</i> <i class="arg">cmdname</i></a></dt>
+<dd><p>Prints out useless info.</p></dd>
+<dt><a name="4"><b class="cmd">observe</b> <i class="arg">variable</i> <i class="arg">varname</i> <i class="arg">operation</i> <span class="opt">?<i class="arg">args</i>?</span></a></dt>
+<dd><p>Currently a wrapper around trace that uses <b class="cmd">dump</b> to print out
+the value of the named variable whenever the specified
+operation on that variable occurs (must be <i class="arg">read</i>, <i class="arg">write</i> or <i class="arg">unset</i>).</p></dd>
+<dt><a name="5"><b class="cmd">observe</b> <i class="arg">vdelete</i> <i class="arg">varname</i> <i class="arg">operation</i></a></dt>
+<dd><p>Deletes the trace wrapper around the named variable.</p></dd>
+<dt><a name="6"><b class="cmd">observe</b> <i class="arg">vinfo</i> <i class="arg">varname</i></a></dt>
+<dd><p>Prints out trace info about the named variable.</p></dd>
+</dl>
+</div>
+<div id="see-also" class="doctools_section"><h2><a name="see-also">See Also</a></h2>
+<p><b class="cmd">dump</b>(n), <b class="cmd">idebug</b>(n), <b class="cmd">tkcon</b>(1), <b class="cmd">tkcon</b>(n), <b class="cmd">tkconrc</b>(5)</p>
+</div>
+<div id="keywords" class="doctools_section"><h2><a name="keywords">Keywords</a></h2>
+<p>Tk, console, debug</p>
+</div>
+<div id="copyright" class="doctools_section"><h2><a name="copyright">Copyright</a></h2>
+<p>Copyright &copy; Jeffrey Hobbs &lt;jeff at hobbs.org&gt;</p>
+</div>
+</div></body></html>

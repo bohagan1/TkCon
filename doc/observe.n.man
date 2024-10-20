@@ -1,5 +1,5 @@
 [comment {-*- tcl -*- observe manpage}]
-[manpage_begin observe n 2.5]
+[manpage_begin observe n 2.8]
 [copyright {Jeffrey Hobbs <jeff at hobbs.org>}]
 [moddesc   {TkCon}]
 [titledesc {Runtime debugging output in TkCon}]

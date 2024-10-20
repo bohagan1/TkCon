@@ -1,5 +1,5 @@
 [comment {-*- tcl -*- tkconrc manpage}]
-[manpage_begin tkconrc 5 2.5]
+[manpage_begin tkconrc 5 2.8]
 [copyright {Jeffrey Hobbs <jeff at hobbs.org>}]
 [moddesc   {TkCon}]
 [titledesc {TkCon resource file}]

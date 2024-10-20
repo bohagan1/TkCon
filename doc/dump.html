@@ -1,100 +1,164 @@
-<HTML>
-<HEAD>
-<TITLE>tkcon: dump procedure</TITLE>
-<LINK REL="STYLESHEET" TYPE="text/css" HREF="./style.css">
-</HEAD>
-
-<BODY BGCOLOR=#FFFFFF>
-
-<TABLE WIDTH=100% BORDER=0 CELLSPACING=2 CELLPADDING=0 BGCOLOR=#000000><TR><TD>
-<!-- start header info -->
-<TABLE WIDTH=100% BORDER=0 CELLSPACING=0 CELLPADDING=0 BGCOLOR=#FFFFFF>
-<TR>
-<TH><FONT SIZE=+3>tkcon: <CODE>dump</CODE> procedure</FONT></TH>
-<TD align=right>
-<A href="http://tkcon.sourceforge.net/"> 
-<IMG src="http://sourceforge.net/sflogo.php?group_id=11462&type=1" width="88"
-height="31" border="0" alt="SourceForge Logo"></A>
-</TD>
-</TR>
-</TABLE>
-<!-- end header info -->
-
-</TD></TR><TR><TD>
-<!-- start main navigation table -->
-<TABLE BORDER=1 CELLPADDING=2 CELLSPACING=2 BGCOLOR=#CCCCCC width=100%>
-<TR>
-<TH CLASS="hi"><A HREF="index.html" CLASS="hi">Documentation</A></TH>
-<TH><A HREF="purpose.html">Purpose &amp; Features</A></TH>
-<TH><A HREF="limits.html">Limitations</A></TH>
-<TH><A HREF="todo.html">To&nbsp;Do</A></TH>
-<TH><A HREF="license.terms">License</A></TH>
-</TR><TR>
-<TH COLSPAN=2><A HREF="plugin.html">Online Demo</A>
-(requires <A HREF="http://tcl.activestate.com/software/plugin/">Tk plugin</A>)</TH>
-<TH COLSPAN=3><A HREF="nontcl.html">Using TkCon with other Tk Languages</A></TH>
-</TR>
-</TABLE>
-<!-- end main navigation table -->
-</TD></TR><TR><TD>
-<!-- start secondary navigation table -->
-<TABLE BORDER=1 CELLPADDING=2 CELLSPACING=2 BGCOLOR=#BBBBBB width=100%>
-<TR>
-<TH><A HREF="start.html">Getting Started</A></TH>
-<TH><A HREF="bindings.html">Special Bindings</A></TH>
-<TH><A HREF="procs.html">Procedures</A></TH>
-<TH><A HREF="demopic.png">Screenshot</A></TH>
-</TR>
-<TR>
-<TH CLASS="hi2"><A HREF="dump.html" CLASS="hi2"><CODE>dump</CODE></A></TH>
-<TH><A HREF="tkcon.html"><CODE>tkcon</CODE></A></TH>
-<TH><A HREF="idebug.html"><CODE>idebug</CODE></A></TH>
-<TH><A HREF="observe.html"><CODE>observe</CODE></A></TH>
-</TR>
-</TABLE>
-<!-- end secondary navigation table -->
-</TD></TR><TR><TD BGCOLOR=#FFFFFF>
-<DIV CLASS="indent">
- <P>
-The <CODE>dump</CODE> command provides a way for the user to spit out
-state information about the interpreter in a Tcl readable (and human
-readable) form.  It takes the general form:
-
-<BLOCKQUOTE>
-<code>dump</code> <b>method</b> <i>?-nocomplain? ?-filter pattern? ?--?
-pattern ?pattern ...?</i>
-</BLOCKQUOTE>
-
-The patterns represent glob-style patterns (as in <code>string match pattern
-$str</code>).  <i>-nocomplain</i> will prevent <code>dump</code> from
-throwing an error if no items matched the pattern.  <i>-filter</i> is
-interpreted as appropriate for the method.  The various methods are:
-
-<DL>
-
-<DT> <CODE>dump <b>command</b></CODE> <i>args</i>
-<DD> Outputs one or more commands.
-
-<DT> <CODE>dump <b>procedure</b></CODE> <i>args</i>
-<DD> Outputs one or more procs in sourceable form.
-
-<DT> <CODE>dump <b>variable</b></CODE> <i>args</i>
-<DD> Outputs the values of variables in sourceable form.  Recognizes nested
-arrays.  The <i>-filter</i> pattern is used as to filter array element
+<!DOCTYPE html><html><head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>dump - TkCon</title>
+<style type="text/css"><!--
+    HTML {
+	background: 	#FFFFFF;
+	color: 		black;
+    }
+    BODY {
+	background: 	#FFFFFF;
+	color:	 	black;
+    }
+    DIV.doctools {
+	margin-left:	10%;
+	margin-right:	10%;
+    }
+    DIV.doctools H1,DIV.doctools H2 {
+	margin-left:	-5%;
+    }
+    H1, H2, H3, H4 {
+	margin-top: 	1em;
+	font-family:	sans-serif;
+	font-size:	large;
+	color:		#005A9C;
+	background: 	transparent;
+	text-align:		left;
+    }
+    H1.doctools_title {
+	text-align: center;
+    }
+    UL,OL {
+	margin-right: 0em;
+	margin-top: 3pt;
+	margin-bottom: 3pt;
+    }
+    UL LI {
+	list-style: disc;
+    }
+    OL LI {
+	list-style: decimal;
+    }
+    DT {
+	padding-top: 	1ex;
+    }
+    UL.doctools_toc,UL.doctools_toc UL, UL.doctools_toc UL UL {
+	font:		normal 12pt/14pt sans-serif;
+	list-style:	none;
+    }
+    LI.doctools_section, LI.doctools_subsection {
+	list-style: 	none;
+	margin-left: 	0em;
+	text-indent:	0em;
+	padding: 	0em;
+    }
+    PRE {
+	display: 	block;
+	font-family:	monospace;
+	white-space:	pre;
+	margin:		0%;
+	padding-top:	0.5ex;
+	padding-bottom:	0.5ex;
+	padding-left:	1ex;
+	padding-right:	1ex;
+	width:		100%;
+    }
+    PRE.doctools_example {
+	color: 		black;
+	background: 	#f5dcb3;
+	border:		1px solid black;
+    }
+    UL.doctools_requirements LI, UL.doctools_syntax LI {
+	list-style: 	none;
+	margin-left: 	0em;
+	text-indent:	0em;
+	padding:	0em;
+    }
+    DIV.doctools_synopsis {
+	color: 		black;
+	background: 	#80ffff;
+	border:		1px solid black;
+	font-family:	serif;
+	margin-top: 	1em;
+	margin-bottom: 	1em;
+    }
+    UL.doctools_syntax {
+	margin-top: 	1em;
+	border-top:	1px solid black;
+    }
+    UL.doctools_requirements {
+	margin-bottom: 	1em;
+	border-bottom:	1px solid black;
+    }
+--></style>
+</head>
+<!-- Generated from file 'dump.n.man' by tcllib/doctools with format 'html'
+   -->
+<!-- Copyright &amp;copy; Jeffrey Hobbs &amp;lt;jeff at hobbs.org&amp;gt;
+   -->
+<!-- dump.n
+   -->
+<body><div class="doctools">
+<h1 class="doctools_title">dump(n) 2.8 dump.n &quot;TkCon&quot;</h1>
+<div id="name" class="doctools_section"><h2><a name="name">Name</a></h2>
+<p>dump - Dump information about Tcl interpreter in TkCon</p>
+</div>
+<div id="toc" class="doctools_section"><h2><a name="toc">Table Of Contents</a></h2>
+<ul class="doctools_toc">
+<li class="doctools_section"><a href="#toc">Table Of Contents</a></li>
+<li class="doctools_section"><a href="#synopsis">Synopsis</a></li>
+<li class="doctools_section"><a href="#section1">Description</a></li>
+<li class="doctools_section"><a href="#see-also">See Also</a></li>
+<li class="doctools_section"><a href="#keywords">Keywords</a></li>
+<li class="doctools_section"><a href="#copyright">Copyright</a></li>
+</ul>
+</div>
+<div id="synopsis" class="doctools_section"><h2><a name="synopsis">Synopsis</a></h2>
+<div class="doctools_synopsis">
+<ul class="doctools_syntax">
+<li><a href="#1"><b class="cmd">dump</b> <i class="arg">method</i> <span class="opt">?<i class="arg">-nocomplain</i>?</span> <span class="opt">?<i class="arg">-filter pattern</i>?</span> <span class="opt">?<b class="cmd">--</b>?</span> <i class="arg">pattern</i> <span class="opt">?<i class="arg">pattern ...</i>?</span></a></li>
+</ul>
+</div>
+</div>
+<div id="section1" class="doctools_section"><h2><a name="section1">Description</a></h2>
+<p>The dump command provides a way for the user to spit out state
+information about the interpreter in a Tcl readable
+(and human readable) form.
+It takes the general form:</p>
+<dl class="doctools_definitions">
+<dt><a name="1"><b class="cmd">dump</b> <i class="arg">method</i> <span class="opt">?<i class="arg">-nocomplain</i>?</span> <span class="opt">?<i class="arg">-filter pattern</i>?</span> <span class="opt">?<b class="cmd">--</b>?</span> <i class="arg">pattern</i> <span class="opt">?<i class="arg">pattern ...</i>?</span></a></dt>
+<dd></dd>
+</dl>
+<p>The patterns represent glob-style patterns (as in <b class="cmd">string</b> <i class="arg">match pattern $str</i>).
+<i class="arg">-nocomplain</i> will prevent dump from throwing an error if no items
+matched the pattern.
+<i class="arg">-filter</i> is interpreted as appropriate for the method.
+The various methods are:</p>
+<dl class="doctools_definitions">
+<dt><b class="cmd">dump</b> <i class="arg">command</i> <i class="arg">args</i></dt>
+<dd><p>Outputs one or more commands.</p></dd>
+<dt><b class="cmd">dump</b> <i class="arg">procedure</i> <i class="arg">args</i></dt>
+<dd><p>Outputs one or more procs in sourceable form.</p></dd>
+<dt><b class="cmd">dump</b> <i class="arg">variable</i> <i class="arg">args</i></dt>
+<dd><p>Outputs the values of variables in sourceable form.
+Recognizes nested arrays.
+The -filter pattern is used as to filter array element
 names and is interepreted as a glob pattern (defaults to {*}).
-It is passed down for nested arrays.
-
-<DT> <CODE>dump <b>widget</b></CODE> <i>args</i>
-<DD> Outputs one or more widgets by giving their configuration options.
-The <i>-filter</i> pattern is used as to filter the config options and
-is interpreted as a case insensitive regexp pattern (defaults to {.*})
-
-</DL>
-</DIV>
-</TD></TR></TABLE>
-
-<HR NOSHADE SIZE=1>
-<ADDRESS><FONT SIZE=2>&copy; Jeffrey Hobbs</FONT></ADDRESS>
-
-</BODY>
-</HTML>
+It is passed down for nested arrays.</p></dd>
+<dt><b class="cmd">dump</b> <i class="arg">widget</i> <i class="arg">args</i></dt>
+<dd><p>Outputs one or more widgets by giving their configuration options.
+The -filter pattern is used as to filter the config options and
+is interpreted as a case insensitive regexp pattern (defaults to {.*}).</p></dd>
+</dl>
+</div>
+<div id="see-also" class="doctools_section"><h2><a name="see-also">See Also</a></h2>
+<p><b class="cmd">idebug</b>(n), <b class="cmd">observe</b>(n), <b class="cmd">tkcon</b>(1), <b class="cmd">tkcon</b>(n), <b class="cmd">tkconrc</b>(5)</p>
+</div>
+<div id="keywords" class="doctools_section"><h2><a name="keywords">Keywords</a></h2>
+<p>Tk, console, dump</p>
+</div>
+<div id="copyright" class="doctools_section"><h2><a name="copyright">Copyright</a></h2>
+<p>Copyright &copy; Jeffrey Hobbs &lt;jeff at hobbs.org&gt;</p>
+</div>
+</div></body></html>

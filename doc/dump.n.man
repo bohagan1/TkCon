@@ -1,5 +1,5 @@
 [comment {-*- tcl -*- dump manpage}]
-[manpage_begin dump n 2.5]
+[manpage_begin dump n 2.8]
 [copyright {Jeffrey Hobbs <jeff at hobbs.org>}]
 [moddesc   {TkCon}]
 [titledesc {Dump information about Tcl interpreter in TkCon}]
