@@ -61,7 +61,7 @@ PKG_LIB_FILE	= @PKG_LIB_FILE@
 PKG_STUB_LIB_FILE = @PKG_STUB_LIB_FILE@
 
 lib_BINARIES	= $(PKG_LIB_FILE)
-BINARIES	= $(lib_BINARIES)
+BINARIES	= $(lib_BINARIES) pkgIndex.tcl
 
 SHELL		= @SHELL@
 
@@ -310,6 +310,18 @@ VPATH = $(srcdir):$(srcdir)/generic:$(srcdir)/unix:$(srcdir)/win:$(srcdir)/macos
 	$(COMPILE) -c `@CYGPATH@ $<` -o $@
 
 #========================================================================
+# Create the pkgIndex.tcl file.
+# It is usually easiest to let Tcl do this for you with pkg_mkIndex, but
+# you may find that you need to customize the package.  If so, either
+# modify the -hand version, or create a pkgIndex.tcl.in file and have
+# the configure script output the pkgIndex.tcl by editing configure.in.
+#========================================================================
+
+pkgIndex.tcl: $(srcdir)/pkgIndex.tcl.in
+	cd $(top_builddir) \
+	  && CONFIG_FILES=$@ CONFIG_HEADERS= $(SHELL) ./config.status
+
+#========================================================================
 # Distribution creation
 # You may need to tweak this target to make it work correctly.
 #========================================================================
@@ -337,18 +349,18 @@ dist: dist-clean
 	$(INSTALL_DATA_DIR) $(DIST_DIR)/tclconfig
 	$(DIST_INSTALL_DATA) $(srcdir)/tclconfig/README.txt \
 	    $(srcdir)/tclconfig/tcl.m4 $(srcdir)/tclconfig/install-sh \
-	    $(DIST_DIR)/tclconfig/
+	    $(srcdir)/tclconfig/license.terms $(DIST_DIR)/tclconfig/
 
 	# Extension files
 	$(DIST_INSTALL_DATA) \
 	    $(srcdir)/ChangeLog \
-	    $(srcdir)/README.sha \
 	    $(srcdir)/license.terms \
-	    $(srcdir)/README \
+	    $(srcdir)/README.txt \
 	    $(srcdir)/pkgIndex.tcl.in \
+	    $(srcdir)/tkcon.tcl \
 	    $(DIST_DIR)/
 
-	list='demos doc generic library mac tests unix win'; \
+	list='doc extra library mac tests unix win'; \
 	for p in $$list; do \
 	    if test -d $(srcdir)/$$p ; then \
 		$(INSTALL_DATA_DIR) $(DIST_DIR)/$$p; \
@@ -357,6 +369,8 @@ dist: dist-clean
 	done
 
 	(cd $(DIST_ROOT); $(COMPRESS);)
+	mv $(DIST_ROOT)/$(PKG_DIR).tar.gz $(top_builddir)
+	cd $(top_builddir)
 
 #========================================================================
 # End of user-definable section
@@ -375,7 +389,8 @@ clean:
 distclean: clean
 	-rm -f *.tab.c
 	-rm -f $(CONFIG_CLEAN_FILES)
-	-rm -f config.cache config.log config.status
+	-rm -f config.cache config.log config.status configure~
+	-rm -fR autom4te.cache
 
 #========================================================================
 # Install binary object libraries.  On Windows this includes both .dll and
@@ -389,17 +404,17 @@ distclean: clean
 #========================================================================
 
 install-lib-binaries: binaries
-	@$(INSTALL_DATA_DIR) $(DESTDIR)$(pkglibdir)
+	@$(INSTALL_DATA_DIR) "$(DESTDIR)$(pkglibdir)"
 	@list='$(lib_BINARIES)'; for p in $$list; do \
 	  if test -f $$p; then \
 	    echo " $(INSTALL_LIBRARY) $$p $(DESTDIR)$(pkglibdir)/$$p"; \
-	    $(INSTALL_LIBRARY) $$p $(DESTDIR)$(pkglibdir)/$$p; \
+	    $(INSTALL_LIBRARY) $$p "$(DESTDIR)$(pkglibdir)/$$p"; \
 	    ext=`echo $$p|sed -e "s/.*\.//"`; \
 	    if test "x$$ext" = "xdll"; then \
 		lib=`basename $$p|sed -e 's/.[^.]*$$//'`.lib; \
 		if test -f $$lib; then \
 		    echo " $(INSTALL_DATA) $$lib $(DESTDIR)$(pkglibdir)/$$lib"; \
-	            $(INSTALL_DATA) $$lib $(DESTDIR)$(pkglibdir)/$$lib; \
+	            $(INSTALL_DATA) $$lib "$(DESTDIR)$(pkglibdir)/$$lib"; \
 		fi; \
 	    fi; \
 	  fi; \
@@ -408,13 +423,11 @@ install-lib-binaries: binaries
 	  if test -f $(srcdir)/$$p; then \
 	    destp=`basename $$p`; \
 	    echo " Install $$destp $(DESTDIR)$(pkglibdir)/$$destp"; \
-	    $(INSTALL_DATA) $(srcdir)/$$p $(DESTDIR)$(pkglibdir)/$$destp; \
+	    $(INSTALL_DATA) $(srcdir)/$$p "$(DESTDIR)$(pkglibdir)/$$destp"; \
 	  fi; \
 	done
-	@if test "x$(SHARED_BUILD)" = "x1"; then \
-	    echo " Install pkgIndex.tcl $(DESTDIR)$(pkglibdir)"; \
-	    $(INSTALL_DATA) pkgIndex.tcl $(DESTDIR)$(pkglibdir); \
-	fi
+	echo " Install pkgIndex.tcl $(DESTDIR)$(pkglibdir)"; \
+	$(INSTALL_DATA) pkgIndex.tcl "$(DESTDIR)$(pkglibdir)"; \
 
 #========================================================================
 # Install binary executables (e.g. .exe files and dependent .dll files)

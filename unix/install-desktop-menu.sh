@@ -10,7 +10,7 @@
 PROG_XDG_DESKTOP_MENU=`which xdg-desktop-menu`
 PROG_XDG_ICON_RESOURCE=`which xdg-icon-resource`
 
-ICONFILE=icons/tkcon-small48.png
+ICONFILE=tkcon-small48.png
 
 if [ -x $PROG_XDG_DESKTOP_MENU -a -x PROG_XDG_ICON_RESOURCE ]
 then

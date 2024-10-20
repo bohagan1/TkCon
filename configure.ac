@@ -103,6 +103,7 @@ else
     #TEA_ADD_SOURCES([unix/unixFile.c])
     #TEA_ADD_LIBS([-lsuperfly])
 fi
+#AC_SUBST(CLEANFILES)
 
 #--------------------------------------------------------------------
 # __CHANGE__
@@ -180,7 +181,7 @@ fi
 # substituting the AC variables in. Include these here.
 #--------------------------------------------------------------------
 
-AC_CONFIG_FILES([Makefile])
+AC_CONFIG_FILES([Makefile pkgIndex.tcl])
 #AC_CONFIG_FILES([sampleConfig.sh])
 
 #--------------------------------------------------------------------

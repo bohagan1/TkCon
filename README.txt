@@ -38,5 +38,8 @@ tkcon is a single drop-in file.  On Windows, I place this on the desktop
 and double-click on it instead of wish/tclsh.  On Unix and OS X, I place it
 in a directory on my path and run this instead of wish.
 
-Documentation can be reading by starting with index.html in the docs/
+Alternatively, on Unix and Linux use the unix/install-desktop-menu.sh script
+to install a desktop link to the tkcon application.
+
+Documentation can be reading by starting with index.html in the doc/
 subdirectory.  Happying Tcl'ing!
