@@ -5127,7 +5127,7 @@ proc tcl_unknown args {
 		checkbutton menu text tk_strictMotif ttk::scale \
 		clipboard menubutton tk tk_textCopy ttk::scrollbar \
 		colors message tk::mac tk_textCut ttk::separator \
-		console nsimage tk::scalingPct tk_textPaste ttk::sizegrip ]
+		console nsimage tk::scalingPct tk_textPaste ttk::sizegrip \
 		cursors option tk::svgFmt tk_version ttk::spinbox \
 		destroy options tk_bisque tkerror ttk::style \
 		entry pack tk_chooseColor tkwait ttk::treeview \
