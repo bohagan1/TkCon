@@ -635,8 +635,8 @@ proc ::tkcon::InitUI {title} {
     catch {font create tkconfixedlarge -family $family -size [expr {$size + 4}] -weight bold}
     catch {font create tkconfixedsmall -family $family -size [expr {$size - 4}] -weight bold}
 
-    set PRIV(statusbar) [set sbar [frame $w.fstatus]]
-    set PRIV(tabframe)  [frame $sbar.tabs -relief sunken -borderwidth 1]
+    set PRIV(statusbar) [set sbar [ttk::frame $w.fstatus]]
+    set PRIV(tabframe)  [ttk::frame $sbar.tabs -relief sunken -borderwidth 1]
     set PRIV(X) [button $sbar.deltab -text "X" -command ::tkcon::DeleteTab \
 		     -activeforeground red -fg red -font tkconfixedbold \
 		     -highlightthickness 0 -padx 2 -pady 0 -borderwidth 1 \
@@ -688,7 +688,7 @@ proc ::tkcon::InitUI {title} {
     ## Menus
     ## catch against use in plugin
     if {[catch {menu $w.mbar} PRIV(menubar)]} {
-	set PRIV(menubar) [frame $w.mbar -relief raised -borderwidth 1]
+	set PRIV(menubar) [ttk::frame $w.mbar -relief raised -borderwidth 1]
     }
 
     InitMenus $PRIV(menubar) $title
@@ -1803,7 +1803,7 @@ proc ::tkcon::InterpPkgs {app type} {
 	ttk::button $t.load -text ">>" \
 	    -command [list ::tkcon::InterpPkgLoad $app $type $t.loadable]
 
-	set f [frame $t.btns]
+	set f [ttk::frame $t.btns]
 	ttk::button $f.refresh -text "Refresh" -command [info level 0]
 	ttk::button $f.dismiss -text "Dismiss" -command [list destroy $t]
 	grid $f.refresh $f.dismiss -padx 4 -pady 3 -sticky ew
@@ -2027,7 +2027,7 @@ proc ::tkcon::NamespacesList {names} {
 	-background white -borderwidth 1
     ttk::scrollbar $f.scrollv -command [list $f.names yview]
     ttk::scrollbar $f.scrollh -command [list $f.names xview] -orient horizontal
-    frame $f.buttons
+    ttk::frame $f.buttons
     ttk::button $f.cancel -text "Cancel" -command [list destroy $f]
 
     grid $f.names $f.scrollv -sticky nesw
@@ -2101,15 +2101,15 @@ proc ::tkcon::FindBox {w {str {}}} {
 	wm geometry $base [format %+d%+d $x $y]
 
 	ttk::label $base.l -text "Find:" -anchor e
-	entry $base.e -textvariable ::tkcon::PRIV(find)
+	ttk::entry $base.e -textvariable ::tkcon::PRIV(find)
 
 	ttk::checkbutton $base.case -text "Case Sensitive" \
 	    -variable ::tkcon::PRIV(find,case)
 	ttk::checkbutton $base.re -text "Use Regexp" \
 	    -variable ::tkcon::PRIV(find,reg)
 
-	frame $base.sep -borderwidth 1 -relief sunken -height 2
-	frame $base.btn
+	ttk::frame $base.sep -borderwidth 1 -relief sunken -height 2
+	ttk::frame $base.btn
 	grid $base.l $base.e - - -sticky ew -padx 4 -pady 4
 	grid $base.case - $base.re -sticky ew -padx 4
 	grid $base.sep -columnspan 4 -sticky ew
@@ -2410,9 +2410,9 @@ proc ::tkcon::NewSocket {} {
 	wm title $t "tkcon Create Socket"
 	wm resizable $t 1 0
 	ttk::label $t.lhost -text "Host: "
-	entry $t.host -width 16 -takefocus 1
+	ttk::entry $t.host -width 16 -takefocus 1
 	ttk::label $t.lport -text " Port: "
-	entry $t.port -width 5 -takefocus 1
+	ttk::entry $t.port -width 5 -takefocus 1
 	ttk::button $t.ok -text "OK" -command {set ::tkcon::PRIV(grab) 1} \
 	    -takefocus 1
 	bind $t.host <Return> [list focus $t.port]
@@ -2769,7 +2769,7 @@ proc ::tkcon::MainInit {} {
 	    catch {wm attributes $t -type dialog}
 	    wm title $t "tkcon Attach to Display"
 	    ttk::label $t.gets -text "New Display: "
-	    entry $t.data -width 32
+	    ttk::entry $t.data -width 32
 	    ttk::button $t.ok -text "OK" -command {set ::tkcon::PRIV(grab) 1}
 	    bind $t.data <Return> [list $t.ok invoke]
 	    bind $t.ok   <Return> [list $t.ok invoke]
@@ -2876,7 +2876,7 @@ proc ::tkcon::MainInit {} {
 	    set x [expr {[winfo x $parent] + 100}]
 	    set y [expr {[winfo y $parent] + 100}]
 	    wm geometry $w [format %+d%+d $x $y]
-	    frame $w.btn
+	    ttk::frame $w.btn
 	    ttk::scrollbar $w.sy -command [list $w.text yview]
 	    text $w.text -yscrollcommand [list $w.sy set] -height 12 \
 		    -foreground $COLOR(stdin) \
@@ -6407,14 +6407,14 @@ proc ::tkcon::RetrieveAuthentication {} {
     set dlg [toplevel .auth]
     catch {wm attributes $dlg -type dialog}
     wm title $dlg "Authenticating Proxy Configuration"
-    set f1 [frame ${dlg}.f1]
-    set f2 [frame ${dlg}.f2]
+    set f1 [ttk::frame ${dlg}.f1]
+    set f2 [ttk::frame ${dlg}.f2]
     ttk::button $f2.b -text "OK" -command "destroy $dlg"
     pack $f2.b -side right
     ttk::label $f1.l2 -text "Username"
     ttk::label $f1.l3 -text "Password"
-    entry $f1.e2 -textvariable "[namespace current]::conf_userid"
-    entry $f1.e3 -textvariable "[namespace current]::conf_passwd" -show *
+    ttk::entry $f1.e2 -textvariable "[namespace current]::conf_userid"
+    ttk::entry $f1.e3 -textvariable "[namespace current]::conf_passwd" -show *
     grid $f1.l2 -column 0 -row 0 -sticky e
     grid $f1.l3 -column 0 -row 1 -sticky e
     grid $f1.e2 -column 1 -row 0 -sticky news
