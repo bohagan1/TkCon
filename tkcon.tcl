@@ -86,6 +86,7 @@ namespace eval ::tkcon {
     set PRIV(AQUA)	[expr {[tk windowingsystem] eq "aqua"}]
     set PRIV(CTRL)	[expr {$PRIV(AQUA) ? "Command-" : "Control-"}]
     set PRIV(ACC)	[expr {$PRIV(AQUA) ? "Command-" : "Ctrl+"}]
+    set PRIV(MOD)	[expr {$PRIV(AQUA) ? "Shift-" : "Shift+"}]
 
     variable EXPECT 0
 }
@@ -842,7 +843,7 @@ proc ::tkcon::GotoTab {con} {
     set numtabs [llength $PRIV(tabs)]
     #if {$numtabs == 1} { return }
 
-    if {[regexp {^[0-9]+$} $con]} {
+    if {[string is integer $con]} {
 	set curtab [lsearch -exact $PRIV(tabs) $PRIV(console)]
 	set nexttab [expr {$curtab + $con}]
 	if {$nexttab >= $numtabs} {
@@ -896,7 +897,7 @@ proc ::tkcon::NewTab {{con {}}} {
 	set ATTACH($con) [list $slave slave]
     }
     $PRIV(X) configure -state normal
-    MenuConfigure Console "Delete Tab" -state normal
+    MenuConfigure Console "Close Tab" -state normal
     GotoTab $con
 }
 
@@ -907,7 +908,7 @@ proc ::tkcon::DeleteTab {{con {}} {slave {}} {code 0}} {
     set numtabs [llength $PRIV(tabs)]
     if {$numtabs <= 2} {
 	$PRIV(X) configure -state disabled
-	MenuConfigure Console "Delete Tab" -state disabled
+	MenuConfigure Console "Close Tab" -state disabled
     }
     if {$numtabs == 1} {
 	# For only tab in the master, close window
@@ -1510,7 +1511,7 @@ proc ::tkcon::InitMenus {w title} {
 	$m add command -label "Load File" -underline 0 -command ::tkcon::Load
 	$m add cascade -label "Save ..."  -underline 0 -menu $m.save
 	$m add separator
-	$m add command -label "Quit" -underline 0 -accel $PRIV(ACC)q \
+	$m add command -label "Quit" -underline 0 -accel $PRIV(ACC)Q \
 	    -command exit
 
 	## Save Menu
@@ -1534,15 +1535,15 @@ proc ::tkcon::InitMenus {w title} {
     foreach m [list [menu $w.console -disabledfore $COLOR(disabled)] \
 	    [menu $w.pop.console -disabledfore $COLOR(disabled)]] {
 	$m add command -label "$title Console"	-state disabled
-	$m add command -label "New Console" -underline 0 -accel $PRIV(ACC)N \
+	$m add command -label "New Console" -underline 0 -accel $PRIV(ACC)$PRIV(MOD)N \
 		-command ::tkcon::New
-	$m add command -label "New Tab" -underline 4 -accel $PRIV(ACC)T \
+	$m add command -label "New Tab" -underline 4 -accel $PRIV(ACC)$PRIV(MOD)T \
 		-command ::tkcon::NewTab
-	$m add command -label "Delete Tab" -underline 0 \
+	$m add command -label "Close Tab" -underline 0 -accel $PRIV(ACC)W \
 		-command ::tkcon::DeleteTab -state disabled
-	$m add command -label "Close Console" -underline 0 -accel $PRIV(ACC)w \
+	$m add command -label "Close Console" -underline 0 -accel $PRIV(ACC)$PRIV(MOD)W \
 		-command ::tkcon::Destroy
-	$m add command -label "Clear Console" -underline 1 -accel Ctrl-l \
+	$m add command -label "Clear Console" -underline 1 -accel $PRIV(ACC)L \
 		-command { tkcon_clear; ::tkcon::Prompt }
 	if {[tk windowingsystem] eq "x11"} {
 	    $m add separator
@@ -1587,11 +1588,11 @@ proc ::tkcon::InitMenus {w title} {
     ##
     set text $PRIV(console)
     foreach m [list [menu $w.edit] [menu $w.pop.edit]] {
-	$m add command -label "Cut"   -underline 2 -accel $PRIV(ACC)x \
-		-command [list ::tkcon::Cut $text]
-	$m add command -label "Copy"  -underline 0 -accel $PRIV(ACC)c \
+	$m add command -label "Copy"  -underline 0 -accel $PRIV(ACC)C \
 		-command [list ::tkcon::Copy $text]
-	$m add command -label "Paste" -underline 0 -accel $PRIV(ACC)v \
+	$m add command -label "Cut"   -underline 2 -accel $PRIV(ACC)X \
+		-command [list ::tkcon::Cut $text]
+	$m add command -label "Paste" -underline 0 -accel $PRIV(ACC)V \
 		 -command [list ::tkcon::Paste $text]
 	$m add separator
 	$m add command -label "Find"  -underline 0 -accel $PRIV(ACC)F \
@@ -4008,9 +4009,9 @@ proc edit {args} {
     $m add command -label "Append To..."  -underline 0 \
 	-command [list ::tkcon::Save {} widget $w.text a+]
     $m add separator
-    $m add command -label "Dismiss" -underline 0 -accel $PRIV(ACC)w \
+    $m add command -label "Dismiss" -underline 0 -accel $PRIV(ACC)W \
 	-command [list destroy $w]
-    bind $w <$PRIV(CTRL)w>		[list destroy $w]
+    bind $w <$PRIV(CTRL)w>	[list destroy $w]
     bind $w <Alt-w>		[list destroy $w]
 
     ## Edit Menu
@@ -5269,16 +5270,18 @@ proc ::tkcon::Bindings {} {
 
     ## Now make all our virtual event bindings
     set bindings {
-	<<TkCon_ResizeUp>>	<$PRIV(CTRL)-plus>
-	<<TkCon_ResizeDn>>	<$PRIV(CTRL)-minus>
-	<<TkCon_Exit>>		<$PRIV(CTRL)-q>
-	<<TkCon_New>>		<$PRIV(CTRL)-N>
-	<<TkCon_NewTab>>	<$PRIV(CTRL)-T>
-	<<TkCon_NextTab>>	<Control-Key-Tab>
-	<<TkCon_PrevTab>>	<Control-Shift-Key-Tab>
-	<<TkCon_Close>>		<$PRIV(CTRL)-w>
-	<<TkCon_About>>		<$PRIV(CTRL)-A>
+	<<TkCon_ResizeUp>>	<$PRIV(CTRL)plus>
+	<<TkCon_ResizeDn>>	<$PRIV(CTRL)minus>
+	<<TkCon_Exit>>		<$PRIV(CTRL)q>
+	<<TkCon_New>>		<$PRIV(CTRL)N>
+	<<TkCon_NewTab>>	<$PRIV(CTRL)T>
+	<<TkCon_NextTab>>	<$PRIV(CTRL)Next>
+	<<TkCon_PrevTab>>	<$PRIV(CTRL)Prior>
+	<<TkCon_Close>>		<$PRIV(CTRL)w>
+	<<TkCon_CloseWin>>	<$PRIV(CTRL)W>
+	<<TkCon_About>>		<F1>
 	<<TkCon_Find>>		<$PRIV(CTRL)F>
+	<<TkCon_Find>>		<$PRIV(CTRL)f>
 	<<TkCon_Slave>>		<$PRIV(CTRL)Key-1>
 	<<TkCon_Master>>	<$PRIV(CTRL)Key-2>
 	<<TkCon_Main>>		<$PRIV(CTRL)Key-3>
@@ -5294,7 +5297,7 @@ proc ::tkcon::Bindings {} {
 	<<TkCon_Newline>>	<Control-Key-KP_Enter>
 	<<TkCon_Eval>>		<Return>
 	<<TkCon_Eval>>		<KP_Enter>
-	<<TkCon_Clear>>		<Control-l>
+	<<TkCon_Clear>>		<$PRIV(CTRL)l>
 	<<TkCon_Previous>>	<Up>
 	<<TkCon_PreviousImmediate>>	<Control-p>
 	<<TkCon_PreviousSearch>>	<Control-r>
@@ -5326,7 +5329,8 @@ proc ::tkcon::Bindings {} {
     bind $PRIV(root) <<TkCon_NewTab>>   { ::tkcon::NewTab }
     bind $PRIV(root) <<TkCon_NextTab>>  { ::tkcon::GotoTab 1 ; break }
     bind $PRIV(root) <<TkCon_PrevTab>>  { ::tkcon::GotoTab -1 ; break }
-    bind $PRIV(root) <<TkCon_Close>>    { ::tkcon::Destroy }
+    bind $PRIV(root) <<TkCon_Close>>    { ::tkcon::DeleteTab }
+    bind $PRIV(root) <<TkCon_CloseWin>> { ::tkcon::Destroy }
     bind $PRIV(root) <<TkCon_About>>    { ::tkcon::About }
     bind $PRIV(root) <<TkCon_Find>>     { ::tkcon::FindBox $::tkcon::PRIV(console) }
     bind $PRIV(root) <<TkCon_Slave>>    {
@@ -5493,14 +5497,6 @@ proc ::tkcon::Bindings {} {
 	::tkcon::Insert %W %A
     }
 
-    bind TkConsole <Control-a> {
-	if {[%W compare {limit linestart} == {insert linestart}]} {
-	    tk::TextSetCursor %W limit
-	} else {
-	    tk::TextSetCursor %W {insert linestart}
-	}
-    }
-    bind TkConsole <Key-Home> [bind TkConsole <Control-a>]
     bind TkConsole <Control-d> {
 	if {[%W compare insert < limit]} break
 	%W delete insert

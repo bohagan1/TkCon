@@ -98,10 +98,16 @@ It's search behavior is like that for procedure names.
 <DT> <B>Return</B> or <B>Enter</B>
 <DD> Evaluates the current command line if it is a complete command,
 otherwise it just goes to a new line
-<DT> <B>Control-a</B>
+<DT> <B>Home</B>
 <DD> Go to the beginning of the current command line
+<DT> <B>End</B>
+<DD> Go to the end of the current command line<DT>
+<DT> <B>Control-i</B>
+<DD> Insert tab
 <DT> <B>Control-l</B>
 <DD> Clear the entire console buffer
+<DT> <B>Control-i</B>
+<DD> Insert return
 <DT> <B>Control-r</B>
 <DD> Searches backwards in the history for any command that contains the
 string in the current command line.  Repeatable to search farther back.
@@ -124,17 +130,32 @@ current contents get swapped with what's in the saved command buffer.
 <DD> Attaches console to the console's master interpreter
 <DT> <B>Control-Key-3</B>
 <DD> Attaches console to main TkCon interpreter
-<DT> <B>Control-A</B>
+<DT> <B>Control-a</B>
 <DD> Pops up the "About" dialog
+<DT> <B>Control-f</B>
+<DD> Show find dialog
 <DT> <B>Control-N</B>
 <DD> Creates a new console.  Each console has separate state, including
 it's own widget hierarchy (it's a slave interpreter).
 <DT> <B>Control-q</B>
 <DD> Close the current console OR Quit the program (depends on the value
 of TKCON(slaveexit)).
+<DT> <B>Control-T</B>
+<DD> Creates a new tab.
 <DT> <B>Control-w</B>
+<DD> Closes the current tab
+<DT> <B>Control-W</B>
 <DD> Closes the current console.  Closing the main console will exit the
 program (something has to control all the slaves...)
+<DT> <B>Control-Next</B>
+<DD> Go to next tab.
+<DT> <B>Control-Prior</B>
+<DD> Go to previous tab.
+ <P>
+<DT> <B>Control-plus</B>
+<DD> Increase font size.
+<DT> <B>Control-minus</B>
+<DD> Decrease font size
 </DL>
 
 TkCon also has <B>electric bracing</B> (similar to that in emacs).  It will
