@@ -135,6 +135,7 @@ proc ::tkcon::Init {args} {
 	maxlinelen	0
 	calcmode	0
 	cols		100
+	confirmExit	1
 	debugPrompt	{(level \#$level) debug [history nextid] > }
 	dead		{}
 	edit		edit
@@ -909,9 +910,8 @@ proc ::tkcon::DeleteTab {{con {}} {slave {}} {code 0}} {
 	MenuConfigure Console "Delete Tab" -state disabled
     }
     if {$numtabs == 1} {
-	# in the master, it should do the right thing
-	# currently the first master still exists - need rearch to fix
-	exit
+	# For only tab in the master, close window
+	::tkcon::Destroy
 	# we might end up here, depending on how exit is rerouted
 	return
     }
@@ -1612,6 +1612,8 @@ proc ::tkcon::InitMenus {w title} {
 		-underline 0 -variable ::tkcon::OPT(lightbrace)
 	$m add check -label "Command Highlighting" \
 		-underline 0 -variable ::tkcon::OPT(lightcmd)
+	$m add check -label "Confirm Exit" \
+	        -underline 0 -variable ::tkcon::OPT(confirmExit)
 	$m add check -label "History Substitution" \
 		-underline 0 -variable ::tkcon::OPT(subhistory)
 	$m add check -label "Hot Errors" \
@@ -2630,23 +2632,29 @@ proc ::tkcon::MainInit {} {
     ##
     proc ::tkcon::Destroy {{slave {}}} {
 	variable PRIV
-
-	set confirmed 0
-	if {[tk_messageBox -parent $PRIV(root) -title "Close window?" \
-	    -message "Close the current window?" -default no \
-	    -icon question -type yesno] eq "yes"} {
-	    set confirmed 1
+	if {$slave eq ""} {
+	    set type "application"
+	} else {
+	    set type "window"
 	}
 
-	if {!$confirmed} {
-	    return
+	if {$::tkcon::OPT(confirmExit)} {
+	    set confirmed 0
+	    if {[tk_messageBox -parent $PRIV(root) -title "Close $type?" \
+		-message "Close the current $type?" -default no \
+		-icon question -type yesno] eq "yes"} {
+		set confirmed 1
+	    }
+
+	    if {!$confirmed} {
+		return
+	    }
 	}
 
 	# Just close on the last one
-	if {[llength $PRIV(interps)] == 1} { exit }
-	if {$slave eq ""} {
+	if {[llength $PRIV(interps)] == 1 || $slave eq ""} {
 	    ## Main interpreter close request
-	    return
+	    exit
 	} elseif {$slave eq $::tkcon::OPT(exec)} {
 	    set name  [tk appname]
 	    set slave "Main"
@@ -3540,8 +3548,8 @@ proc tkcon {cmd args} {
 	    bgerror [lindex $args 0]
 	}
 	cl* {
-	    ## 'close' Closes the console
-	    ::tkcon::Destroy
+	    ## 'close' Closes the tab
+	    ::tkcon::DeleteTab
 	}
 	cons* {
 	    ## 'console' - passes the args to the text widget of the console.
@@ -3575,6 +3583,10 @@ proc tkcon {cmd args} {
 	    if {[llength $args]} {
 	       ::tkcon::EvalCmd $PRIV(console) $args
             }
+	}
+	exit {
+	    ## 'exit' Closes the console
+	    ::tkcon::Destroy
 	}
 	exp* {
 	    ::tkcon::Expect [lindex $args 0]
