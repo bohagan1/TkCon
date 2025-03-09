@@ -1595,6 +1595,11 @@ proc ::tkcon::InitMenus {w title} {
 	$m add command -label "Paste" -underline 0 -accel $PRIV(ACC)V \
 		 -command [list ::tkcon::Paste $text]
 	$m add separator
+	$m add command -label "Select All" -underline 7 -accel $PRIV(ACC)A \
+		 -command [list ::tkcon::SelectAll $text]
+	$m add command -label "Clear Selection" -underline 6 -accel $PRIV(ACC)$PRIV(MOD)A \
+		 -command [list ::tkcon::SelectNone $text]
+	$m add separator
 	$m add command -label "Find"  -underline 0 -accel $PRIV(ACC)F \
 		-command [list ::tkcon::FindBox $text]
     }
@@ -1665,7 +1670,7 @@ proc ::tkcon::InitMenus {w title} {
     ## Help Menu
     ##
     foreach m [list [menu $w.help] [menu $w.pop.help]] {
-	$m add command -label "About " -underline 0 -accel $PRIV(ACC)A \
+	$m add command -label "About " -underline 0 -accel F1 \
 		-command ::tkcon::About
 	$m add command -label "Retrieve Latest Version" -underline 0 \
 		-command ::tkcon::Retrieve -state disabled
@@ -5277,6 +5282,8 @@ proc ::tkcon::Bindings {} {
 	<<TkCon_NewTab>>	<$PRIV(CTRL)T>
 	<<TkCon_NextTab>>	<$PRIV(CTRL)Next>
 	<<TkCon_PrevTab>>	<$PRIV(CTRL)Prior>
+	<<TkCon_NextTab>>	<Control-Key-Tab>
+	<<TkCon_PrevTab>>	<Control-Shift-Key-Tab>
 	<<TkCon_Close>>		<$PRIV(CTRL)w>
 	<<TkCon_CloseWin>>	<$PRIV(CTRL)W>
 	<<TkCon_About>>		<F1>
@@ -5307,6 +5314,8 @@ proc ::tkcon::Bindings {} {
 	<<TkCon_Transpose>>	<Control-t>
 	<<TkCon_ClearLine>>	<Control-u>
 	<<TkCon_SaveCommand>>	<Control-z>
+	<<TkCon_SelectAll>>	<Control-a>
+	<<TkCon_SelectNone>>	<Control-A>
     }
     if {$PRIV(AQUA)} {
 	lappend bindings <<TkCon_Popup>> <Control-Button-1> \
@@ -5422,6 +5431,20 @@ proc ::tkcon::Bindings {} {
 	    $w see insert
 	    if {[string match *\n* $txt]} { ::tkcon::Eval $w }
 	}
+    }
+
+    proc ::tkcon::SelectAll w {
+	event generate $w <<SelectAll>>
+    }
+    proc ::tkcon::SelectNone w {
+	event generate $w <<SelectNone>>
+    }
+
+    bind TkConsole <<TkCon_SelectAll>> {
+	::tkcon::SelectAll %W
+    }
+    bind TkConsole <<TkCon_SelectNone>> {
+	::tkcon::SelectNone %W
     }
 
     ## Redefine for TkConsole what we need
