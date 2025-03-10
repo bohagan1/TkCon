@@ -632,6 +632,7 @@ proc ::tkcon::InitUI {title} {
 	set family "Consolas"
     }
     set size [font actual TkFixedFont -size]
+    set PRIV(fontsize) $size
     catch {font create tkconfixed      -family $family -size $size}
     catch {font create tkconfixedbold  -family $family -size $size -weight bold}
     catch {font create tkconfixedlarge -family $family -size [expr {$size + 4}] -weight bold}
@@ -1595,9 +1596,9 @@ proc ::tkcon::InitMenus {w title} {
 	$m add command -label "Paste" -underline 0 -accel $PRIV(ACC)V \
 		 -command [list ::tkcon::Paste $text]
 	$m add separator
-	$m add command -label "Select All" -underline 7 -accel $PRIV(ACC)A \
+	$m add command -label "Select All" -underline 7 -accel $PRIV(ACC)/ \
 		 -command [list ::tkcon::SelectAll $text]
-	$m add command -label "Clear Selection" -underline 6 -accel $PRIV(ACC)$PRIV(MOD)A \
+	$m add command -label "Clear Selection" -underline 6 -accel $PRIV(ACC)\\ \
 		 -command [list ::tkcon::SelectNone $text]
 	$m add separator
 	$m add command -label "Find"  -underline 0 -accel $PRIV(ACC)F \
@@ -5246,6 +5247,19 @@ proc ::tkcon::ResizeDn {} {
     ResizeSet $incr
 }
 
+############################################################################
+#
+# Font Size Reset
+#
+# Set font sizes to defualt
+#
+############################################################################
+proc ::tkcon::ResizeReset {} {
+    variable PRIV
+    set incr [expr {$PRIV(fontsize) - [font configure tkconfixed -size]}]
+    ResizeSet $incr
+}
+
 
 proc ::tkcon::Bindings {} {
     variable PRIV
@@ -5277,6 +5291,7 @@ proc ::tkcon::Bindings {} {
     set bindings {
 	<<TkCon_ResizeUp>>	<$PRIV(CTRL)plus>
 	<<TkCon_ResizeDn>>	<$PRIV(CTRL)minus>
+	<<TkCon_ResizeReset>>	<$PRIV(CTRL)0>
 	<<TkCon_Exit>>		<$PRIV(CTRL)q>
 	<<TkCon_New>>		<$PRIV(CTRL)N>
 	<<TkCon_NewTab>>	<$PRIV(CTRL)T>
@@ -5298,8 +5313,6 @@ proc ::tkcon::Bindings {} {
 	<<TkCon_ExpandVar>>	<Control-V>
 	<<TkCon_Tab>>		<Control-i>
 	<<TkCon_Tab>>		<Alt-i>
-	<<TkCon_Newline>>	<Control-o>
-	<<TkCon_Newline>>	<Alt-o>
 	<<TkCon_Newline>>	<Control-Key-Return>
 	<<TkCon_Newline>>	<Control-Key-KP_Enter>
 	<<TkCon_Eval>>		<Return>
@@ -5314,8 +5327,6 @@ proc ::tkcon::Bindings {} {
 	<<TkCon_Transpose>>	<Control-t>
 	<<TkCon_ClearLine>>	<Control-u>
 	<<TkCon_SaveCommand>>	<Control-z>
-	<<TkCon_SelectAll>>	<Control-a>
-	<<TkCon_SelectNone>>	<Control-A>
     }
     if {$PRIV(AQUA)} {
 	lappend bindings <<TkCon_Popup>> <Control-Button-1> \
@@ -5330,8 +5341,9 @@ proc ::tkcon::Bindings {} {
     }
 
     ## Make the ROOT bindings
-	bind $PRIV(root) <<TkCon_ResizeUp>> ::tkcon::ResizeUp
-	bind $PRIV(root) <<TkCon_ResizeDn>> ::tkcon::ResizeDn
+    bind $PRIV(root) <<TkCon_ResizeUp>> ::tkcon::ResizeUp
+    bind $PRIV(root) <<TkCon_ResizeDn>> ::tkcon::ResizeDn
+    bind $PRIV(root) <<TkCon_ResizeReset>> ::tkcon::ResizeReset
 
     bind $PRIV(root) <<TkCon_Exit>>     exit
     bind $PRIV(root) <<TkCon_New>>      { ::tkcon::New }
@@ -5438,13 +5450,6 @@ proc ::tkcon::Bindings {} {
     }
     proc ::tkcon::SelectNone w {
 	event generate $w <<SelectNone>>
-    }
-
-    bind TkConsole <<TkCon_SelectAll>> {
-	::tkcon::SelectAll %W
-    }
-    bind TkConsole <<TkCon_SelectNone>> {
-	::tkcon::SelectNone %W
     }
 
     ## Redefine for TkConsole what we need
