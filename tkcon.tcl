@@ -5525,6 +5525,14 @@ proc ::tkcon::Bindings {} {
 	::tkcon::Insert %W %A
     }
 
+    bind TkConsole <Control-a> {
+	if {[%W compare {limit linestart} == {insert linestart}]} {
+	    tk::TextSetCursor %W limit
+	} else {
+	    tk::TextSetCursor %W {insert linestart}
+	}
+    }
+    bind TkConsole <Key-Home> [bind TkConsole <Control-a>]
     bind TkConsole <Control-d> {
 	if {[%W compare insert < limit]} break
 	%W delete insert
