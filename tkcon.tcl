@@ -190,7 +190,7 @@ proc ::tkcon::Init {args} {
 	find,case	0
 	find,reg	0
 	errorInfo	{}
-	protocol	exit
+	protocol	{::tkcon::Destroy 1}
 	showOnStartup	1
 	slaveprocs	{
 	    alias tkcon_clear tkcon_dir dump echo idebug tkcon_lremove
@@ -913,7 +913,7 @@ proc ::tkcon::DeleteTab {{con {}} {slave {}} {code 0}} {
     }
     if {$numtabs == 1} {
 	# For only tab in the master, close window
-	::tkcon::Destroy
+	::tkcon::Destroy 0
 	# we might end up here, depending on how exit is rerouted
 	return
     }
@@ -1513,7 +1513,7 @@ proc ::tkcon::InitMenus {w title} {
 	$m add cascade -label "Save ..."  -underline 0 -menu $m.save
 	$m add separator
 	$m add command -label "Quit" -underline 0 -accel $PRIV(ACC)Q \
-	    -command exit
+	    -command {::tkcon::Destroy 1}
 
 	## Save Menu
 	##
@@ -1543,7 +1543,7 @@ proc ::tkcon::InitMenus {w title} {
 	$m add command -label "Close Tab" -underline 0 -accel $PRIV(ACC)W \
 		-command ::tkcon::DeleteTab -state disabled
 	$m add command -label "Close Console" -underline 0 -accel $PRIV(ACC)$PRIV(MOD)W \
-		-command ::tkcon::Destroy
+		-command {::tkcon::Destroy 1}
 	$m add command -label "Clear Console" -underline 1 -accel $PRIV(ACC)L \
 		-command { tkcon_clear; ::tkcon::Prompt }
 	if {[tk windowingsystem] eq "x11"} {
@@ -2597,7 +2597,7 @@ proc ::tkcon::MainInit {} {
 	$tmp eval [list set ::tkcon::PRIV(name) $tmp]
 	$tmp eval [list set ::tkcon::PRIV(SCRIPT) $::tkcon::PRIV(SCRIPT)]
 	$tmp alias exit				::tkcon::Exit $tmp
-	$tmp alias ::tkcon::Destroy		::tkcon::Destroy $tmp
+	$tmp alias ::tkcon::Destroy		::tkcon::Destroy 1 $tmp
 	$tmp alias ::tkcon::New			::tkcon::New
 	$tmp alias ::tkcon::GetSlave		::tkcon::GetSlave $tmp
 	$tmp alias ::tkcon::Main		::tkcon::InterpEval Main
@@ -2628,7 +2628,7 @@ proc ::tkcon::MainInit {} {
 	    uplevel 1 exit $args
 	} else {
 	    ## Otherwise we will delete the slave interp and associated data
-	    ::tkcon::Destroy $slave
+	    ::tkcon::Destroy 1 $slave
 	}
     }
 
@@ -2637,7 +2637,7 @@ proc ::tkcon::MainInit {} {
     ## called from there, it will ask before exiting tkcon.  All others
     ## (slaves) will just have their slave interpreter deleted, closing them.
     ##
-    proc ::tkcon::Destroy {{slave {}}} {
+    proc ::tkcon::Destroy {confirm {slave {}}} {
 	variable PRIV
 	if {$slave eq ""} {
 	    set type "application"
@@ -2645,7 +2645,7 @@ proc ::tkcon::MainInit {} {
 	    set type "window"
 	}
 
-	if {$::tkcon::OPT(confirmExit)} {
+	if {$confirm && $::tkcon::OPT(confirmExit)} {
 	    set confirmed 0
 	    if {[tk_messageBox -parent $PRIV(root) -title "Close $type?" \
 		-message "Close the current $type?" -default no \
@@ -3593,7 +3593,7 @@ proc tkcon {cmd args} {
 	}
 	exit {
 	    ## 'exit' Closes the console
-	    ::tkcon::Destroy
+	    ::tkcon::Destroy 0
 	}
 	exp* {
 	    ::tkcon::Expect [lindex $args 0]
@@ -5351,7 +5351,7 @@ proc ::tkcon::Bindings {} {
     bind $PRIV(root) <<TkCon_NextTab>>  { ::tkcon::GotoTab 1 ; break }
     bind $PRIV(root) <<TkCon_PrevTab>>  { ::tkcon::GotoTab -1 ; break }
     bind $PRIV(root) <<TkCon_Close>>    { ::tkcon::DeleteTab }
-    bind $PRIV(root) <<TkCon_CloseWin>> { ::tkcon::Destroy }
+    bind $PRIV(root) <<TkCon_CloseWin>> { ::tkcon::Destroy 1 }
     bind $PRIV(root) <<TkCon_About>>    { ::tkcon::About }
     bind $PRIV(root) <<TkCon_Find>>     { ::tkcon::FindBox $::tkcon::PRIV(console) }
     bind $PRIV(root) <<TkCon_Slave>>    {
