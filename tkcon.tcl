@@ -636,7 +636,7 @@ proc ::tkcon::InitUI {title} {
     catch {font create tkconfixed      -family $family -size $size}
     catch {font create tkconfixedbold  -family $family -size $size -weight bold}
     catch {font create tkconfixedlarge -family $family -size [expr {$size + 4}] -weight bold}
-    catch {font create tkconfixedsmall -family $family -size [expr {$size - 4}] -weight bold}
+    catch {font create tkconfixedsmall -family $family -size [expr {$size - 2}] -weight bold}
 
     set PRIV(statusbar) [set sbar [ttk::frame $w.fstatus]]
     set PRIV(tabframe)  [ttk::frame $sbar.tabs -relief sunken -borderwidth 1]
