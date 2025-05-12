@@ -3811,7 +3811,7 @@ proc tkcon {cmd args} {
 		catch {interp eval $OPT(exec) [list unset $slaveVar]}
 	    }
 	    interp eval $OPT(exec) \
-		    [list trace add variable $slaveVar rwu \
+		    [list trace add variable $slaveVar [list read write unset] \
 		    [list tkcon set $masterVar $OPT(exec)]]
 	    return
 	}
@@ -4679,7 +4679,7 @@ proc observe {opt name args} {
 	va* - vd* {
 	    set type [lindex $args 0]
 	    set args [lrange $args 1 end]
-	    if {![regexp {^[rwu]} $type type]} {
+	    if {$type ni [list read write unset]} {
 		return -code error "bad [lindex [info level 0] 0] $opt type\
 			\"$type\", must be: read, write or unset"
 	    }
@@ -4688,7 +4688,14 @@ proc observe {opt name args} {
 		# don't double up on the traces
 		if {[list $type $args] eq $c} { return }
 	    }
-	    uplevel 1 [list trace $opt $name $type $args]
+            switch -glob -- $opt {
+                va* {
+	            uplevel 1 [list trace add variable $name $type $args]
+                }
+                vd* {
+	            uplevel 1 [list trace remove variable $name $type $args]
+                }
+            }
 	}
 	vi* {
 	    uplevel 1 [list trace info variable $name]
@@ -4708,7 +4715,7 @@ proc observe {opt name args} {
 #	op	- operation type (rwu)
 ##
 proc observe_var {name el op} {
-    if {[string match u $op]} {
+    if {[string match u* $op]} {
 	if {[string compare {} $el]} {
 	    puts "unset \"${name}($el)\""
 	} else {
@@ -4870,7 +4877,7 @@ proc tkcon_dir {args} {
 		} else {
 		    set mode [string index $st(type) 0]
 		}
-		foreach j [split [format %03o [expr {$st(mode)&0777}]] {}] {
+		foreach j [split [format %03o [expr {$st(mode)&0o777}]] {}] {
 		    append mode $s($j)
 		}
 		if {$st(mtime)>$old} {
@@ -6282,7 +6289,7 @@ proc ::tkcon::SafeSubst {i a} {
 	    } else {
 		catch {unset $newvalue}
 	    }
-	    $i eval trace add variable $value rwu \{[list tkcon set $newvalue $i]\}
+	    $i eval trace add variable $value [list read write unset] \{[list tkcon set $newvalue $i]\}
 	    set value $newvalue
 	} elseif {![string compare $arg -command]} {
 	    set value [list $i eval $value]
