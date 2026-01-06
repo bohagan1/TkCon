@@ -325,7 +325,7 @@ shell: binaries libraries
 gdb:
 	$(TCLSH_ENV) $(PKG_ENV) $(GDB) $(TCLSH_PROG) $(SCRIPT)
 
-gdb-test: binaries libraries 
+gdb-test: binaries libraries
 	$(TCLSH_ENV) $(PKG_ENV) $(GDB) \
 	    --args $(TCLSH_PROG) `@CYGPATH@ $(srcdir)/tests/all.tcl` \
 	    $(TESTFLAGS) -singleproc 1 \
@@ -398,30 +398,33 @@ pkgIndex.tcl: $(srcdir)/pkgIndex.tcl.in
 # You may need to tweak this target to make it work correctly.
 #========================================================================
 
+TEMP_DIR	= $(srcdir)/$(PKG_DIR)/
 #COMPRESS	= tar cvf $(PKG_DIR).tar $(PKG_DIR); compress $(PKG_DIR).tar
-COMPRESS	= tar zcvf $(PKG_DIR).tar.gz $(PKG_DIR)
-DIST_ROOT	= $(TEMP)/dist
-DIST_DIR	= $(DIST_ROOT)/$(PKG_DIR)
+COMPRESS	= tar zcvf $(PKG_DIR).tar.gz $(TEMP_DIR)
 
 DIST_INSTALL_DATA	= CPPROG='cp -p' $(INSTALL) -m 644
 DIST_INSTALL_SCRIPT	= CPPROG='cp -p' $(INSTALL) -m 755
 
-dist-clean:
-	rm -rf $(DIST_DIR) "$(DIST_ROOT)/$(PKG_DIR).tar.*"
+${TEMP_DIR}:
+	mkdir -p ${TEMP_DIR}
 
-dist: dist-clean
-	$(INSTALL_DATA_DIR) $(DIST_DIR)
+
+dist-clean:
+	rm -rf "$(srcdir)/$(PKG_DIR).tar.*"
+
+dist: ${TEMP_DIR} dist-clean manifest.uuid
+	$(INSTALL_DATA_DIR) $(TEMP_DIR)
 
 	# TEA files
 	$(DIST_INSTALL_DATA) $(srcdir)/Makefile.in \
 	    $(srcdir)/aclocal.m4 $(srcdir)/configure.ac \
-	    $(DIST_DIR)/
-	$(DIST_INSTALL_SCRIPT) $(srcdir)/configure $(DIST_DIR)/
+	    $(TEMP_DIR)/
+	$(DIST_INSTALL_SCRIPT) $(srcdir)/configure $(TEMP_DIR)/
 
-	$(INSTALL_DATA_DIR) $(DIST_DIR)/tclconfig
+	$(INSTALL_DATA_DIR) $(TEMP_DIR)/tclconfig
 	$(DIST_INSTALL_DATA) $(srcdir)/tclconfig/README.txt \
 	    $(srcdir)/tclconfig/tcl.m4 $(srcdir)/tclconfig/install-sh \
-	    $(srcdir)/tclconfig/license.terms $(DIST_DIR)/tclconfig/
+	    $(srcdir)/tclconfig/license.terms $(TEMP_DIR)/tclconfig/
 
 	# Extension files
 	$(DIST_INSTALL_DATA) \
@@ -430,19 +433,20 @@ dist: dist-clean
 	    $(srcdir)/README.txt \
 	    $(srcdir)/pkgIndex.tcl.in \
 	    $(srcdir)/tkcon.tcl \
-	    $(DIST_DIR)/
+	    $(TEMP_DIR)/
 
-	list='doc extra library mac tests unix win'; \
+	list='doc extra library tests unix'; \
 	for p in $$list; do \
-	    if test -d '$(srcdir)/$$p' ; then \
-		$(INSTALL_DATA_DIR) '$(DIST_DIR)/$$p'; \
-		$(DIST_INSTALL_DATA) '$(srcdir)/$$p/*' '$(DIST_DIR)/$$p/'; \
+	    if test -d "$(srcdir)/$$p" ; then \
+		$(INSTALL_DATA_DIR) "$(TEMP_DIR)/$$p"; \
+		for i in "$(srcdir)/$$p/*"; do \
+		    $(INSTALL_DATA) $$i "$(TEMP_DIR)/$$p/"; \
+		done; \
 	    fi; \
 	done
 
-	(cd '$(DIST_ROOT)'; $(COMPRESS);)
-	mv $(DIST_ROOT)/$(PKG_DIR).tar.gz $(top_builddir)
-	cd '$(top_builddir)'
+	$(COMPRESS)
+	rm -fR $(TEMP_DIR)
 
 #========================================================================
 # End of user-definable section
