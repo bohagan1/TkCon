@@ -207,28 +207,33 @@ libraries:
 # end user machine when building from source.
 #========================================================================
 
-DTPLITE=$(TCLSH) @DTPLITE@
+DTPLITE=`@CYGPATH@ @DTPLITE@`
+
 doc: tkcon.n
 
 tkcon.n: $(srcdir)/doc/tkcon.n.man
 	@echo "make nroff documentation"
-	@if [ -n "$(DTPLITE)" -a -x "$(DTPLITE)" ]; then \
+	@if [ -n "$(DTPLITE)" -a -e "$(DTPLITE)" ]; then \
 	    @list='dump.n idebug.n observe.n tkcon.n tkcon.1 tkconrc.5'; \
 	    for i in $$list; do \
-		if test -f $$i ; then \
+		if test -f $$i; then \
 		    echo "Make $$i"; \
-		    $(DTPLITE) -o $(srcdir)/doc/$$i nroff $(srcdir)/doc/$$(i).man ; \
+		    $(TCLSH) $(DTPLITE) -o $(srcdir)/doc/$$i nroff $(srcdir)/doc/$$(i).man; \
 		fi; \
 	    done; \
+	else \
+	    echo "Can't find dtplite. Please install Tcllib."; \
 	fi
 
 tkcon.html: $(srcdir)/doc/tkcon.n.man
 	@echo "make HTML documentation"
-	@if [ -n "$(DTPLITE)" -a -x "$(DTPLITE)" ]; then \
+	@if [ -n "$(DTPLITE)" -a -e "$(DTPLITE)" ]; then \
 	    @list='dump idebug observe tkcon'; \
 	    for i in $$list; do \
-		$(DTPLITE) -o $(srcdir)/doc/$$i.html html $(srcdir)/doc/$$(i).n.man ; \
+		$(TCLSH) $(DTPLITE) -o $(srcdir)/doc/$$i.html html $(srcdir)/doc/$$(i).n.man; \
 	    done; \
+	else \
+	    echo "Can't find dtplite. Please install Tcllib."; \
 	fi
 
 
@@ -245,8 +250,8 @@ install-libraries: libraries
 	@$(INSTALL_DATA_DIR) $(DESTDIR)$(includedir)
 	@echo "Installing header files in $(DESTDIR)$(includedir)"
 	@list='$(PKG_HEADERS)'; for i in $$list; do \
-	    echo "Installing $(srcdir)/$$i" ; \
-	    $(INSTALL_DATA) "$(srcdir)/$$i" "$(DESTDIR)$(includedir)" ; \
+	    echo "Installing $(srcdir)/$$i"; \
+	    $(INSTALL_DATA) "$(srcdir)/$$i" "$(DESTDIR)$(includedir)"; \
 	done;
 
 #========================================================================
@@ -258,7 +263,7 @@ install-doc-html: tkcon.html
 	@$(INSTALL_DATA_DIR) "$(DESTDIR)$(pkglibdir)/html"
 	@echo "Installing HTML documentation in $(DESTDIR)$(pkglibdir)/html"
 	@list='$(srcdir)/doc/*.html $(srcdir)/doc/*.css'; for i in $$list; do \
-	    if test -f "$$i" ; then \
+	    if test -f "$$i"; then \
 		echo "Installing $$i"; \
 		$(INSTALL_DATA) "$$i" "$(DESTDIR)$(pkglibdir)/html"; \
 	    fi; \
@@ -268,48 +273,48 @@ install-doc-n: tkcon.n
 	@$(INSTALL_DATA_DIR) "$(DESTDIR)$(mandir)/mann"
 	@echo "Installing nroff documentation in $(DESTDIR)$(mandir)/mann"
 	@list='$(srcdir)/doc/*.n'; for i in $$list; do \
-	    if test -f "$$i" ; then \
+	    if test -f "$$i"; then \
 		if test -f "$(DESTDIR)$(mandir)/mann/Tcl.n.gz" -o \
-		    "$(DESTDIR)$(mandir)/mann/Tcl*.n.gz" ; then \
-		    gzip -k "$$i" ; \
+		    "$(DESTDIR)$(mandir)/mann/Tcl*.n.gz"; then \
+		    gzip -k "$$i"; \
 		    echo "Installing $$i.gz"; \
-		    $(INSTALL_DATA) "$$i.gz" "$(DESTDIR)$(mandir)/mann" ; \
+		    $(INSTALL_DATA) "$$i.gz" "$(DESTDIR)$(mandir)/mann"; \
 		    rm -f "$$i.gz";\
 		else \
 		    echo "Installing $$i"; \
-		    $(INSTALL_DATA) "$$i" "$(DESTDIR)$(mandir)/mann" ; \
+		    $(INSTALL_DATA) "$$i" "$(DESTDIR)$(mandir)/mann"; \
 		fi; \
 	    fi; \
 	done
 	@$(INSTALL_DATA_DIR) "$(DESTDIR)$(mandir)/man1"
 	@echo "Installing nroff documentation in $(DESTDIR)$(mandir)/man1"
 	@list='$(srcdir)/doc/*.1'; for i in $$list; do \
-	    if test -f $$i ; then \
+	    if test -f $$i; then \
 		if test -f "$(DESTDIR)$(mandir)/mann/Tcl.n.gz" -o \
-		    "$(DESTDIR)$(mandir)/mann/Tcl*.n.gz" ; then \
-		    gzip -k $$i ; \
+		    "$(DESTDIR)$(mandir)/mann/Tcl*.n.gz"; then \
+		    gzip -k $$i; \
 		    echo "Installing $$i.gz"; \
-		    $(INSTALL_DATA) $$i.gz "$(DESTDIR)$(mandir)/man1" ; \
+		    $(INSTALL_DATA) $$i.gz "$(DESTDIR)$(mandir)/man1"; \
 		    rm -f $$i.gz;\
 		else \
 		    echo "Installing $$i"; \
-		    $(INSTALL_DATA) $$i "$(DESTDIR)$(mandir)/man1" ; \
+		    $(INSTALL_DATA) $$i "$(DESTDIR)$(mandir)/man1"; \
 		fi; \
 	    fi; \
 	done
 	@$(INSTALL_DATA_DIR) "$(DESTDIR)$(mandir)/man5"
 	@echo "Installing nroff documentation in $(DESTDIR)$(mandir)/man5"
 	@list='$(srcdir)/doc/*.5'; for i in $$list; do \
-	    if test -f $$i ; then \
+	    if test -f $$i; then \
 		if test -f "$(DESTDIR)$(mandir)/mann/Tcl.n.gz" -o \
-		    "$(DESTDIR)$(mandir)/mann/Tcl*.n.gz" ; then \
-		    gzip -k $$i ; \
+		    "$(DESTDIR)$(mandir)/mann/Tcl*.n.gz"; then \
+		    gzip -k $$i; \
 		    echo "Installing $$i.gz"; \
-		    $(INSTALL_DATA) $$i.gz "$(DESTDIR)$(mandir)/man5" ; \
+		    $(INSTALL_DATA) $$i.gz "$(DESTDIR)$(mandir)/man5"; \
 		    rm -f $$i.gz;\
 		else \
 		    echo "Installing $$i"; \
-		    $(INSTALL_DATA) $$i "$(DESTDIR)$(mandir)/man5" ; \
+		    $(INSTALL_DATA) $$i "$(DESTDIR)$(mandir)/man5"; \
 		fi; \
 	    fi; \
 	done
@@ -437,7 +442,7 @@ dist: ${TEMP_DIR} dist-clean manifest.uuid
 
 	list='doc extra library tests unix'; \
 	for p in $$list; do \
-	    if test -d "$(srcdir)/$$p" ; then \
+	    if test -d "$(srcdir)/$$p"; then \
 		$(INSTALL_DATA_DIR) "$(TEMP_DIR)/$$p"; \
 		for i in "$(srcdir)/$$p/*"; do \
 		    $(INSTALL_DATA) $$i "$(TEMP_DIR)/$$p/"; \
