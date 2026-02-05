@@ -4,14 +4,11 @@ dnl	generate the file "configure", which is run during Tcl installation
 dnl	to configure the system for the local environment.
 
 #-----------------------------------------------------------------------
-# Sample configure.ac for Tcl Extensions.  The only places you should
+# This is the configure.ac file for the TkCon application.  The only places
 # need to modify this file are marked by the string __CHANGE__
 #-----------------------------------------------------------------------
 
 #-----------------------------------------------------------------------
-# __CHANGE__
-# Set your package name and version numbers here.
-#
 # This initializes the environment with PACKAGE_NAME and PACKAGE_VERSION
 # set as provided.  These will also be added as -D defs in your Makefile
 # so you can encode the package version directly into the source files.
@@ -27,7 +24,7 @@ AC_INIT([tkcon], [2.8])
 # as well as PKG_LIB_FILE and PKG_STUB_LIB_FILE.
 #--------------------------------------------------------------------
 
-TEA_INIT()
+TEA_INIT
 
 AC_CONFIG_AUX_DIR(tclconfig)
 
@@ -42,8 +39,8 @@ TEA_LOAD_TCLCONFIG
 # Load the tkConfig.sh file if necessary (Tk extension)
 #--------------------------------------------------------------------
 
-TEA_PATH_TKCONFIG
-TEA_LOAD_TKCONFIG
+#TEA_PATH_TKCONFIG
+#TEA_LOAD_TKCONFIG
 
 #-----------------------------------------------------------------------
 # Handle the --prefix=... option by defaulting to what Tcl gave.
@@ -62,7 +59,6 @@ TEA_PREFIX
 TEA_SETUP_COMPILER
 
 #-----------------------------------------------------------------------
-# __CHANGE__
 # Specify the C source files to compile in TEA_ADD_SOURCES,
 # public headers that need to be installed in TEA_ADD_HEADERS,
 # stub library C source files to compile in TEA_ADD_STUB_SOURCES,
@@ -80,8 +76,6 @@ TEA_ADD_STUB_SOURCES([])
 TEA_ADD_TCL_SOURCES([tkcon.tcl])
 
 #--------------------------------------------------------------------
-# __CHANGE__
-#
 # You can add more files to clean if your extension creates any extra
 # files by extending CLEANFILES.
 # Add pkgIndex.tcl if it is generated in the Makefile instead of ./configure
@@ -91,7 +85,7 @@ TEA_ADD_TCL_SOURCES([tkcon.tcl])
 # TEA_ADD_* any platform specific compiler/build info here.
 #--------------------------------------------------------------------
 
-#CLEANFILES="$CLEANFILES pkgIndex.tcl"
+TEA_ADD_CLEANFILES([pkgIndex.tcl])
 if test "${TEA_PLATFORM}" = "windows" ; then
     # Ensure no empty if clauses
     :
@@ -103,10 +97,9 @@ else
     #TEA_ADD_SOURCES([unix/unixFile.c])
     #TEA_ADD_LIBS([-lsuperfly])
 fi
-#AC_SUBST(CLEANFILES)
+AC_SUBST(CLEANFILES)
 
 #--------------------------------------------------------------------
-# __CHANGE__
 # Choose which headers you need.  Extension authors should try very
 # hard to only rely on the Tcl public header files.  Internal headers
 # contain private data structures and are subject to change without
@@ -119,7 +112,6 @@ fi
 
 #TEA_PUBLIC_TK_HEADERS
 #TEA_PRIVATE_TK_HEADERS
-#TEA_PATH_X
 
 #--------------------------------------------------------------------
 # Check whether --enable-threads or --disable-threads was given.
@@ -150,6 +142,16 @@ fi
 #TEA_ENABLE_SYMBOLS
 
 #--------------------------------------------------------------------
+# Everyone should be linking against the Tcl stub library.  If you
+# can't for some reason, remove this definition.  If you aren't using
+# stubs, you also need to modify the SHLIB_LD_LIBS setting below to
+# link against the non-stubbed Tcl library.  Add Tk too if necessary.
+#--------------------------------------------------------------------
+
+#AC_DEFINE(USE_TCL_STUBS)
+#AC_DEFINE(USE_TK_STUBS)
+
+#--------------------------------------------------------------------
 # This macro generates a line to use when building a library.  It
 # depends on values set by the TEA_ENABLE_SHARED, TEA_ENABLE_SYMBOLS,
 # and TEA_LOAD_TCLCONFIG macros above.
@@ -172,7 +174,7 @@ fi
 # Setup a *Config.sh.in configuration file.
 #--------------------------------------------------------------------
 
-#TEA_EXPORT_CONFIG([sample])
+#TEA_EXPORT_CONFIG([tkcon])
 #AC_SUBST(SAMPLE_VAR)
 
 # -------------------------------------------------------------------
@@ -188,11 +190,11 @@ TEA_PROG_DTPLITE
 #--------------------------------------------------------------------
 
 AC_CONFIG_FILES([Makefile pkgIndex.tcl])
-#AC_CONFIG_FILES([sampleConfig.sh])
+#AC_CONFIG_FILES([tkConConfig.sh])
 
 #--------------------------------------------------------------------
 # Finally, substitute all of the various values into the files
 # specified with AC_CONFIG_FILES.
 #--------------------------------------------------------------------
 
-AC_OUTPUT()
+AC_OUTPUT
