@@ -1867,10 +1867,13 @@ proc ::tkcon::InitMenus {w title} {
 
     ## Console Menu
     ##
+    set standalone [expr {[info exists ::argv0] && $::argv0 eq $PRIV(SCRIPT)}]
     foreach m [list [menu $w.console] [menu $w.pop.console]] {
 	$m add command -label "$title Console"	-state disabled
-	$m add command -label "New Window" -underline 0 -accel $PRIV(ACC)$PRIV(MOD)N \
-		-command ::tkcon::New
+	if {$standalone} {
+	    $m add command -label "New Window" -underline 0 -accel $PRIV(ACC)$PRIV(MOD)N \
+		    -command ::tkcon::New
+	}
 	$m add command -label "New Tab" -underline 4 -accel $PRIV(ACC)$PRIV(MOD)T \
 		-command ::tkcon::NewTab
 	$m add command -label "Close Tab" -underline 0 -accel $PRIV(ACC)W \
@@ -5669,7 +5672,9 @@ proc ::tkcon::Bindings {} {
     bind $PRIV(root) <<TkCon_ResizeReset>> ::tkcon::ResizeReset
 
     bind $PRIV(root) <<TkCon_Exit>>     exit
-    bind $PRIV(root) <<TkCon_New>>      { ::tkcon::New }
+    if {[info exists ::argv0] && $::argv0 eq $PRIV(SCRIPT)} {
+	bind $PRIV(root) <<TkCon_New>>      { ::tkcon::New }
+    }
     bind $PRIV(root) <<TkCon_NewTab>>   { ::tkcon::NewTab }
     bind $PRIV(root) <<TkCon_NextTab>>  { ::tkcon::GotoTab 1 ; break }
     bind $PRIV(root) <<TkCon_PrevTab>>  { ::tkcon::GotoTab -1 ; break }
