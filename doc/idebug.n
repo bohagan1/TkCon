@@ -2,7 +2,7 @@
 '\" Generated from file 'idebug\&.n\&.man' by tcllib/doctools with format 'nroff'
 '\" Copyright (c) Jeffrey Hobbs <jeff at hobbs\&.org>
 '\"
-.TH "idebug" n 2\&.5 idebug\&.n "TkCon"
+.TH "idebug" n 3\&.0b0 idebug\&.n "TkCon"
 .\" The -*- nroff -*- definitions below are for supplemental macros used
 .\" in Tcl/Tk manual entries.
 .\"

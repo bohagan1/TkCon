@@ -2,7 +2,7 @@
 '\" Generated from file 'dump\&.n\&.man' by tcllib/doctools with format 'nroff'
 '\" Copyright (c) Jeffrey Hobbs <jeff at hobbs\&.org>
 '\"
-.TH "dump" n 2\&.5 dump\&.n "TkCon"
+.TH "dump" n 3\&.0b0 dump\&.n "TkCon"
 .\" The -*- nroff -*- definitions below are for supplemental macros used
 .\" in Tcl/Tk manual entries.
 .\"
