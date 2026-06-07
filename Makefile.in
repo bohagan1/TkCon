@@ -140,14 +140,14 @@ PKG_ENV		= @LD_LIBRARY_PATH_VAR@="$(EXTRA_PATH):$(@LD_LIBRARY_PATH_VAR@)" \
 TCLSH_PROG	= @TCLSH_PROG@
 TCLSH		= $(TCLSH_ENV) $(PKG_ENV) $(TCLSH_PROG)
 
-#WISH_ENV	= TK_LIBRARY=`@CYGPATH@ $(TK_SRC_DIR)/library`
-#WISH_PROG	= @WISH_PROG@
-#WISH		= $(TCLSH_ENV) $(WISH_ENV) $(PKG_ENV) $(WISH_PROG)
+WISH_ENV	= TK_LIBRARY=`@CYGPATH@ $(TK_SRC_DIR)/library`
+WISH_PROG	= @WISH_PROG@
+WISH		= $(TCLSH_ENV) $(WISH_ENV) $(PKG_ENV) $(WISH_PROG)
 
 SHARED_BUILD	= @SHARED_BUILD@
 
-INCLUDES	= @PKG_INCLUDES@ @TCL_INCLUDES@ -I.
-#INCLUDES	= @PKG_INCLUDES@ @TCL_INCLUDES@ @TK_INCLUDES@ @TK_XINCLUDES@
+#INCLUDES	= @PKG_INCLUDES@ @TCL_INCLUDES@ -I.
+INCLUDES	= @PKG_INCLUDES@ @TCL_INCLUDES@ @TK_INCLUDES@ @TK_XINCLUDES@ -I. -I$(srcdir)
 
 PKG_CFLAGS	= @PKG_CFLAGS@
 
@@ -204,6 +204,7 @@ binaries: $(BINARIES)
 
 libraries:
 
+
 #========================================================================
 # Your doc target should differentiate from doc builds (by the developer)
 # and doc installs (see install-doc), which just install the docs on the
@@ -217,11 +218,9 @@ doc: make-docs-n make-docs-html
 make-docs-n: doc/tkcon.n.man
 	@echo "make nroff documentation"
 	@if [ -n "$(DTPLITE)" -a -e "$(DTPLITE)" ]; then \
-	    @list='dump.n idebug.n observe.n tkcon.n tkcon.1 tkconrc.5'; \
-	    for i in $$list; do \
-		if test -f $$i; then \
-		    echo "Make $$i"; \
-		    $(TCLSH) $(DTPLITE) -o $(srcdir)/doc/$$i nroff $(srcdir)/doc/$$(i).man; \
+	    for file in "dump.n" "idebug.n" "observe.n" "tkcon.n" "tkcon.1" "tkconrc.5"; do \
+		if [ -e "doc/$$file" ]; then \
+		    $(TCLSH) $(DTPLITE) -o doc/$$file nroff doc/$$file.man; \
 		fi; \
 	    done; \
 	else \
@@ -231,14 +230,16 @@ make-docs-n: doc/tkcon.n.man
 make-docs-html: doc/tkcon.n.man
 	@echo "make HTML documentation"
 	@if [ -n "$(DTPLITE)" -a -e "$(DTPLITE)" ]; then \
-	    @list='dump idebug observe tkcon'; \
-	    for i in $$list; do \
-		$(TCLSH) $(DTPLITE) -o $(srcdir)/doc/$$i.html html $(srcdir)/doc/$$(i).n.man; \
+	    for file in "dump" "idebug" "observe" "tkcon"; do \
+		$(TCLSH) $(DTPLITE) -o doc/$$file.html html doc/$$file.n.man; \
 	    done; \
 	else \
 	    echo "Can't find dtplite. Please install Tcllib."; \
 	fi
 
+#========================================================================
+# Install targets
+#========================================================================
 
 install: all install-binaries install-libraries install-doc-n install-doc-html
 
@@ -424,8 +425,7 @@ dist: ${TEMP_DIR} dist-clean
 	# TEA files
 	$(INSTALL_DATA_DIR) $(TEMP_DIR)
 	$(DIST_INSTALL_DATA) $(srcdir)/Makefile.in \
-	    $(srcdir)/aclocal.m4 $(srcdir)/configure.ac \
-	    $(TEMP_DIR)/
+	    $(srcdir)/aclocal.m4 $(srcdir)/configure.ac $(TEMP_DIR)/
 	$(DIST_INSTALL_SCRIPT) $(srcdir)/configure $(TEMP_DIR)/
 
 	# Extension files

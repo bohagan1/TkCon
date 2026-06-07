@@ -133,7 +133,7 @@ AC_SUBST(CLEANFILES)
 # can be taken from the tclConfig.sh file, but this figures it all out.
 #--------------------------------------------------------------------
 
-#TEA_CONFIG_CFLAGS
+TEA_CONFIG_CFLAGS
 
 #--------------------------------------------------------------------
 # Set the default compiler switches based on the --enable-symbols option.
@@ -167,8 +167,8 @@ AC_SUBST(CLEANFILES)
 # a pkgIndex.tcl file or anything else at extension build time.
 #--------------------------------------------------------------------
 
-#TEA_PROG_TCLSH
-#TEA_PROG_WISH
+TEA_PROG_TCLSH
+TEA_PROG_WISH
 
 #--------------------------------------------------------------------
 # Setup a *Config.sh.in configuration file.
