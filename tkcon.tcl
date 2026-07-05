@@ -6276,6 +6276,8 @@ proc ::tkcon::ExpandPathname str {
     if {[string match */ $str]} { append dir / }
     # Create a safely glob-able name
     regsub -all {([][])} $dir {\\\1} safedir
+    set m ""
+    set match ""
     if {[catch {lsort [EvalAttached [list glob $safedir*]]} m]} {
 	set match {}
     } else {
