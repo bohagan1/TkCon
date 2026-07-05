@@ -4869,7 +4869,7 @@ proc tkcon_dir {args} {
 		    switch -glob $st(type) {
 			d* { append f $sep }
 			l* { append f "@ -> [file readlink $d$sep$f]" }
-			default { if {[file exec $d$sep$f]} { append f * } }
+			default { if {[file executable $d$sep$f]} { append f * } }
 		    }
 		}
 		if {[string match file $st(type)]} {
@@ -4913,7 +4913,7 @@ proc tkcon_dir {args} {
 		    switch -glob [file type $d$sep$f] {
 			d* { append f $sep }
 			l* { append f @ }
-			default { if {[file exec $d$sep$f]} { append f * } }
+			default { if {[file executable $d$sep$f]} { append f * } }
 		    }
 		}
 		append res [format "%-${i}s" $f]
@@ -6258,7 +6258,7 @@ proc ::tkcon::SafeLoad {i f p} {
 	if {[llength [info command event]]} {
 	    $i alias event ::tkcon::SafeManage $i $command
 	}
-	frame .${i}_dot -width 300 -height 300 -relief raised
+	ttk::frame .${i}_dot -width 300 -height 300 -relief raised
 	pack .${i}_dot -side left
 	$i alias tk tk
 	$i alias bind ::tkcon::SafeBind $i
