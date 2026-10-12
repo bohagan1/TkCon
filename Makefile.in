@@ -263,7 +263,7 @@ install-libraries: libraries
 # directory.
 #========================================================================
 
-install-doc-html: make-docs-html
+install-doc-html:
 	@$(INSTALL_DATA_DIR) "$(DESTDIR)$(pkglibdir)/html"
 	@echo "Installing HTML documentation in $(DESTDIR)$(pkglibdir)/html"
 	@list='$(srcdir)/doc/*.html $(srcdir)/doc/*.css'; for i in $$list; do \
@@ -273,7 +273,7 @@ install-doc-html: make-docs-html
 	    fi; \
 	done
 
-install-doc-n: make-docs-n
+install-doc-n:
 	@$(INSTALL_DATA_DIR) "$(DESTDIR)$(mandir)/mann"
 	@echo "Installing nroff documentation in $(DESTDIR)$(mandir)/mann"
 	@list='$(srcdir)/doc/*.n'; for i in $$list; do \
@@ -502,8 +502,8 @@ install-lib-binaries: binaries
 	    $(INSTALL_DATA) "$(srcdir)/$$p" "$(DESTDIR)$(pkglibdir)/$$destp"; \
 	  fi; \
 	done
-	echo " Install pkgIndex.tcl $(DESTDIR)$(pkglibdir)"; \
-	$(INSTALL_DATA) pkgIndex.tcl "$(DESTDIR)$(pkglibdir)"; \
+	@echo " Install pkgIndex.tcl $(DESTDIR)$(pkglibdir)"
+	$(INSTALL_DATA) pkgIndex.tcl "$(DESTDIR)$(pkglibdir)"
 
 #========================================================================
 # Install binary executables (e.g. .exe files and dependent .dll files)

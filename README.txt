@@ -1,8 +1,5 @@
 WHAT:   Enhanced Tk Console for all Tk platforms
 
-WHERE:  http://tkcon.sourceforge.net/
-	http://www.purl.org/net/hobbs/tcl/script/
-
 REQUIREMENTS: Tcl/Tk 8.5+
 	Tested through Tcl/Tk 9.0.
         tkcon is all Tcl/Tk code, no compiling required
@@ -32,14 +29,32 @@ FEATURES:
 
 CONTACT: Jeffrey Hobbs, jeff at hobbs dot org
 
-GETTING STARTED:
 
-tkcon is a single drop-in file.  On Windows, I place this on the desktop
-and double-click on it instead of wish/tclsh.  On Unix and OS X, I place it
-in a directory on my path and run this instead of wish.
+BUILD AND INSTALL:
 
-Alternatively, on Unix and Linux use the unix/install-desktop-menu.sh script
-to install a desktop link to the tkcon application.
+On Unix platforms, the tkcon package can be built and installed using the
+following commands:
 
-Documentation can be reading by starting with index.html in the doc/
+	./configure
+	make
+	make install
+
+This will install tkcon to both the bin and lib directories.
+
+On Windows, use:
+
+	cd win
+	nmake -f makefile.vc
+	nmake -f makefile.vc install
+
+USAGE:
+
+Since tkcon is installed to the bin directory, it can be started via:
+
+	tkcon
+
+
+DOCUMENTATION:
+
+Documentation can be read by starting with index.html file in the doc/
 subdirectory.  Happying Tcl'ing!
